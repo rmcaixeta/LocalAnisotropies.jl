@@ -1,0 +1,13 @@
+name = "LocalAnisotropies"
+uuid = "cb698b3a-2f1d-48b4-a1e9-ddc0b8f648e2"
+authors = ["Rafael Caixeta <8386288+rmcaixeta@users.noreply.github.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.5"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
