@@ -16,7 +16,7 @@
 """
 
 
-# cast points as grid
+# cast points as grid or special method for pts
 
 struct LocalAnisotropies
   rotation::Quaternion
@@ -31,24 +31,26 @@ function gridneighbors(img, i::CartesianIndex, window::Int)
     CartesianIndices(idx)
 end
 
-function Gradient(img, prop)
+function gradients(preimg, prop, window)
 
-    #img = reshape(preimg.table[:Z], Size(300,260))
+    dims = preimg.domain.dims
+    N = length(dims)
+
+    # extract gradients (maybe need an extra method to deal with big datasets)
+    img = reshape(preimg.table[prop], Size(dims))
     g = imgradients(img, KernelFactors.sobel, "replicate")
 
-    w = 5
-    N = length(g)
-    out = Array{LocalAnisotropies}(undef,300,260) # make some better way to store it
+    out = Array{LocalAnisotropies}(undef,size(img)) # make some better way to store it
 
     Threads.@threads for i in CartesianIndices(img)
         tensor = zeros(Float64,N,N)
-        for ng in gridneighbors(img, i, 10)
+        for ng in gridneighbors(img, i, window)
             for j in CartesianIndices((1:N,1:N))
                 tensor[j] += g[j[1]][ng]*g[j[2]][ng]
             end
         end
 
-        T = eigen(SMatrix{N,N}(tensor))
+        T = eigen(SMatrix{N,N}(tensor)) # maybe need to sort by eigenvalues
         if N==3
             eigv = T.vectors
         else
@@ -60,5 +62,19 @@ function Gradient(img, prop)
         q = dcm_to_quat(eigv')
         out[i] = LocalAnisotropies(q,T.values)
     end
+    vec(out)
 
 end
+
+
+# function geometry(ref_pt, pars)
+#     # PCA on mesh points
+# end
+
+
+# function EmpiricalVariogram(ref_pt, pars)
+#     # local variography
+# end
+
+
+## Interpolate LocalAnisotropies: NN and IDW
