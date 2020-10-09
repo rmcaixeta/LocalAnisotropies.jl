@@ -5,22 +5,22 @@ version = "0.1.0"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+GeoStats = "dcc97b0b-8ce5-5539-9008-bb190f959ef6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-GeoStats = "dcc97b0b-8ce5-5539-9008-bb190f959ef6"
-WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ReferenceFrameRotations = "74f56ac7-18b3-5285-802d-d4bd4f104033"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
-Distances = "0.7, 0.8, 0.9"
+Distances = "0.7, 0.8, 0.9, 0.10"
+GeoStats = "0.17"
 MultivariateStats = "0.7"
 NearestNeighbors = "0.4"
-GeoStats = "0.17"
-WriteVTK = "1.7"
-StaticArrays = "0.12"
 ReferenceFrameRotations = "0.5"
+StaticArrays = "0.12"
+WriteVTK = "1.7"
 julia = "1"
 
 [extras]
