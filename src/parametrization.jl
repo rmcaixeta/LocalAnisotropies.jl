@@ -50,17 +50,18 @@ function gradients(preimg, prop, window)
             end
         end
 
-        T = eigen(SMatrix{N,N}(tensor)) # maybe need to sort by eigenvalues
+        T = eigen(SMatrix{N,N}(tensor))
+        V = T.vectors[:, sortperm(T.values)]'
         if N==3
-            eigv = T.vectors
+            eigv = V
         else
             eigv = zeros(Float64,3,3)
-            eigv[1:2,1:2] = T.vectors
+            eigv[1:2,1:2] = V
             eigv[3,3] = 1.0
             eigv = SMatrix{3,3}(eigv)
         end
-        q = dcm_to_quat(eigv')
-        out[i] = LocalAnisotropies(q,T.values)
+        q = dcm_to_quat(eigv)
+        out[i] = LocalAnisotropies(q,sort(T.values, rev=true))
     end
     vec(out)
 

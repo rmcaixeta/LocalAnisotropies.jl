@@ -14,7 +14,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ReferenceFrameRotations = "74f56ac7-18b3-5285-802d-d4bd4f104033"
 
 [compat]
-Distances = "0.7, 0.8, 0.9"
+Distances = "0.9,0.10"
 MultivariateStats = "0.7"
 NearestNeighbors = "0.4"
 GeoStats = "0.17"
