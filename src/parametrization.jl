@@ -18,7 +18,7 @@
 
 # cast points as grid or special method for pts
 
-struct LocalAnisotropies
+struct LocalParameters
   rotation::Quaternion
   magnitude::AbstractVector
 end
@@ -40,7 +40,7 @@ function gradients(preimg, prop, window)
     img = reshape(preimg.table[prop], Size(dims))
     g = imgradients(img, KernelFactors.sobel, "replicate")
 
-    out = Array{LocalAnisotropies}(undef,size(img)) # make some better way to store it
+    pars = Array{LocalParameters}(undef,size(img)) # make some better way to store it
 
     Threads.@threads for i in CartesianIndices(img)
         tensor = zeros(Float64,N,N)
@@ -61,9 +61,9 @@ function gradients(preimg, prop, window)
             eigv = SMatrix{3,3}(eigv)
         end
         q = dcm_to_quat(eigv)
-        out[i] = LocalAnisotropies(q,sort(T.values, rev=true))
+        pars[i] = LocalParameters(q,sort(T.values, rev=true))
     end
-    vec(out)
+    vec(pars)
 
 end
 
@@ -78,4 +78,4 @@ end
 # end
 
 
-## Interpolate LocalAnisotropies: NN and IDW
+## Interpolate LocalParameters: NN and IDW
