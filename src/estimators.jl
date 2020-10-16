@@ -269,15 +269,6 @@ local_predict(estimator::FittedKriging, xₒ::AbstractVector, localpars::Abstrac
   combine(estimator, local_weights(estimator, xₒ, localpars), estimator.state.z)
 
 
-function mwvario(estimator, localpar)
-  #SimpleKriging(varparams.variogram, varparams.mean)
-  #OrdinaryKriging(varparams.variogram)
-  estimator
-end
-
-function kcfill!(LHS, γ, X, localpars)
-  nothing
-end
 
 function nnlocalpars(pdata,pdomain,localpars)
   nothing

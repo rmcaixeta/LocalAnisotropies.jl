@@ -5,18 +5,18 @@
 
  Store parameters as quaternions + ratios
 
- # https://math.stackexchange.com/questions/2816986/plotting-an-ellipsoid-using-eigenvectors-and-eigenvalues
- # world frame rotation example
- e, x = np.linalg.eig(E)
- rot_matrix = np.array([x[:, 0],
-                       x[:, 1],
-                       x[:, 2]]) # or .T
- dcm_to_quat(rot_matrix) # need to test
+- Need to resolve:
+- best design to scale ratios easily?
+    fix reference vario and scale between ]0,1]?
+    fix vario range to one and scale between [min,max] ranges?
+- how to assign local pars differently to each structures? mayber better to only
+allow if the ratios should rescale all or given list of structures
+
+
 
 """
 
 
-# cast points as grid or special method for pts
 
 struct LocalParameters
   rotation::Quaternion
@@ -61,7 +61,8 @@ function gradients(preimg, prop, window)
             eigv = SMatrix{3,3}(eigv)
         end
         q = dcm_to_quat(eigv)
-        pars[i] = LocalParameters(q,sort(T.values, rev=true))
+        λ = sort(T.values, rev=true)
+        pars[i] = LocalParameters(q,λ/λ[end])
     end
     vec(pars)
 
