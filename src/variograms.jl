@@ -6,7 +6,7 @@
 """
 
 function get_pars(γ::Variogram)
-
+  #### do for multistructure later
   kw = Dict(
     :range => γ.range,
     :distance => γ.distance,
@@ -20,43 +20,66 @@ function get_pars(γ::Variogram)
   )
 
   [st1]
-
 end
 
+function qmat(q,m)
+  N = length(m)
+  P = quat_to_dcm(q)[SOneTo(N),SOneTo(N)]
+  Λ = Diagonal(SVector{N}(one(eltype(m))./m.^2))
+  Q = P'*Λ*P
+  Q
+end
 
 function mwvario(estimator, localpar)
-
-  #if local_par <: LocalParameters # to check scaling multistructures
-  m = localpar.magnitude # maybe need to check if range = 1 or not
-  N = length(m)
-  P = quat_to_dcm(localpar.rotation)[SOneTo(N),SOneTo(N)]
-  Λ = Diagonal(SVector{N}(one(eltype(m))./m.^2))
-  Q = P*Λ*P'
+  # get local Mahalanobis
+  Q = qmat(localpar[1],localpar[2])
   local_d = Mahalanobis(Q)
 
+  # get reference pars. and apply local anisotropy to given structures
   ref_pars = get_pars(estimator.γ)
-
-  # localvario = nothing
-  # for i in 1:length(ref_pars)
-  #   kwargs = ref_pars[i][:kw]
-  #   kwargs[:distance] = local_d
-  #   localvario += ref_pars[i][:type](kwargs...)
-  # end
+  ### loop multi structure after updated struct
   kwargs = ref_pars[1][:kw]
   kwargs[:distance] = local_d
-  localvario = ref_pars[1][:type](;kwargs...)
+  γl = ref_pars[1][:type](;kwargs...)
 
+  # return local estimator
   if typeof(estimator) <: SimpleKriging
-    return SimpleKriging(localvario, estimator.mean)
+    return SimpleKriging(γl, estimator.mean)
   elseif typeof(estimator) <: OrdinaryKriging
-    return OrdinaryKriging(localvario)
+    return OrdinaryKriging(γl)
   end
 
-  #SimpleKriging(varparams.variogram, varparams.mean)
-  #OrdinaryKriging(varparams.variogram)
-  #estimator
 end
 
-function kcfill!(LHS, γ, X, localpars)
-  nothing
+function kcfill!(Γ, γ::Variogram, X::AbstractMatrix, localpars)
+  # X = neighbors coords
+  # need to consider LHS[i,j] = sill(γ) - LHS[i,j] to convert vario to covario
+  m, n = size(X)
+  @inbounds for j=1:n
+    xj = view(X, :, j)
+    Qj = localpars[j]
+    for i=j+1:n
+      xi = view(X, :, i)
+      Qi = localpars[i]
+      Γ[i,j] = kccov(γ, xi, xj, Qi, Qj)
+    end
+    Γ[j,j] = sill(γ) # kccov(γ, xj, xj, Qj, Qj)
+    for i=1:j-1
+      Γ[i,j] = Γ[j,i] # leverage the symmetry
+    end
+  end
+end
+
+function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
+  Qij = (Qi+Qj)/2
+  local_d = Mahalanobis(Qij)
+
+  # get reference pars. and apply local anisotropy to given structures
+  ref_pars = get_pars(γ)
+  ### loop multi structure after updated struct
+  kwargs = ref_pars[1][:kw]
+  kwargs[:distance] = local_d
+  γl = ref_pars[1][:type](;kwargs...)
+
+  (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end

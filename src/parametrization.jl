@@ -13,14 +13,11 @@
 allow if the ratios should rescale all or given list of structures
 
 
-
 """
 
-
-
-struct LocalParameters
-  rotation::Quaternion
-  magnitude::AbstractVector
+mutable struct LocalParameters
+  rotation::AbstractVector{Quaternion}
+  magnitude::AbstractArray{AbstractFloat,2}
 end
 
 function gridneighbors(img, i::CartesianIndex, window::Int)
@@ -32,7 +29,7 @@ function gridneighbors(img, i::CartesianIndex, window::Int)
 end
 
 function gradients(preimg, prop, window)
-
+    # get dimensions
     dims = preimg.domain.dims
     N = length(dims)
 
@@ -40,7 +37,8 @@ function gradients(preimg, prop, window)
     img = reshape(preimg.table[prop], Size(dims))
     g = imgradients(img, KernelFactors.sobel, "replicate")
 
-    pars = Array{LocalParameters}(undef,size(img)) # make some better way to store it
+    quat = Array{Quaternion}(undef,size(img)) # make some better way to store it
+    m = Array{Vector}(undef,size(img)) # make some better way to store it
 
     Threads.@threads for i in CartesianIndices(img)
         tensor = zeros(Float64,N,N)
@@ -62,10 +60,11 @@ function gradients(preimg, prop, window)
         end
         q = dcm_to_quat(eigv)
         λ = sort(T.values, rev=true)
-        pars[i] = LocalParameters(q,λ/λ[end])
+        quat[i] = q
+        m[i] = λ/λ[1]
     end
-    vec(pars)
 
+    LocalParameters(vec(quat), reduce(hcat,vec(m)))
 end
 
 

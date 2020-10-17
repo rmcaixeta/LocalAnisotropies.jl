@@ -89,8 +89,8 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
       okmeth = method in [:MovingWindows, :KernelConvolution]
       @assert okmeth "method must be :MovingWindows or :KernelConvolution"
 
-      oklocal1 = length(localpars) == nelms(pdomain)
-      oklocal2 = typeof(localpars[1]) <: LocalParameters
+      oklocal1 = length(localpars.rotation) == nelms(pdomain)
+      oklocal2 = typeof(localpars) <: LocalParameters
       @assert oklocal1 "number of local parameters must match domain points"
       @assert oklocal2 "wrong format of local parameters"
 
@@ -120,7 +120,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     KC = method == :KernelConvolution ? true : false
 
     # if KC, pass localpars to hard data
-    KC && (hdlocalpars = nnlocalpars(pdata,pdomain,localpars))
+    KC && (hdlocalpars = grid2hd(pdata,pdomain,localpars))
 
     # determine value type
     V = variables(problem)[var]
@@ -144,7 +144,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
       # find neighbors with previously estimated values
       nneigh = search!(neighbors, xₒ, bsearcher)
 
-      localestimator = KC ? nothing : mwvario(estimator, localpars[location])
+      localpar = (localpars.rotation[location],localpars.magnitude[:,location])
+      localestimator = KC ? nothing : mwvario(estimator, localpar)
 
       # skip location in there are too few neighbors
       if nneigh < minneighbors
@@ -165,11 +166,10 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
           krig = local_fit(localestimator, Xview, zview)
           μ, σ² = local_predict(krig, xₒ)
         else
-          println("To do")
-          #localargs = view(hdlocalpars, nneighids)
-          #push!(localargs, localpars[location])
-          #krig = local_fit(estimator, Xview, zview, localargs)
-          #μ, σ² = local_predict(krig, xₒ, localargs)
+          ∑neighs = view(hdlocalpars, nview)
+          krig = local_fit(estimator, Xview, zview, ∑neighs)
+          #push!(∑neighs, qmat(localpar...))
+          μ, σ² = local_predict(krig, xₒ, ∑neighs)
         end
 
         varμ[location] = μ
@@ -213,13 +213,15 @@ function local_lhs(estimator::KrigingEstimator, X::AbstractMatrix,
   LHS = Matrix{T}(undef, m, m)
 
   # set variogram/covariance block
-  localpars[1] == nothing && Variography.pairwise!(LHS, γ, X)
-  localpars[1] != nothing && kcfill!(LHS, γ, X, localpars)
+  KC = (localpars[1] == nothing) ? false : true
 
-  if isstationary(γ)
+  if !KC
+    Variography.pairwise!(LHS, γ, X)
     for j=1:nobs, i=1:nobs
       @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
     end
+  else
+    kcfill!(LHS, γ, X, localpars)
   end
 
   # set blocks of constraints
@@ -269,7 +271,12 @@ local_predict(estimator::FittedKriging, xₒ::AbstractVector, localpars::Abstrac
   combine(estimator, local_weights(estimator, xₒ, localpars), estimator.state.z)
 
 
+function grid2hd(pdata,pdomain,localpars)
+  hd = coordinates(pdata)
+  grid = coordinates(pdomain)
 
-function nnlocalpars(pdata,pdomain,localpars)
-  nothing
+  tree = KDTree(grid)
+  idxs, dists = nn(tree, hd)
+
+  [qmat(localpars.rotation[i],localpars.magnitude[:,i]) for i in idxs]
 end
