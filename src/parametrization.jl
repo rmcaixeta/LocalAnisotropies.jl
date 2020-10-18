@@ -78,4 +78,20 @@ end
 # end
 
 
+function rescale_magnitude!(localpars::LocalParameters, bounds::AbstractVector)
+    N = size(localpars.magnitude)[1]
+
+    for i in 2:N
+        m = localpars.magnitude[i,:]
+
+        qx = quantile(m, [0.05,0.95])
+        m[m .< qx[1]] .= qx[1]
+        m[m .> qx[2]] .= qx[2]
+        r = (m .- qx[1]) ./ (qx[2]-qx[1])
+        b1, b2 = bounds[i-1]
+        localpars.magnitude[i,:] .= (b1 .+ (b2-b1) .* r)
+    end
+end
+
+
 ## Interpolate LocalParameters: NN and IDW

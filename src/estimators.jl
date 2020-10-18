@@ -130,14 +130,19 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     varσ = Vector{V}(undef, nelms(pdomain))
 
     # pre-allocate memory for coordinates
-    xₒ = MVector{N,T}(undef)
+    #xₒ = MVector{N,T}(undef)
 
     # pre-allocate memory for neighbors
-    neighbors = Vector{Int}(undef, maxneighbors)
-    X = Matrix{T}(undef, N, maxneighbors)
+    #neighbors = Vector{Int}(undef, maxneighbors)
+    #X = Matrix{T}(undef, N, maxneighbors)
 
     # estimation loop
-    for location in traverse(pdomain, LinearPath())
+    Threads.@threads for location in traverse(pdomain, LinearPath())
+      # pre-allocate memory
+      xₒ = MVector{N,T}(undef)
+      neighbors = Vector{Int}(undef, maxneighbors)
+      X = Matrix{T}(undef, N, maxneighbors)
+
       # coordinates of neighborhood center
       coordinates!(xₒ, pdomain, location)
 
@@ -168,8 +173,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
         else
           ∑neighs = view(hdlocalpars, nview)
           krig = local_fit(estimator, Xview, zview, ∑neighs)
-          #push!(∑neighs, qmat(localpar...))
-          μ, σ² = local_predict(krig, xₒ, ∑neighs)
+          Qx₀ = qmat(localpar...)
+          μ, σ² = local_predict(krig, xₒ, (Qx₀,∑neighs))
         end
 
         varμ[location] = μ
@@ -232,27 +237,32 @@ end
 
 
 function set_local_rhs!(estimator::FittedKriging, xₒ::AbstractVector,
-  localpars::AbstractVector)
+  localpars::Tuple)
 
   γ = estimator.estimator.γ
   X = estimator.state.X
   RHS = estimator.state.RHS
 
-  #############################################################
-  #### FILL SOME OTHER WAY FOR KC
-  #############################################################
+  KC = localpars[1]==nothing ? false : true
 
   # RHS variogram/covariance
-  @inbounds for j in 1:size(X, 2)
-    xj = view(X,:,j)
-    RHS[j] = isstationary(γ) ? sill(γ) - γ(xj, xₒ) : γ(xj, xₒ)
+  if !KC
+    @inbounds for j in 1:size(X, 2)
+      xj = view(X,:,j)
+      RHS[j] = isstationary(γ) ? sill(γ) - γ(xj, xₒ) : γ(xj, xₒ)
+    end
+  else
+    @inbounds for j in 1:size(X, 2)
+      xj = view(X,:,j)
+      RHS[j] = kccov(γ, xₒ, xj, localpars[1], localpars[2][j])
+    end
   end
 
   set_constraints_rhs!(estimator, xₒ)
 end
 
 function local_weights(estimator::FittedKriging, xₒ::AbstractVector,
-  localpars::AbstractVector)
+  localpars::Tuple)
 
   nobs = size(estimator.state.X, 2)
 
@@ -267,7 +277,7 @@ function local_weights(estimator::FittedKriging, xₒ::AbstractVector,
   KrigingWeights(λ, ν)
 end
 
-local_predict(estimator::FittedKriging, xₒ::AbstractVector, localpars::AbstractVector=[nothing]) =
+local_predict(estimator::FittedKriging, xₒ::AbstractVector, localpars::Tuple=(nothing,)) =
   combine(estimator, local_weights(estimator, xₒ, localpars), estimator.state.z)
 
 

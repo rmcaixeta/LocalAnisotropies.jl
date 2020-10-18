@@ -24,6 +24,7 @@ include("variograms.jl")
 
 export
     LocalKriging,
-    gradients
+    gradients,
+    rescale_magnitude!
 
 end
