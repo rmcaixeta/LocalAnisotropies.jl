@@ -5,23 +5,6 @@
  e.g. γns = γ1(pars,local_pars) + γ2(pars) # only vary in the first structure
 """
 
-function get_pars(γ::Variogram)
-  #### do for multistructure later
-  kw = Dict(
-    :range => γ.range,
-    :distance => γ.distance,
-    :nugget => γ.nugget,
-    :sill => γ.sill
-  )
-
-  st1 = Dict(
-    :type => getfield(Main, nameof(typeof(γ))),
-    :kw => kw
-  )
-
-  [st1]
-end
-
 function qmat(q,m)
   N = length(m)
   P = quat_to_dcm(q)[SOneTo(N),SOneTo(N)]
@@ -36,11 +19,11 @@ function mwvario(estimator, localpar)
   local_d = Mahalanobis(Q)
 
   # get reference pars. and apply local anisotropy to given structures
-  ref_pars = get_pars(estimator.γ)
-  ### loop multi structure after updated struct
-  kwargs = ref_pars[1][:kw]
-  kwargs[:distance] = local_d
-  γl = ref_pars[1][:type](;kwargs...)
+  p = structures(estimator.γ)
+  γs = map(p[3]) do γ
+    γ = @set γ.distance = local_d
+  end
+  γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
 
   # return local estimator
   if typeof(estimator) <: SimpleKriging
@@ -75,11 +58,11 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   local_d = Mahalanobis(Qij)
 
   # get reference pars. and apply local anisotropy to given structures
-  ref_pars = get_pars(γ)
-  ### loop multi structure after updated struct
-  kwargs = ref_pars[1][:kw]
-  kwargs[:distance] = local_d
-  γl = ref_pars[1][:type](;kwargs...)
+  p = structures(γ)
+  γs = map(p[3]) do γ
+    γ = @set γ.distance = local_d
+  end
+  γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
 
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end

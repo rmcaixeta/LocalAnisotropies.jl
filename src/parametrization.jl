@@ -73,11 +73,6 @@ end
 # end
 
 
-# function EmpiricalVariogram(ref_pt, pars)
-#     # local variography
-# end
-
-
 function rescale_magnitude!(localpars::LocalParameters, bounds::AbstractVector)
     N = size(localpars.magnitude)[1]
 
@@ -92,6 +87,32 @@ function rescale_magnitude!(localpars::LocalParameters, bounds::AbstractVector)
         localpars.magnitude[i,:] .= (b1 .+ (b2-b1) .* r)
     end
 end
+
+"""
+Generic function that cross-validate multiple scenarios and return an optimal local field
+
+
+struct TestSet
+  refimgs::AbstractVector{AbstractDomain}
+  variogram::AbstractVector{Variogram}=[(:Y,γ1),(:X,γ2)]
+  smooth::AbstractVector{Number}
+  estmethods::AbstractVector{Symbol}=[:MovingWindows,:KernelConvolution]
+  search::AbstractArray{Search}=[KNN(15),KNN(30),KNN(50)]
+  folds::Int=10
+
+  # Any better way to represent it?
+  ratio1limits::AbstractArray{Tuple(Float64,Float64)}=[(0.2,1.0),(0.5,1.0)]
+  ratio2limits::AbstractArray{Tuple(Float64,Float64)}
+end
+
+
+function localpars(problem::EstimationProblem, testset::TestSet=nothing)
+    KNN(neigh) = KNearestSearcher(pdata, maxneighbors, metric=distance)
+    testset == nothing && ()
+    (:variogram=(:Z,γ), :neighborhood=s, :localpars=optlocalpars, :method=m)
+end
+
+"""
 
 
 ## Interpolate LocalParameters: NN and IDW

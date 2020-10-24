@@ -1,17 +1,19 @@
 module LocalAnisotropies
 
 using Distances
-using LinearAlgebra
+using GeoStatsBase
 using ImageFiltering
+using KrigingEstimators
+using KrigingEstimators
+using LinearAlgebra
+using LossFunctions
 using MultivariateStats
 using NearestNeighbors
-using KrigingEstimators
-using StaticArrays
 using ReferenceFrameRotations
-using WriteVTK
-using GeoStatsBase
-using KrigingEstimators
+using Setfield
+using StaticArrays
 using Variography
+using WriteVTK
 
 import GeoStatsBase: solve
 import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
@@ -21,6 +23,7 @@ include("estimators.jl")
 include("parametrization.jl")
 include("partitions.jl")
 include("variograms.jl")
+include("tmp/cross_validation.jl")
 
 export
     LocalKriging,

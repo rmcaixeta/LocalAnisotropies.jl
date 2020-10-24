@@ -2,19 +2,21 @@
  Estimators using local anisotropies
  - Kriging using non-stationary covariances: MW, KC, DE(?)
  - IDW: MW, averaged matrix
+
+
+
 """
 
-## Necessary custom functions in the end
-## Think how to deal with local pars for vaio structure
+## Structure adapted from KrigingEstimators.jl
 
 
 @estimsolver LocalKriging begin
-  @param variogram = GaussianVariogram()
+  @param variogram = ExponentialVariogram() # (:Y, ExponentialVariogram)
   @param mean = nothing #0.0 or [1.0,0.8,....]
   @param method = :MovingWindows
   @param localpars = [nothing]
   @param minneighbors = 1
-  @param maxneighbors = 40
+  @param maxneighbors = 20
   @param neighborhood = nothing
   @param distance = Euclidean()
 end
