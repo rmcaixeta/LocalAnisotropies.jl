@@ -52,9 +52,9 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
 
       # determine which Kriging variant to use
       if varparams.mean ≠ nothing
-        estimator = SimpleKriging(varparams.variogram, varparams.mean)
+        estimator = SimpleKriging(varparams.variogram[2], varparams.mean)
       else
-        estimator = OrdinaryKriging(varparams.variogram)
+        estimator = OrdinaryKriging(varparams.variogram[2])
       end
 
       # determine minimum/maximum number of neighbors
@@ -83,9 +83,19 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
         bsearcher = nothing
       end
 
-      # local inputs
+      # local inputs; adjust ratios according to axis of ref vario
       method = varparams.method
+      ax = varparams.variogram[1]
       localpars = varparams.localpars
+      if ax!=:X
+        ix = Dict(:X=>1,:Y=>2,:Z=>3)
+        m = localpars.magnitude
+        ref = m[ix[ax],:]
+        for i in size(m, 1)
+          m[i,:] ./= ref
+        end
+        localpars = LocalParameters(localpars.rotation,m)
+      end
 
       # check pars
       okmeth = method in [:MovingWindows, :KernelConvolution]
