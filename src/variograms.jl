@@ -66,3 +66,13 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
 
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end
+
+function setref_axis(localpars::LocalParameters, ax::Symbol)
+  ix = Dict(:X=>1,:Y=>2,:Z=>3)
+  m = localpars.magnitude
+  ref = m[ix[ax],:]
+  for i in size(m, 1)
+    m[i,:] ./= ref
+  end
+  LocalParameters(localpars.rotation,m)
+end

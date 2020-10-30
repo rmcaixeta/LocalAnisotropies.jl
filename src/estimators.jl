@@ -14,7 +14,8 @@
   @param variogram = ExponentialVariogram() # (:Y, ExponentialVariogram)
   @param mean = nothing #0.0 or [1.0,0.8,....]
   @param method = :MovingWindows
-  @param localpars = [nothing]
+  @param localpars = nothing
+  @param localparshd = nothing
   @param minneighbors = 1
   @param maxneighbors = 20
   @param neighborhood = nothing
@@ -85,17 +86,14 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
 
       # local inputs; adjust ratios according to axis of ref vario
       method = varparams.method
+      KC = method == :KernelConvolution ? true : false
       ax = varparams.variogram[1]
-      localpars = varparams.localpars
+      localpars, localparshd = (varparams.localpars, varparams.localparshd)
       if ax!=:X
-        ix = Dict(:X=>1,:Y=>2,:Z=>3)
-        m = localpars.magnitude
-        ref = m[ix[ax],:]
-        for i in size(m, 1)
-          m[i,:] ./= ref
-        end
-        localpars = LocalParameters(localpars.rotation,m)
+        localpars = setref_axis(localpars, ax)
+        localparshd != nothing && (localparshd = setref_axis(localparshd, ax))
       end
+      (localparshd != nothing && KC) && (localparshd = toqmat(localparshd))
 
       # check pars
       okmeth = method in [:MovingWindows, :KernelConvolution]
@@ -112,7 +110,8 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
                       maxneighbors=maxneighbors,
                       bsearcher=bsearcher,
                       method=method,
-                      localpars=localpars)
+                      localpars=localpars,
+                      localparshd=localparshd)
     end
   end
 
@@ -128,11 +127,11 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     T = coordtype(pdomain)
 
     # unpack preprocessed parameters
-    estimator, minneighbors, maxneighbors, bsearcher, method, localpars = preproc[var]
+    estimator, minneighbors, maxneighbors, bsearcher, method, localpars, hdlocalpars = preproc[var]
     KC = method == :KernelConvolution ? true : false
 
     # if KC, pass localpars to hard data
-    KC && (hdlocalpars = grid2hd(pdata,pdomain,localpars))
+    (KC && hdlocalpars==nothing) && (hdlocalpars = grid2hd(pdata,pdomain,localpars))
 
     # determine value type
     V = variables(problem)[var]
@@ -302,3 +301,15 @@ function grid2hd(pdata,pdomain,localpars)
 
   [qmat(localpars.rotation[i],localpars.magnitude[:,i]) for i in idxs]
 end
+
+function grid2hd_ids(pdata,pdomain)
+  hd = coordinates(pdata)
+  grid = coordinates(pdomain)
+
+  tree = KDTree(grid)
+  idxs, dists = nn(tree, hd)
+
+  [i for i in idxs]
+end
+
+toqmat(lp) = [qmat(lp.rotation[i],lp.magnitude[:,i]) for i in 1:length(lp.rotation)]

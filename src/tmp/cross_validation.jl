@@ -23,6 +23,8 @@ function cverror(solver::AbstractSolver,
   # folds for cross-validation
   folds  = subsets(partition(sdata, partitioner))
   nfolds = length(folds)
+  dataids = grid2hd_ids(sdata,domain(problem))
+  hdpars = Dict(v => slicelp(solver.vparams[v].localpars, dataids) for v in ovars)
 
   # error for a fold k
   function ε(k)
@@ -33,15 +35,25 @@ function cverror(solver::AbstractSolver,
     # source and target data
     train = view(sdata, sinds)
     hold  = view(sdata, tinds)
+    vpars = []
+    for v in ovars
+      p = pars2tuple(solver.vparams[v])
+      # find one to modify solver; or create new one
+      p = @set p.localparshd = slicelp(hdpars[v], sinds)
+      p = @set p.localpars = slicelp(hdpars[v], tinds)
+      push!(vpars,p)
+    end
+
+    lsolver = LocalKriging(zip(ovars,vpars)...)
 
     # setup and solve sub-problem
     subproblem = EstimationProblem(train, domain(hold), Tuple(ovars))
-    solution   = solve(subproblem, solver)
+    solution   = solve(subproblem, lsolver)
 
     # loss for each variable
     losses = map(ovars) do var
       y = hold[var]
-      ŷ = EP ? solution[var].mean : solution[var]
+      ŷ = solution[var].mean
       ℒ = value(loss[var], y, ŷ, AggMode.Mean())
       var => ℒ
     end
@@ -50,8 +62,12 @@ function cverror(solver::AbstractSolver,
   end
 
   # compute error for each fold in parallel
-  εs = foldxt(vcat, Map(ε), 1:nfolds)
+  εs = mapreduce(ε, vcat, 1:nfolds)
 
   # combine error from different folds
   Dict(var => mean(get.(εs, var, 0)) for var in ovars)
 end
+
+
+pars2tuple(p) =
+  (;(v=>getfield(p, v) for v in fieldnames(typeof(p)) if v != :__dummy__)...)

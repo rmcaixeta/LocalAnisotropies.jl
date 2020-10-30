@@ -28,6 +28,8 @@ include("tmp/cross_validation.jl")
 export
     LocalKriging,
     gradients,
-    rescale_magnitude
+    rescale_magnitude,
+    localpars,
+    TestSet
 
 end

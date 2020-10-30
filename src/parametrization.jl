@@ -20,6 +20,9 @@ struct LocalParameters
   magnitude::AbstractArray{AbstractFloat,2}
 end
 
+slicelp(lp::LocalParameters,ids) = LocalParameters(lp.rotation[ids],lp.magnitude[:,ids])
+
+
 function gridneighbors(img, i::CartesianIndex, window::Int)
     dim = Size(img)
     minid(d) = max(1,i[d]-window)
@@ -92,55 +95,66 @@ function rescale_magnitude(lp::LocalParameters, bounds1, bounds2=nothing)
     LocalParameters(lp.rotation,m)
 end
 
-"""
-Generic function that cross-validate multiple scenarios and return an optimal local field
 
-searchtests(pdata, maxneighbors::AbstractVector{Int}; metric=Euclidean()) =
-    [KNearestSearcher(pdata, n, metric=metric) for n in maxneighbors]
+#Generic function that cross-validate multiple scenarios and return an optimal local field
 
-
-struct TestSet
-  refimgs::AbstractVector=[(img,prop1),(img,prop2)]
+Base.@kwdef mutable struct TestSet
+  refimgs::AbstractVector # [(img,prop1),(img,prop2)]
   smooth::AbstractVector{Number}
-  meths::AbstractVector{Symbol}=[:MovingWindows,:KernelConvolution]
-  search::AbstractArray{Search}=[KNN(15),KNN(30),KNN(50)]
-  variogram::AbstractVector=[(:Y,γ1),(:X,γ2)]
-  ratio1::AbstractArray=[(0.2,1.0),(0.5,1.0)]
-  ratio2::AbstractArray=[nothing]
+  variogram::AbstractVector # [(:Y,γ1),(:X,γ2)]
 
-  folds::Int=10
-  forcegradients::Bool=false
+  ratio1::AbstractArray = [(0.2,1.0),(0.5,1.0)]
+  ratio2::AbstractArray = [nothing]
+  meths::AbstractVector{Symbol} = [:MovingWindows,:KernelConvolution]
+  maxneighbors::AbstractArray{Int} = [15,25,40]
+
+  #search::AbstractArray{Search}=[KNN(15),KNN(30),KNN(50)]
+
+  folds::Int = 10
+  forcegradients::Bool = false
 
 end
 
 
+macro name(arg)
+   string(arg)
+end
+
 function localpars(problem::EstimationProblem, t::TestSet)
-
+    ip = Iterators.product
     vars = [v for (v,V) in variables(problem)]
-    for (img,w) in Iterators.product(t.refimgs, t.smooth)
-        M = typeof(img[1]) <: RegularGrid || forcegradients
-        lpars = M ? gradients(img[1],img[2],w) : geometry(img,w)
 
-        for (r1,r2) in Iterators.product(t.ratio1, t.ratio2)
+    bestε = Dict(v => Inf for v in vars)
+    optpars = Dict()
+    listε = Dict(v => [] for v in vars)
+
+    ids = grid2hd_ids(data(problem),domain(problem))
+
+    for (img,w) in ip(t.refimgs, t.smooth)
+        M = typeof(img[1]) <: RegularGrid || t.forcegradients
+        #lpars = M ? gradients(img[1],img[2],w) : geometry(img,w)
+        lpars = gradients(img[1],img[2],w)
+
+        for (r1,r2) in ip(t.ratio1, t.ratio2)
             lx = rescale_magnitude(lpars, r1, r2)
 
-            for (v,s,e,γ) in Iterators.product(vars, t.search, t.meths, t.variogram)
-                p = (variogram=γ, localpars=lx, method=e, neighborhood=s)
+            for (v,n,e,γ) in ip(vars, t.maxneighbors, t.meths, t.variogram)
+                p = (variogram=γ, localpars=lx, method=e, maxneighbors=n)
                 solver = LocalKriging(v => p)
                 cv = CrossValidation(t.folds)
                 ε = cverror(solver, problem, cv)
+                push!(listε[v],ε[v])
+
+                if bestε[v]>ε[v]
+                    bestε[v] = ε[v]
+                    optpars[v] = p
+                end
             end
         end
     end
 
-    # store ε and pars
-    # get optimal pars
-    # generic call for search or is it constrained to original pdata in case o cv?
-
-    (variogram=(:Z,γ), neighborhood=neigh, localpars=optlocalpars, method=m)
+    optpars
 end
-
-"""
 
 
 ## Interpolate LocalParameters: NN and IDW
