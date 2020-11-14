@@ -20,7 +20,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
 Distances = "0.10"
-GeoStatsBase = "0.14"
+GeoStatsBase = "0.14, 0.15"
 ImageFiltering = "0.6"
 KrigingEstimators = "0.4"
 LossFunctions = "0.6"
