@@ -37,7 +37,9 @@ function gradients(preimg, prop, window)
     N = length(dims)
 
     # extract gradients (maybe need an extra method to deal with big datasets)
-    img = reshape(preimg.table[prop], Size(dims))
+    factor = maximum(preimg.table[prop]) - minimum(preimg.table[prop])
+    factor = factor < 1000 ? 100 : 1
+    img = round.(Int,(factor .* reshape(preimg.table[prop], Size(dims)) )) # temp solution
     g = imgradients(img, KernelFactors.sobel, "replicate")
 
     quat = Array{Quaternion}(undef,size(img)) # make some better way to store it
@@ -55,9 +57,11 @@ function gradients(preimg, prop, window)
         V = T.vectors[:, sortperm(T.values)]'
         if N==3
             eigv = V
+			det(V) < 0 && (eigv = Diagonal(SVector{3}([-1,1,1])) * eigv)
         else
             eigv = zeros(Float64,3,3)
             eigv[1:2,1:2] = V
+			eigv[1,1] ≉ eigv[2,2] && (eigv[1,:] .*= -1)
             eigv[3,3] = 1.0
             eigv = SMatrix{3,3}(eigv)
         end
@@ -76,14 +80,14 @@ end
 # end
 
 
-function rescale_magnitude(lp::LocalParameters, bounds1, bounds2=nothing)
+function rescale_magnitude(lp::LocalParameters, bounds1, bounds2=nothing; clip=[0.05,0.95])
     N = bounds2==nothing ? 2 : size(lp.magnitude,1)
     m = lp.magnitude
     bounds = [bounds1,bounds2]
 
     for i in 2:N
         mi = m[i,:]
-        qx = quantile(mi, [0.05,0.95])
+        qx = quantile(mi, clip)
         mi[mi .< qx[1]] .= qx[1]
         mi[mi .> qx[2]] .= qx[2]
         r = (mi .- qx[1]) ./ (qx[2]-qx[1])
@@ -156,5 +160,24 @@ function localpars(problem::EstimationProblem, t::TestSet)
     optpars
 end
 
+
+function localpars2vtk(vtkfile,coords,lpars; dir=1,magnitude=:r1)
+	dim = size(coords,1)
+	n = size(coords,2)
+	xyz = dim == 2 ? vcat(coords, zeros(Float64,1,n)) : coords
+	verts = [MeshCell( VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
+	ijk = zeros(Float64, 3, n, 1, 1)
+	for x in 1:n
+		dcm = quat_to_dcm(lpars[x])
+		ijk[1, x, 1, 1] = dcm[x][dir,1]
+		ijk[2, x, 1, 1] = dcm[x][dir,2]
+		ijk[3, x, 1, 1] = dcm[x][dir,3]
+	end
+	scale = magnitude == :r1 ? 2 : 3
+	outfiles = vtk_grid(vtkfile,xyz,(verts)) do vtk
+		vtk["orient"] = ijk
+		vtk["scale"] = (1 + eps()) .- localpars.magnitude[scale,:]
+	end
+end
 
 ## Interpolate LocalParameters: NN and IDW
