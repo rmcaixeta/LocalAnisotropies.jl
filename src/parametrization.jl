@@ -80,12 +80,13 @@ end
 # end
 
 
-function rescale_magnitude(lp::LocalParameters, bounds1, bounds2=nothing; clip=[0.05,0.95])
-    N = bounds2==nothing ? 2 : size(lp.magnitude,1)
+function rescale_magnitude(lp::LocalParameters, r1, r2=nothing; clip=[0.05,0.95])
+    N = size(lp.magnitude,1)
     m = lp.magnitude
-    bounds = [bounds1,bounds2]
+    bounds = [r1,r2]
 
     for i in 2:N
+		bounds[i-1] == nothing && continue
         mi = m[i,:]
         qx = quantile(mi, clip)
         mi[mi .< qx[1]] .= qx[1]
@@ -168,16 +169,71 @@ function localpars2vtk(vtkfile,coords,lpars; dir=1,magnitude=:r1)
 	verts = [MeshCell( VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
 	ijk = zeros(Float64, 3, n, 1, 1)
 	for x in 1:n
-		dcm = quat_to_dcm(lpars[x])
-		ijk[1, x, 1, 1] = dcm[x][dir,1]
-		ijk[2, x, 1, 1] = dcm[x][dir,2]
-		ijk[3, x, 1, 1] = dcm[x][dir,3]
+		dcm = quat_to_dcm(lpars.rotation[x])
+		ijk[1, x, 1, 1] = dcm[dir,1]
+		ijk[2, x, 1, 1] = dcm[dir,2]
+		ijk[3, x, 1, 1] = dcm[dir,3]
 	end
 	scale = magnitude == :r1 ? 2 : 3
 	outfiles = vtk_grid(vtkfile,xyz,(verts)) do vtk
 		vtk["orient"] = ijk
-		vtk["scale"] = (1 + eps()) .- localpars.magnitude[scale,:]
+		vtk["scale"] = (1 + eps()) .- lpars.magnitude[scale,:]
 	end
 end
+
+
+function pca(X)
+	N = size(X,1)
+	M = fit(PCA, X, maxoutdim=N, pratio=1)
+	λ = principalvars(M)
+	nv = length(λ)
+	v = N == 3 ? projection(M) : vcat(projection(M),[0 0 1][1:nv])
+
+	if nv == 1
+		vx = [-v[2,1]; v[1,1]; v[3,1]]
+		v = hcat(v,vx,cross(v,vx))
+		append!(λ,[-1.,-1.])
+	elseif nv == 2 && N==3
+		v = hcat(v,cross(v[:,1],v[:,2]))
+		push!(λ,-1.)
+	end
+	λ[1:N], SMatrix{3,3}(v)
+end
+
+
+function pcavector(geopts, searcher::AbstractNeighborSearcher)
+	X = coordinates(geopts)
+	N, len = size(X)
+
+    quat = Array{Quaternion}(undef,len)
+    m = Array{Vector}(undef,len)
+
+    Threads.@threads for i in 1:len
+        icoords = view(X,:,i)
+		neighids = search(icoords, searcher)
+		λ, v = pca(view(X,:,neighids))
+
+		det(v) < 0 && (v = Diagonal(SVector{3}([-1,1,1])) * v)
+
+        q = dcm_to_quat(v)
+        quat[i] = q
+        m[i] = λ/λ[1]
+    end
+
+	# deal with -1 eigvals
+	m = reduce(hcat,vec(m))
+	posm = m .> 0
+	if sum(posm) < N*len
+		for d in 2:N
+			posd = view(posm,d,:)
+			sum(posd) == len && continue
+			minx = minimum(view(m,d,findall(posd)))
+			m[d,findall(.!posd)] .= minx
+		end
+	end
+
+    LocalParameters(quat, m)
+end
+
 
 ## Interpolate LocalParameters: NN and IDW

@@ -26,10 +26,11 @@ include("variograms.jl")
 include("tmp/cross_validation.jl")
 
 export
-    LocalKriging,
     gradients,
-    rescale_magnitude,
     localpars,
+    localpars2vtk,
+    pcavector,
+    rescale_magnitude,
+    LocalKriging,
     TestSet
-
 end

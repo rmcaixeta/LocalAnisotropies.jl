@@ -1,6 +1,5 @@
 # ------------------------------------------------------------------
 # Temporarily ported and adapted from GeoStatsBase.jl
-# Licensed under the ISC License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
 
