@@ -53,7 +53,7 @@ function gradients(preimg, prop, window)
             end
         end
 
-        T = eigen(SMatrix{N,N}(tensor))
+        T = eigen(Symmetric(SMatrix{N,N}(tensor)))
         V = T.vectors[:, sortperm(T.values)]'
         if N==3
             eigv = V
@@ -170,9 +170,10 @@ function localpars2vtk(vtkfile,coords,lpars; dir=1,magnitude=:r1)
 	ijk = zeros(Float64, 3, n, 1, 1)
 	for x in 1:n
 		dcm = quat_to_dcm(lpars.rotation[x])
-		ijk[1, x, 1, 1] = dcm[dir,1]
-		ijk[2, x, 1, 1] = dcm[dir,2]
-		ijk[3, x, 1, 1] = dcm[dir,3]
+        f = dcm[3,3] < 0 ? -1 : 1
+		ijk[1, x, 1, 1] = f*dcm[dir,1]
+		ijk[2, x, 1, 1] = f*dcm[dir,2]
+		ijk[3, x, 1, 1] = f*dcm[dir,3]
 	end
 	scale = magnitude == :r1 ? 2 : 3
 	outfiles = vtk_grid(vtkfile,xyz,(verts)) do vtk
@@ -191,7 +192,7 @@ function pca(X)
 
 	if nv == 1
 		vx = [-v[2,1]; v[1,1]; v[3,1]]
-		v = hcat(v,vx,cross(v,vx))
+		v = hcat(v,vx,cross(v[:,1],vx))
 		append!(λ,[-1.,-1.])
 	elseif nv == 2 && N==3
 		v = hcat(v,cross(v[:,1],v[:,2]))
@@ -235,5 +236,19 @@ function pcavector(geopts, searcher::AbstractNeighborSearcher)
     LocalParameters(quat, m)
 end
 
+# Later adapt it to interpolation using IDW weights
+function smooth(lpars, geopts, searcher::AbstractNeighborSearcher)
+	X = coordinates(geopts)
+	N, len = size(X)
 
-## Interpolate LocalParameters: NN and IDW
+    quat = Array{Quaternion}(undef,len)
+    m = Array{Vector}(undef,len)
+
+    Threads.@threads for i in 1:len
+        icoords = view(X,:,i)
+		neighids = search(icoords, searcher)
+		quat[i] = quatavg(view(lpars.rotation,neighids))
+    end
+
+    LocalParameters(quat, lpars.magnitude)
+end

@@ -22,6 +22,7 @@ import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
 include("estimators.jl")
 include("parametrization.jl")
 include("partitions.jl")
+include("quaternions.jl")
 include("variograms.jl")
 include("tmp/cross_validation.jl")
 
@@ -31,6 +32,7 @@ export
     localpars2vtk,
     pcavector,
     rescale_magnitude,
+    smooth,
     LocalKriging,
     TestSet
 end
