@@ -21,18 +21,27 @@ import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
 
 include("estimators.jl")
 include("parametrization.jl")
-include("partitions.jl")
-include("quaternions.jl")
-include("variograms.jl")
-include("tmp/cross_validation.jl")
+include("estimators/cross_validation.jl")
+include("estimators/idw.jl")
+include("estimators/kriging.jl")
+include("estimators/variograms.jl")
+include("parametrization/calibration.jl")
+include("parametrization/geometric.jl")
+include("parametrization/gradients.jl")
+include("parametrization/interpolation.jl")
+include("parametrization/partitions.jl")
+include("parametrization/searchers.jl")
+include("parametrization/utilities.jl")
+#include("spatialtransforms/lmds.jl")
+#include("spatialtransforms/metrics.jl")
 
 export
-    gradients,
     localpars,
     localpars2vtk,
-    pcavector,
     rescale_magnitude,
     smooth,
+    Geometric,
+    Gradients,
     LocalKriging,
     TestSet
 end

@@ -1,4 +1,23 @@
 
+
+# Later adapt it to interpolation using IDW weights
+function smooth(lpars, searcher::AbstractNeighborSearcher)
+	X = coordinates(searcher.object)
+	N, len = size(X)
+
+    quat = Array{Quaternion}(undef,len)
+    m = Array{Vector}(undef,len)
+
+    Threads.@threads for i in 1:len
+        icoords = view(X,:,i)
+		neighids = search(icoords, searcher)
+		quat[i] = quatavg(view(lpars.rotation,neighids))
+    end
+
+    LocalParameters(quat, lpars.magnitude)
+end
+
+
 # Rerference: Markley, F. Landis, Yang Cheng, John Lucas Crassidis, and Yaakov Oshman.
 # "Averaging quaternions." Journal of Guidance, Control, and Dynamics 30,
 # no. 4 (2007): 1193-1197.
