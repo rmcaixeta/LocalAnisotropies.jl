@@ -23,7 +23,7 @@ function cverror(solver::AbstractSolver,
   folds  = subsets(partition(sdata, partitioner))
   nfolds = length(folds)
   dataids = grid2hd_ids(sdata,domain(problem))
-  hdpars = Dict(v => slicelp(solver.vparams[v].localpars, dataids) for v in ovars)
+  hdpars = Dict(v => slice(solver.vparams[v].localpars, dataids) for v in ovars)
 
   # error for a fold k
   function ε(k)
@@ -38,8 +38,8 @@ function cverror(solver::AbstractSolver,
     for v in ovars
       p = pars2tuple(solver.vparams[v])
       # find one to modify solver; or create new one
-      p = @set p.localparshd = slicelp(hdpars[v], sinds)
-      p = @set p.localpars = slicelp(hdpars[v], tinds)
+      p = @set p.localparshd = slice(hdpars[v], sinds)
+      p = @set p.localpars = slice(hdpars[v], tinds)
       push!(vpars,p)
     end
 

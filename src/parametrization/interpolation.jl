@@ -1,17 +1,17 @@
 
 
 # Later adapt it to interpolation using IDW weights
-function smooth(lpars, searcher::AbstractNeighborSearcher)
-	X = coordinates(searcher.object)
-	N, len = size(X)
+function smooth(lpars, searcher::NeighborSearchMethod)
+	D = searcher.object
+	N, len = ncoords(D), nelms(D)
 
     quat = Array{Quaternion}(undef,len)
     m = Array{Vector}(undef,len)
 
     Threads.@threads for i in 1:len
-        icoords = view(X,:,i)
+        icoords = coordinates(D,i)
 		neighids = search(icoords, searcher)
-		quat[i] = quatavg(view(lpars.rotation,neighids))
+		quat[i] = quatavg(rotation(lpars,neighids))
     end
 
     LocalParameters(quat, lpars.magnitude)

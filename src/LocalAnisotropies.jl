@@ -4,13 +4,14 @@ using Distances
 using GeoStatsBase
 using ImageFiltering
 using KrigingEstimators
-using KrigingEstimators
+using LightGraphs:dijkstra_shortest_paths,connected_components
 using LinearAlgebra
 using LossFunctions
 using MultivariateStats
 using NearestNeighbors
 using ReferenceFrameRotations
 using Setfield
+using SimpleWeightedGraphs
 using StaticArrays
 using Variography
 using WriteVTK
@@ -32,10 +33,12 @@ include("parametrization/interpolation.jl")
 include("parametrization/partitions.jl")
 include("parametrization/searchers.jl")
 include("parametrization/utilities.jl")
-#include("spatialtransforms/lmds.jl")
-#include("spatialtransforms/metrics.jl")
+include("spacetransforms/deformation.jl")
+include("spacetransforms/graph.jl")
+include("spacetransforms/metrics.jl")
 
 export
+    deformspace,
     localpars,
     localpars2vtk,
     rescale_magnitude,
@@ -43,5 +46,6 @@ export
     Geometric,
     Gradients,
     LocalKriging,
+    LocalSpatialData,
     TestSet
 end

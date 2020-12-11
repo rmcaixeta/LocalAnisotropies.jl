@@ -1,6 +1,5 @@
-abstract type Geometric end
 
-function localpars(::Type{Geometric}, searcher::AbstractNeighborSearcher;
+function localpars(::Type{Geometric}, searcher::NeighborSearchMethod;
 	reg::Bool=false)
 	X = coordinates(searcher.object)
 	N, len = size(X)
@@ -9,9 +8,9 @@ function localpars(::Type{Geometric}, searcher::AbstractNeighborSearcher;
     m = Array{Vector}(undef,len)
 
     Threads.@threads for i in 1:len
-        icoords = view(X,:,i)
-		neighids = search(icoords, searcher)
-		λ, v = pca(view(X,:,neighids),regularizeplane)
+        icoord = view(X,:,i)
+		neighids = search(icoord, searcher)
+		λ, v = pca(view(X,:,neighids),reg)
 
 		det(v) < 0 && (v = Diagonal(SVector{3}([-1,1,1])) * v)
 

@@ -1,6 +1,4 @@
 
-abstract type Gradients end
-
 function localpars(::Type{Gradients}, obj, prop, window)
     # get dimensions
     dims = obj.domain.dims

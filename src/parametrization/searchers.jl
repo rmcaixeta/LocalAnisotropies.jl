@@ -8,16 +8,6 @@ function gridneighbors(img, i::CartesianIndex, window::Int)
     CartesianIndices(idx)
 end
 
-function grid2hd(pdata,pdomain,localpars)
-  hd = coordinates(pdata)
-  grid = coordinates(pdomain)
-
-  tree = KDTree(grid)
-  idxs, dists = nn(tree, hd)
-
-  [qmat(localpars.rotation[i],localpars.magnitude[:,i]) for i in idxs]
-end
-
 function grid2hd_ids(pdata,pdomain)
   hd = coordinates(pdata)
   grid = coordinates(pdomain)
@@ -26,4 +16,9 @@ function grid2hd_ids(pdata,pdomain)
   idxs, dists = nn(tree, hd)
 
   [i for i in idxs]
+end
+
+function grid2hd_qmat(pdata,pdomain,localpars)
+  idxs = grid2hd_ids(pdata,pdomain)
+  [qmat(rotation(localpars,i),magnitude(localpars,i)) for i in idxs]
 end

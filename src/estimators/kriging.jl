@@ -48,15 +48,15 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
           neigh = varparams.neighborhood
 
           if neigh isa BallNeighborhood
-            bsearcher = KBallSearcher(pdata, maxneighbors, neigh)
+            bsearcher = KBallSearch(pdata, maxneighbors, neigh)
           else
-            searcher  = NeighborhoodSearcher(pdata, neigh)
-            bsearcher = BoundedSearcher(searcher, maxneighbors)
+            searcher  = NeighborhoodSearch(pdata, neigh)
+            bsearcher = BoundedSearch(searcher, maxneighbors)
           end
         else
           # nearest neighbor search with a distance
           distance = varparams.distance
-          bsearcher = KNearestSearcher(pdata, maxneighbors, metric=distance)
+          bsearcher = KNearestSearch(pdata, maxneighbors, metric=distance)
         end
       else
         # use all data points as neighbors
@@ -110,7 +110,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     KC = method == :KernelConvolution ? true : false
 
     # if KC, pass localpars to hard data
-    (KC && hdlocalpars==nothing) && (hdlocalpars = grid2hd(pdata,pdomain,localpars))
+    (KC && hdlocalpars==nothing) && (hdlocalpars = grid2hd_qmat(pdata,pdomain,localpars))
 
     # determine value type
     V = variables(problem)[var]
@@ -139,7 +139,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
       # find neighbors with previously estimated values
       nneigh = search!(neighbors, xₒ, bsearcher)
 
-      localpar = (localpars.rotation[location],localpars.magnitude[:,location])
+      localpar = (rotation(localpars,location),magnitude(localpars,location))
       localestimator = KC ? nothing : mwvario(estimator, localpar)
 
       # skip location in there are too few neighbors

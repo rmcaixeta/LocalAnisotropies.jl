@@ -1,7 +1,7 @@
 
 
 function rescale_magnitude(lp::LocalParameters, r1, r2=nothing; clip=[0.05,0.95])
-    N = size(lp.magnitude,1)
+    N = ndims(lp)
     m = lp.magnitude
     bounds = [r1,r2]
 
@@ -41,4 +41,4 @@ function localpars2vtk(vtkfile,coords,lpars; dir=1,magnitude=:r1)
 	end
 end
 
-toqmat(lp) = [qmat(lp.rotation[i],lp.magnitude[:,i]) for i in 1:length(lp.rotation)]
+toqmat(lp) = [qmat(rotation(lp,i),magnitude(lp,i)) for i in 1:nvals(lp)]
