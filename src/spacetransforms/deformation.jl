@@ -1,16 +1,34 @@
 
-function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric;
+function deformspace(obj::GeoData, lpar::LocalParameters, metric::LocalMetric;
 	anchors=1500, maxoutdim=10, weights=nothing)
-	D = LocalSpatialData(obj,lpar)
-	deformation(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
+	D = LocalGeoData(obj,lpar)
+	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
+end
+
+function deformspace(obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
+	refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
+	D = LocalGeoData(obj,lpar,refvario)
+	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
+end
+
+function deformspace(hd::GeoData, obj::GeoData, lpar::LocalParameters,
+	metric::LocalMetric; anchors=1500, maxoutdim=10, weights=nothing)
+	D = LocalGeoData(hd,obj,lpar)
+	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
+end
+
+function deformspace(hd::GeoData, obj::GeoData, lpar::LocalParameters,
+	metric::LocalMetric, refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
+	D = LocalGeoData(hd,obj,lpar,refvario)
+	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
 # metric = LocalVariogram, LocalAnisotropy, GraphDistance
-function deformspace(D::LocalSpatialData, metric::LocalMetric;
+function deformspace(D::LocalGeoData, metric::LocalMetric;
 	anchors=1500, maxoutdim=10, weights=nothing)
 
 	#@assert graph exists if GraphDistance
-	dim, n = ndims(D), nvals(D)
+	dim, n = ndims(D), nall(D)
 	n < anchors && (anchors = n)
 
 	ianchors = setanchors(n, anchors, weights)
@@ -33,7 +51,8 @@ function deformspace(D::LocalSpatialData, metric::LocalMetric;
     	tcoords = transform(M)
 		#println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[λ .> 0]))")
 	end
-	georef(obj(D).table, tcoords)
+
+	outobj(D, tcoords)
 end
 
 function setanchors(n,anchors,weights)
@@ -44,7 +63,7 @@ function setanchors(n,anchors,weights)
 	sort!(ianchors)
 end
 
-function dissmatrix!(ADM, D::LocalSpatialData, metric::LocalMetric, ia::Vector{Int})
+function dissmatrix!(ADM, D::LocalGeoData, metric::LocalMetric, ia::Vector{Int})
 	n = nvals(D)
 	for i in 1:n
 		dcols = colwise(D, metric, i, ia[i:end])
@@ -63,22 +82,33 @@ function anchors_mds(ADM, maxoutdim)
 	sorti = sortperm(F.values,rev=true)
 	sortλ = λ[sorti]
     EM = (F.vectors[:,sorti])[:,1:maxdim]
-	println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[λ .> 0]))")
+	println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[sortλ .> 0]))")
     sq_eigenvals = sortλ[1:maxdim].^0.5
     AM = Diagonal(sq_eigenvals)
     atcoords = permutedims(EM*AM)
 
 	# to use later for another points allocations
 	M1 = permutedims(EM)
-	M1 ./= reshape(sq_eigenvals,1,maxdim)
-	M3 = Array{Float64}(undef,(nx,1))
+	M1 ./= reshape(sq_eigenvals,maxdim,1)
+	M3 = Array{Float64}(undef,nx) #Array{Float64}(undef,(nx,1))
 	mean!(M3,ADM.^2)
 
 	atcoords, M1, M3
 end
 
-function triangulation(D::LocalSpatialData, metric::LocalMetric,i,j,M1,M3)
+function triangulation(D::LocalGeoData, metric::LocalMetric,i,j,M1,M3)
 	M2 = colwise(D, metric, i, j) .^ 2
-	# reshape/transpose it?
 	-0.5*M1*(M2-M3)
+end
+
+
+function outobj(D, coord)
+	out = if sdata(D)
+		n, hn = nvals(D), nall(D)
+		h1 = n+1
+		georef(values(sobj(D)), view(coord,:,h1:hn)), georef(values(obj(D)), view(coord,:,1:n))
+	else
+		georef(values(obj(D)), coord)
+	end
+	out
 end

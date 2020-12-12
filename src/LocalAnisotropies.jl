@@ -13,6 +13,7 @@ using ReferenceFrameRotations
 using Setfield
 using SimpleWeightedGraphs
 using StaticArrays
+using StatsBase:mean!
 using Variography
 using WriteVTK
 
@@ -45,7 +46,10 @@ export
     smooth,
     Geometric,
     Gradients,
+    GraphDistance,
+    LocalAnisotropy,
     LocalKriging,
-    LocalSpatialData,
+    LocalGeoData,
+    LocalVariogram,
     TestSet
 end
