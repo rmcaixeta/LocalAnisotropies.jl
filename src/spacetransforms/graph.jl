@@ -6,6 +6,27 @@ function addgraph(obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
 	addgraph!(D, metric, searcher)
 end
 
+function addgraph(obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
+	refvario::Variogram, searcher::NeighborSearchMethod)
+
+	D = LocalGeoData(obj, lpar, refvario)
+	addgraph!(D, metric, searcher)
+end
+
+function addgraph(hd::GeoData, obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
+	searcher::NeighborSearchMethod)
+
+	D = LocalGeoData(hd, obj,lpar)
+	addgraph!(D, metric, searcher)
+end
+
+function addgraph(hd::GeoData, obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
+	refvario::Variogram, searcher::NeighborSearchMethod)
+
+	D = LocalGeoData(hd, obj, lpar, refvario)
+	addgraph!(D, metric, searcher)
+end
+
 function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearchMethod)
 	O = searcher.object
 	n = nelms(O)
@@ -14,7 +35,7 @@ function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearc
 	for i in 1:n
 		icoord = coordinates(O,i)
 		idxs = search(icoord, searcher)
-		for j in idx
+		for j in idxs
 			push!(sources, i)
 			push!(dest, j)
 			push!(wgts, evaluate(D, metric, i, j))
@@ -30,8 +51,6 @@ function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearc
 			push!(wgts, evaluate(D, metric, i, j))
 		end
 	end
-
-	# make with hd, id being i+n
 
 	g = SimpleWeightedGraph(sources, dest, wgts)
 	comps = length(connected_components(g))

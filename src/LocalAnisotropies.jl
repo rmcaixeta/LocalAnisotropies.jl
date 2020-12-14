@@ -39,6 +39,7 @@ include("spacetransforms/graph.jl")
 include("spacetransforms/metrics.jl")
 
 export
+    addgraph,
     deformspace,
     localpars,
     localpars2vtk,

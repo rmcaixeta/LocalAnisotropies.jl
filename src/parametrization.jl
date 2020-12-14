@@ -75,7 +75,6 @@ function Base.show(io::IO, ::MIME"text/plain", ld::LocalGeoData)
 	println(io,"LocalGeoData $(ndims(ld))-D")
 end
 
-
 abstract type LocalParMethods end
 struct Geometric <: LocalParMethods end
 struct Gradients <: LocalParMethods end

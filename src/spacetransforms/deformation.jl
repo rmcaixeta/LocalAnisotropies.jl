@@ -63,10 +63,10 @@ function setanchors(n,anchors,weights)
 	sort!(ianchors)
 end
 
-function dissmatrix!(ADM, D::LocalGeoData, metric::LocalMetric, ia::Vector{Int})
-	n = nvals(D)
-	for i in 1:n
-		dcols = colwise(D, metric, i, ia[i:end])
+function dissmatrix!(ADM, D::LocalGeoData, metric::LocalMetric, iax::Vector{Int})
+	n = size(ADM,1)
+	for (i,ia) in enumerate(iax)
+		dcols = colwise(D, metric, ia, iax[i:n])
 		for (d,j) in zip(dcols,i:n)
 			ADM[i,j] = ADM[j,i] = d
 		end
