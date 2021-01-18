@@ -82,5 +82,5 @@ struct Gradients <: LocalParMethods end
 
 abstract type LocalMetric end
 struct LocalAnisotropy <: LocalMetric end
-struct LocalVariogram <: LocalMetric end
-struct GraphDistance <: LocalMetric end
+struct LocalVariogram  <: LocalMetric end
+struct GraphDistance   <: LocalMetric end

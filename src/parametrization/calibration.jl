@@ -21,7 +21,7 @@ macro name(arg)
    string(arg)
 end
 
-function localpars(t::TestPars, problem::EstimationProblem)
+function localparameters(t::TestPars, problem::EstimationProblem)
     ip = Iterators.product
     vars = [v for (v,V) in variables(problem)]
 
@@ -34,7 +34,7 @@ function localpars(t::TestPars, problem::EstimationProblem)
     for (img,w) in ip(t.refimgs, t.smooth)
         M = typeof(img[1]) <: RegularGrid || t.forcegradients
         #lpars = M ? gradients(img[1],img[2],w) : geometry(img,w)
-        lpars = localpars(Gradients,img[1],img[2],w)
+        lpars = localparameters(Gradients,img[1],img[2],w)
 
         for (r1,r2) in ip(t.ratio1, t.ratio2)
             lx = rescale_magnitude(lpars, r1, r2)

@@ -1,5 +1,5 @@
 
-function localpars(::Gradients, obj, prop, window)
+function localparameters(::Gradients, obj, prop, window)
     # get dimensions
     dims = obj.domain.dims
     N = length(dims)

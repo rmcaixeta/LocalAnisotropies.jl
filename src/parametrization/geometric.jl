@@ -1,5 +1,5 @@
 
-function localpars(::Geometric, searcher::NeighborSearchMethod;
+function localparameters(::Geometric, searcher::NeighborSearchMethod;
 	reg::Bool=false)
 	X = coordinates(searcher.object)
 	N, len = size(X)
