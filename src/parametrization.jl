@@ -20,7 +20,7 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
 	println(io,"LocalParameters $(ndims(lp))-D")
 end
 
-GeoData = Union{SpatialData,GeoStatsBase.DataView}
+GeoData = Union{AbstractDomain,AbstractData}
 struct LocalGeoData
 	data::GeoData
 	object::GeoData

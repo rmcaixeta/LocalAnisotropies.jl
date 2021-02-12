@@ -56,7 +56,7 @@ function deformspace(D::LocalGeoData, metric::LocalMetric;
 end
 
 function setanchors(n,anchors,weights)
-	n == anchors && (return 1:n)
+	n == anchors && (return collect(1:n))
 	# maybe need to convert GeoStatsBase weights to StatsBase format
 	args = weights == nothing ? (1:n, anchors) : (1:n, weights, anchors)
 	ianchors = sample(args..., replace=false)
@@ -82,7 +82,7 @@ function anchors_mds(ADM, maxoutdim)
 	sorti = sortperm(F.values,rev=true)
 	sortλ = λ[sorti]
     EM = (F.vectors[:,sorti])[:,1:maxdim]
-	println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[sortλ .> 0]))")
+	#println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[sortλ .> 0]))")
     sq_eigenvals = sortλ[1:maxdim].^0.5
     AM = Diagonal(sq_eigenvals)
     atcoords = permutedims(EM*AM)

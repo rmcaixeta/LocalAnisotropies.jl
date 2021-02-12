@@ -1,4 +1,11 @@
 # LocalAnisotropies
 
-[![Build Status](https://travis-ci.com/rmcaixeta/LocalAnisotropies.jl.svg?branch=master)](https://travis-ci.com/rmcaixeta/LocalAnisotropies.jl)
-[![Coverage](https://codecov.io/gh/rmcaixeta/LocalAnisotropies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rmcaixeta/LocalAnisotropies.jl)
+[![Build Status][build-img]][build-url] [![Coverage][codecov-img]][codecov-url]
+
+
+
+[build-img]: https://img.shields.io/github/workflow/status/rmcaixeta/LocalAnisotropies.jl/CI?style=flat-square
+[build-url]: https://github.com/rmcaixeta/LocalAnisotropies.jl/actions
+
+[codecov-img]: https://codecov.io/gh/rmcaixeta/LocalAnisotropies.jl/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/rmcaixeta/LocalAnisotropies.jl

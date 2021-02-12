@@ -46,9 +46,6 @@ function exportpars(out, lpars::LocalParameters, convention=:GSLIB)
     CSV.write(out, table)
 end
 
-
-
-
 # convert LocalParameters into angles + ranges ### Simplify it
 function convertpars(lpars::LocalParameters, convention=:GSLIB)
     pars = []

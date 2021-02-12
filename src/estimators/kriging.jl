@@ -7,13 +7,13 @@ function solve(problem::EstimationProblem, solver::LocalKriging)
 
   # results for each variable
   μs = []; σs = []
-  for (var, V) in variables(problem)
+  for var in name.(variables(problem))
     varμ, varσ = local_solve_approx(problem, var, preproc)
     push!(μs, var => varμ)
-    push!(σs, var => varσ)
+    push!(σs, Symbol(var,"-variance") => varσ)
   end
 
-  EstimationSolution(domain(problem), Dict(μs), Dict(σs))
+  georef((; μs..., σs...), domain(problem))
 end
 
 
@@ -105,6 +105,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     N = ncoords(pdomain)
     T = coordtype(pdomain)
 
+    mactypeof = Dict(name(v) => mactype(v) for v in variables(problem))
+
     # unpack preprocessed parameters
     estimator, minneighbors, maxneighbors, bsearcher, method, localpars, hdlocalpars = preproc[var]
     KC = method == :KernelConvolution ? true : false
@@ -113,7 +115,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     (KC && hdlocalpars==nothing) && (hdlocalpars = grid2hd_qmat(pdata,pdomain,localpars))
 
     # determine value type
-    V = variables(problem)[var]
+    V = mactypeof[var]
 
     # pre-allocate memory for result
     varμ = Vector{V}(undef, nelms(pdomain))

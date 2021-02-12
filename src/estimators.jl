@@ -1,6 +1,6 @@
 
 @estimsolver LocalKriging begin
-  @param variogram = ExponentialVariogram() # (:Y, ExponentialVariogram)
+  @param variogram = (:X => ExponentialVariogram())
   @param mean = nothing #0.0 or [1.0,0.8,....]
   @param method = :MovingWindows
   @param localpars = nothing
