@@ -51,21 +51,21 @@ import LocalAnisotropies: rotmat
         # Spatial deformation
         searcher = KNearestSearch(G, 10)
 
-        Sd1, Dd1 = deformspace(S, G, lpars, LocalAnisotropy(), anchors=1500, maxoutdim=3)
+        Sd1, Dd1 = deformspace(S, G, lpars, LocalAnisotropy(), anchors=1500)
         Pd = EstimationProblem(Sd1, Dd1, :P)
         s3 = solve(Pd, Kriging(:P => (variogram=γ,)))
 
-        Sd2, Dd2 = deformspace(S, G, lpars, LocalVariogram(), γ, anchors=1500, maxoutdim=3)
+        Sd2, Dd2 = deformspace(S, G, lpars, LocalVariogram(), γ, anchors=1500)
         Pd = EstimationProblem(Sd2, Dd2, :P)
         s4 = solve(Pd, Kriging(:P => (variogram=γ,)))
 
         LDa = addgraph(S, G, lpars, LocalAnisotropy(), searcher)
-        Sd3, Dd3 = deformspace(LDa, GraphDistance(), anchors=1500, maxoutdim=3)
+        Sd3, Dd3 = deformspace(LDa, GraphDistance(), anchors=1500)
         Pd = EstimationProblem(Sd3, Dd3, :P)
         s5 = solve(Pd, Kriging(:P => (variogram=γ,)))
 
         LDv = addgraph(S, G, lpars, LocalVariogram(), γ, searcher)
-        Sd4, Dd4 = deformspace(LDv, GraphDistance(), anchors=1500, maxoutdim=3)
+        Sd4, Dd4 = deformspace(LDv, GraphDistance(), anchors=1500)
         Pd = EstimationProblem(Sd4, Dd4, :P)
         s6 = solve(Pd, Kriging(:P => (variogram=γ,)))
     end
