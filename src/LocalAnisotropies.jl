@@ -53,6 +53,7 @@ export
     Geometric,
     Gradients,
     GraphDistance,
+    IDWpars,
     LocalAnisotropy,
     LocalGeoData,
     LocalKriging,

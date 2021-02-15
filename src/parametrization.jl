@@ -17,7 +17,7 @@ ndims(L::LocalParameters) = size(L.magnitude,1)
 Base.show(io::IO, lp::LocalParameters) = print(io, "LocalParameters")
 
 function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
-	println(io,"LocalParameters $(ndims(lp))-D")
+	print(io,"LocalParameters $(ndims(lp))-D")
 end
 
 GeoData = Union{AbstractDomain,AbstractData}
@@ -72,7 +72,7 @@ magnitude(D::LocalGeoData, i::Ints) = i<=nvals(D) ? view(magnitude(D), :, i) : v
 Base.show(io::IO, ld::LocalGeoData) = print(io, "LocalGeoData")
 
 function Base.show(io::IO, ::MIME"text/plain", ld::LocalGeoData)
-	println(io,"LocalGeoData $(ndims(ld))-D")
+	print(io,"LocalGeoData $(ndims(ld))-D")
 end
 
 abstract type LocalParMethods end

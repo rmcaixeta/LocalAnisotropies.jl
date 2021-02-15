@@ -7,10 +7,11 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 	D = searcher.object
 	N = ncoords(D)
 	len = domain==nothing ? nelms(D) : nelms(domain)
-	@assert nelms(D)==length(lpars) "searcher domain must match number of local parameters"
+	@assert nelms(D)==nvals(lpars) "searcher domain must match number of local parameters"
 
     quat = Array{Quaternion}(undef,len)
-    m    = domain==nothing && power==0 ? lpars.magnitude : Array{Vector}(undef,len)
+	mag  = lpars.magnitude
+    m    = domain==nothing && power==0 ? mag : Array{Float64}(undef,N,len)
 
     Threads.@threads for i in 1:len
         icoords  = domain==nothing ? coordinates(D,i) : coordinates(domain,i)
@@ -22,16 +23,17 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 		elseif power==0.0
 			quat[i] = quatavg(rotation(lpars,neighids))
 			if domain!=nothing
-				mi   = magnitude(lpars,neighids)
-				m[i] = mapreduce(x->quantile(view(mi,x,:),0.5), vcat, 1:N)
+				mi      = magnitude(lpars,neighids)
+				m[:,i] .= mapreduce(x->quantile(view(mi,x,:),0.5), vcat, 1:N)
 			end
 		else
-			xcoords = map(x->coordinates(D,x), neighids)
-			weigths = 1 ./ (eps() .+ colwise(metric, icoords, xcoords)) .^ power
-			weights = Weights(weights ./ sum(weights))
+			xcoords = coordinates(D,neighids)
+			prewgts = 1 ./ (eps() .+ Distances.colwise(metric, icoords, xcoords)) .^ power
+			weights = prewgts ./ sum(prewgts)
 			quat[i] = quatavg(rotation(lpars,neighids), weights)
 			mi      = magnitude(lpars,neighids)
-			m[i]    = mapreduce(x->StatsBase.quantile(view(mi,x,:),weights,0.5), vcat, 1:N)
+			wgts    = Weights(weights)
+			m[:,i] .= mapreduce(x->quantile(view(mi,x,:),wgts,0.5), vcat, 1:N)
 		end
     end
 
