@@ -23,7 +23,8 @@ import LocalAnisotropies: rotmat
 
     for dims in (grid2d, grid3d)
         # reference scenario for tests
-        D = if length(dims)==2
+		R = length(dims)
+		D = if R==2
     		georef((P=[sin(i)+j for i in 1:dims[1], j in 1:dims[2]],))
     	else
     		georef((P=[sin(i)+j+k for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]],))
@@ -42,7 +43,11 @@ import LocalAnisotropies: rotmat
         lpars = smoothpars(lpars, searcher)
 
         # interpolate in a coarser grid
-        G_ = RegularGrid((5,5),(0.5,0.5),(2.0,2.0))
+        G_ = if R==2
+			RegularGrid((5,5),(0.5,0.5),(2.0,2.0))
+		else
+			RegularGrid((5,5,3),(0.5,0.5,0.5),(2.0,2.0,2.0))
+		end
         lpars_ = IDWpars(lpars, searcher, G_)
 
         # Estimation problem
