@@ -27,7 +27,7 @@ CSV = "0.5, 0.6, 0.7, 0.8"
 Distances = "0.10"
 GeoStatsBase = "0.16, 0,17"
 ImageFiltering = "0.6"
-KrigingEstimators = "0.4, 0.5"
+KrigingEstimators = "0.4, 0.5, 0.6"
 LightGraphs = "1.3"
 LossFunctions = "0.6"
 MultivariateStats = "0.7, 0.8"
@@ -42,8 +42,8 @@ WriteVTK = "1.7"
 julia = "1"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 GeoStats = "dcc97b0b-8ce5-5539-9008-bb190f959ef6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test","GeoStats"]
+test = ["Test", "GeoStats"]
