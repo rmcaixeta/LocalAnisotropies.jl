@@ -37,13 +37,13 @@ Setfield = "0.7"
 SimpleWeightedGraphs = "1.1"
 StaticArrays = "0.12, 1.0"
 StatsBase = "0.32, 0.33"
-Variography = "0.9, 0.10"
+Variography = "0.9, 0.10, 0.11"
 WriteVTK = "1.7"
 julia = "1"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 GeoStats = "dcc97b0b-8ce5-5539-9008-bb190f959ef6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test","GeoStats"]
+test = ["Test", "GeoStats"]
