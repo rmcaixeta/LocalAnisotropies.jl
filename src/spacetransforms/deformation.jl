@@ -108,10 +108,12 @@ function outobj(D, coord)
 		n, hn = nvals(D), nall(D)
 		h1 = n+1
 		dc   = view(coord,:,1:n)
-		dobj = dom isa AbstractDomain ? PointSet(dc) : georef(dom, dc)
+		#dobj = dom isa AbstractDomain ? PointSet(dc) : georef(dom, dc)
+		dobj = georef(dom, dc)
 		georef(values(sobj(D)), view(coord,:,h1:hn)), dobj
 	else
-		dobj = dom isa AbstractDomain ? PointSet(coord) : georef(dom, coord)
+		#dobj = dom isa AbstractDomain ? PointSet(coord) : georef(dom, coord)
+		dobj = georef(dom, coord)
 		dobj
 	end
 	out

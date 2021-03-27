@@ -20,7 +20,6 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
 	print(io,"LocalParameters $(ndims(lp))-D")
 end
 
-GeoData = Union{AbstractDomain,AbstractData}
 struct LocalGeoData
 	data::GeoData
 	object::GeoData
@@ -58,7 +57,7 @@ spars(D::LocalGeoData) = D.datapars
 spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]
 spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
-coords(D::LocalGeoData, i::Int) = i<=nvals(D) ? coordinates(obj(D),i) : coordinates(sobj(D),i-nvals(D))
+coords(D::LocalGeoData, i::Int) = i<=nvals(D) ? centroid(obj(D),i) : centroid(sobj(D),i-nvals(D))
 
 rotation(D::LocalGeoData) = D.localpars.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))

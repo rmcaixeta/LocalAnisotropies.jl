@@ -14,7 +14,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
     m    = domain==nothing && power==0 ? mag : Array{Float64}(undef,N,len)
 
     Threads.@threads for i in 1:len
-        icoords  = domain==nothing ? coordinates(D,i) : coordinates(domain,i)
+        icoords  = domain==nothing ? centroid(D,i) : centroid(domain,i)
 		neighids = search(icoords, searcher)
 
 		if length(neighids) == 0
@@ -27,7 +27,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 				m[:,i] .= mapreduce(x->quantile(view(mi,x,:),0.5), vcat, 1:N)
 			end
 		else
-			xcoords = coordinates(D,neighids)
+			xcoords = centroid(D,neighids)
 			prewgts = 1 ./ (eps() .+ Distances.colwise(metric, icoords, xcoords)) .^ power
 			weights = prewgts ./ sum(prewgts)
 			quat[i] = quatavg(rotation(lpars,neighids), weights)

@@ -33,7 +33,7 @@ function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearc
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()
 
 	for i in 1:n
-		icoord = coordinates(O,i)
+		icoord = centroid(O,i)
 		idxs = search(icoord, searcher)
 		for j in idxs
 			push!(sources, i)

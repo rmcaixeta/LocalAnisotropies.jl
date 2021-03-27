@@ -1,7 +1,7 @@
 
 function localparameters(::Geometric, searcher::NeighborSearchMethod;
 	reg::Bool=false)
-	X = coordinates(searcher.object)
+	X = centroid(searcher.object)
 	N, len = size(X)
 
     quat = Array{Quaternion}(undef,len)

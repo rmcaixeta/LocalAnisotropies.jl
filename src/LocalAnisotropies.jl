@@ -8,6 +8,7 @@ using KrigingEstimators
 using LightGraphs:dijkstra_shortest_paths,connected_components
 using LinearAlgebra
 using LossFunctions
+using Meshes
 using MultivariateStats
 using NearestNeighbors
 using ReferenceFrameRotations
@@ -24,11 +25,11 @@ import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
 
 include("estimators.jl")
 include("parametrization.jl")
-include("estimators/cross_validation.jl")
+#include("estimators/cross_validation.jl")
 include("estimators/idw.jl")
 include("estimators/kriging.jl")
 include("estimators/variograms.jl")
-include("parametrization/calibration.jl")
+#include("parametrization/calibration.jl")
 include("parametrization/conventions.jl")
 include("parametrization/conversions.jl")
 include("parametrization/geometric.jl")

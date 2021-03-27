@@ -121,7 +121,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     varμ = Vector{V}(undef, nelms(pdomain))
     varσ = Vector{V}(undef, nelms(pdomain))
 
-    # pre-allocate memory for coordinates
+    # pre-allocate memory for centroid
     #xₒ = MVector{N,T}(undef)
 
     # pre-allocate memory for neighbors
@@ -135,8 +135,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
       neighbors = Vector{Int}(undef, maxneighbors)
       X = Matrix{T}(undef, N, maxneighbors)
 
-      # coordinates of neighborhood center
-      coordinates!(xₒ, pdomain, location)
+      # centroid of neighborhood center
+      centroid!(xₒ, pdomain, location)
 
       # find neighbors with previously estimated values
       nneigh = search!(neighbors, xₒ, bsearcher)
@@ -152,8 +152,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
         # final set of neighbors
         nview = view(neighbors, 1:nneigh)
 
-        # get neighbors coordinates and values
-        coordinates!(X, pdata, nview)
+        # get neighbors centroid and values
+        centroid!(X, pdata, nview)
 
         Xview = view(X,:,1:nneigh)
         zview = view(pdata[var], nview)

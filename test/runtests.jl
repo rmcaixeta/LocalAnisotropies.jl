@@ -32,7 +32,7 @@ import LocalAnisotropies: rotmat
 
         n = round(Int, 0.2*prod(dims))
         S = sample(D, n, replace=false)
-        G = RegularGrid(dims...)
+        G = CartesianGrid(dims...)
         searcher = KNearestSearch(G, 10)
 
         # get local parameters

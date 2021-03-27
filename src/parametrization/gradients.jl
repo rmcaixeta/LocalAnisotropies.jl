@@ -1,13 +1,14 @@
 
 function localparameters(::Gradients, obj, prop, window)
     # get dimensions
-    dims = obj.domain.dims
-    N = length(dims)
+    dims  = obj.domain.dims
+    N     = length(dims)
+	propv = getproperty(obj.table,prop)
 
     # extract gradients (maybe need an extra method to deal with big datasets)
-    factor = maximum(obj.table[!,prop]) - minimum(obj.table[!,prop])
+    factor = maximum(propv) - minimum(propv)
     factor = factor < 1000 ? 100 : 1
-    img = round.(Int,(factor .* reshape(obj.table[!,prop], Size(dims)) )) # temp solution
+    img = round.(Int,(factor .* reshape(propv, Size(dims)) )) # temp solution
     g = imgradients(img, KernelFactors.sobel, "replicate")
 
     quat = Array{Quaternion}(undef,size(img)) # make some better way to store it

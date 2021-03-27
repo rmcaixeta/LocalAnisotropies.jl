@@ -1,13 +1,15 @@
 
-# output conversion main format? a1, a2, a3, r1, r2, r3 (coordinates too?)
+# output conversion main format? a1, a2, a3, r1, r2, r3 (centroid too?)
 # extra conventions: MainPlaneNormalAngles, MainPlaneNormal, MainPlaneAngles, MainPlaneVector
 # only convert: Dir1Angles, Dir1Vector, ....
 
 # convert angles + ranges into LocalParameters
 function LocalParameters(data::GeoData, angles::AbstractVector,
     semiaxes::AbstractVector, convention=:GSLIB)
+    semiaxes = Symbol.(semiaxes)
+    angles   = Symbol.(angles)
     tab  = values(data)
-    cols = names(tab)
+    cols = string.(propertynames(tab))
     len  = size(tab,1)
     @assert string.(angles)   ⊆ cols "angle column name do not exist"
     @assert string.(semiaxes) ⊆ cols "semiaxis column name do not exist"
@@ -16,8 +18,8 @@ function LocalParameters(data::GeoData, angles::AbstractVector,
     m = Array{Vector}(undef,len)
 
     for i in 1:len
-        xsemiaxes = [tab[i,x] for x in semiaxes] ./ tab[i,semiaxes[1]]
-        xangles   = [tab[i,x] for x in angles]
+        xsemiaxes = [getproperty(tab[i],x) for x in semiaxes] ./ getproperty(tab[i],semiaxes[1])
+        xangles   = [getproperty(tab[i],x) for x in angles]
 
         P, Λ = rotmat(xsemiaxes, xangles, convention; rev=false)
         size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
