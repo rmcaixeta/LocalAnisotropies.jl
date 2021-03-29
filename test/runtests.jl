@@ -44,9 +44,9 @@ import LocalAnisotropies: rotmat
 
         # interpolate in a coarser grid
         G_ = if R==2
-			RegularGrid((5,5),(0.5,0.5),(2.0,2.0))
+			CartesianGrid((5,5),(0.5,0.5),(2.0,2.0))
 		else
-			RegularGrid((5,5,3),(0.5,0.5,0.5),(2.0,2.0,2.0))
+			CartesianGrid((5,5,3),(0.5,0.5,0.5),(2.0,2.0,2.0))
 		end
         lpars_ = IDWpars(lpars, searcher, G_)
 

@@ -20,6 +20,8 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
 	print(io,"LocalParameters $(ndims(lp))-D")
 end
 
+coords(g, inds::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(g, i)) for i in inds])
+
 struct LocalGeoData
 	data::GeoData
 	object::GeoData
@@ -49,15 +51,15 @@ end
 
 obj(D::LocalGeoData) = D.object
 sobj(D::LocalGeoData) = D.data
-ndims(D::LocalGeoData) = ncoords(D.object)
+ndims(D::LocalGeoData) = embeddim(D.object)
 sdata(D::LocalGeoData) = sobj(D) != nothing
-nvals(D::LocalGeoData) = nelms(D.object)
-snvals(D::LocalGeoData) = nelms(D.data)
+nvals(D::LocalGeoData) = nelements(D.object)
+snvals(D::LocalGeoData) = nelements(D.data)
 spars(D::LocalGeoData) = D.datapars
 spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]
 spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
-coords(D::LocalGeoData, i::Int) = i<=nvals(D) ? centroid(obj(D),i) : centroid(sobj(D),i-nvals(D))
+coords(D::LocalGeoData, i::Int) = i<=nvals(D) ? coordinates(centroid(obj(D),i)) : coordinates(centroid(sobj(D),i-nvals(D)))
 
 rotation(D::LocalGeoData) = D.localpars.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))

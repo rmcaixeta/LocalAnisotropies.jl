@@ -32,7 +32,7 @@ function localparameters(t::TestPars, problem::EstimationProblem)
     ids = grid2hd_ids(data(problem),domain(problem))
 
     for (img,w) in ip(t.refimgs, t.smooth)
-        M = typeof(img[1]) <: RegularGrid || t.forcegradients
+        M = typeof(img[1]) <: CartesianGrid || t.forcegradients
         #lpars = M ? gradients(img[1],img[2],w) : geometry(img,w)
         lpars = localparameters(Gradients,img[1],img[2],w)
 

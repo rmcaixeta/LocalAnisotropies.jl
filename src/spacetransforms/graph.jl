@@ -29,12 +29,12 @@ end
 
 function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearchMethod)
 	O = searcher.object
-	n = nelms(O)
+	n = nelements(O)
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()
 
 	for i in 1:n
-		icoord = centroid(O,i)
-		idxs = search(icoord, searcher)
+		icoord = coordinates(centroid(O,i))
+		idxs   = search(icoord, searcher)
 		for j in idxs
 			push!(sources, i)
 			push!(dest, j)

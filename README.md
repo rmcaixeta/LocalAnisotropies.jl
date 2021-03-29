@@ -43,7 +43,7 @@ using Plots
 # reference scenario for tests
 D = georef((P=[sin(i)+j for i in 1:20, j in 1:20],))
 S = sample(D, 80, replace=false)
-G = RegularGrid(20,20)
+G = CartesianGrid(20,20)
 
 # Estimation problem
 P = EstimationProblem(S, G, :P)
@@ -123,7 +123,7 @@ dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
 pars  = LocalParameters(dummy, [:az], [:r1,:r2], :GSLIB)
 
 # interpolate local parameters into a coarser grid
-G_ = RegularGrid((10,10),(0.5,0.5),(2.0,2.0))
+G_ = CartesianGrid((10,10),(0.5,0.5),(2.0,2.0))
 lpars_ = IDWpars(lpars, searcher, G_, power=2)
 
 # convert between different rotation conventions
