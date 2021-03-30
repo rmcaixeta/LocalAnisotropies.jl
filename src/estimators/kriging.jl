@@ -47,7 +47,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
           # local search with a neighborhood
           neigh = varparams.neighborhood
 
-          if neigh isa BallNeighborhood
+          if neigh isa MetricBall
             bsearcher = KBallSearch(pdata, maxneighbors, neigh)
           else
             searcher  = NeighborhoodSearch(pdata, neigh)
@@ -102,8 +102,6 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     # retrieve problem info
     pdata = data(problem)
     pdomain = domain(problem)
-    N = embeddim(pdomain)
-    T = coordtype(pdomain)
 
     mactypeof = Dict(name(v) => mactype(v) for v in variables(problem))
 
@@ -121,15 +119,9 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     varμ = Vector{V}(undef, nelements(pdomain))
     varσ = Vector{V}(undef, nelements(pdomain))
 
-    # pre-allocate memory for centroid
-    #pₒ = MVector{N,T}(undef)
-
-    # pre-allocate memory for neighbors
-    #neighbors = Vector{Int}(undef, maxneighbors)
-    #X = Matrix{T}(undef, N, maxneighbors)
-
     # estimation loop
-    Threads.@threads for location in traverse(pdomain, LinearPath())
+    #Threads.@threads for location in traverse(pdomain, LinearPath())
+    for location in traverse(pdomain, LinearPath())
       # pre-allocate memory
       neighbors = Vector{Int}(undef, maxneighbors)
 
@@ -153,16 +145,13 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
         # get neighbors centroid and values
         X = view(pdata, nview)
 
-        Xview = view(X,:,1:nneigh)
-        zview = view(pdata[var], nview)
-
         # fit estimator to data and predict mean and variance
         if !KC
-          krig = local_fit(localestimator, Xview, zview)
+          krig = local_fit(localestimator, X, var)
           μ, σ² = local_predict(krig, pₒ)
         else
           ∑neighs = view(hdlocalpars, nview)
-          krig = local_fit(estimator, Xview, zview, ∑neighs)
+          krig = local_fit(estimator, X, var, ∑neighs)
           Qx₀ = qmat(localpar...)
           μ, σ² = local_predict(krig, pₒ, (Qx₀,∑neighs))
         end
@@ -176,33 +165,33 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 end
 
 
-function local_fit(estimator::KrigingEstimator, X::AbstractMatrix,
-  z::AbstractVector, localpars::AbstractVector=[nothing])
+function local_fit(estimator::KrigingEstimator, data, var,
+  localpars::AbstractVector=[nothing])
 
   # build Kriging system
-  LHS = local_lhs(estimator, X, localpars)
+  LHS = local_lhs(estimator, domain(data), localpars)
   RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
 
   # factorize LHS
   FLHS = factorize(estimator, LHS)
 
   # record Kriging state
-  state = KrigingState(X, z, FLHS, RHS)
+  state = KrigingState(data, var, FLHS, RHS)
 
   # return fitted estimator
   FittedKriging(estimator, state)
 end
 
 
-function local_lhs(estimator::KrigingEstimator, X::AbstractMatrix,
+function local_lhs(estimator::KrigingEstimator, domain,
   localpars::AbstractVector)
 
   γ = estimator.γ
-  nobs = size(X, 2)
+  nobs = nelements(domain)
   ncons = nconstraints(estimator)
 
   # pre-allocate memory for LHS
-  x = view(X,:,1)
+  x = centroid(domain, 1)
   T = Variography.result_type(γ, x, x)
   m = nobs + ncons
   LHS = Matrix{T}(undef, m, m)
@@ -211,39 +200,39 @@ function local_lhs(estimator::KrigingEstimator, X::AbstractMatrix,
   KC = (localpars[1] == nothing) ? false : true
 
   if !KC
-    Variography.pairwise!(LHS, γ, X)
+    Variography.pairwise!(LHS, γ, domain)
     for j=1:nobs, i=1:nobs
       @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
     end
   else
-    kcfill!(LHS, γ, X, localpars)
+    kcfill!(LHS, γ, domain, localpars)
   end
 
   # set blocks of constraints
-  set_constraints_lhs!(estimator, LHS, X)
+  set_constraints_lhs!(estimator, LHS, domain)
 
   LHS
 end
 
 
-function set_local_rhs!(estimator::FittedKriging, pₒ::AbstractVector,
+function set_local_rhs!(estimator::FittedKriging, pₒ,
   localpars::Tuple)
 
   γ = estimator.estimator.γ
-  X = estimator.state.X
+  X = domain(estimator.state.data)
   RHS = estimator.state.RHS
 
   KC = localpars[1]==nothing ? false : true
 
   # RHS variogram/covariance
   if !KC
-    @inbounds for j in 1:size(X, 2)
-      xj = view(X,:,j)
+    @inbounds for j in 1:nelements(X)
+      xj = centroid(X, j)
       RHS[j] = isstationary(γ) ? sill(γ) - γ(xj, pₒ) : γ(xj, pₒ)
     end
   else
-    @inbounds for j in 1:size(X, 2)
-      xj = view(X,:,j)
+    @inbounds for j in 1:nelements(X)
+      xj = centroid(X, j)
       RHS[j] = kccov(γ, pₒ, xj, localpars[1], localpars[2][j])
     end
   end
@@ -251,10 +240,10 @@ function set_local_rhs!(estimator::FittedKriging, pₒ::AbstractVector,
   set_constraints_rhs!(estimator, pₒ)
 end
 
-function local_weights(estimator::FittedKriging, pₒ::AbstractVector,
+function local_weights(estimator::FittedKriging, pₒ,
   localpars::Tuple)
 
-  nobs = size(estimator.state.X, 2)
+  nobs = nelements(estimator.state.data)
 
   set_local_rhs!(estimator, pₒ, localpars)
 
@@ -267,5 +256,8 @@ function local_weights(estimator::FittedKriging, pₒ::AbstractVector,
   KrigingWeights(λ, ν)
 end
 
-local_predict(estimator::FittedKriging, pₒ::AbstractVector, localpars::Tuple=(nothing,)) =
-  combine(estimator, local_weights(estimator, pₒ, localpars), estimator.state.z)
+function local_predict(estimator::FittedKriging, pₒ, localpars::Tuple=(nothing,))
+  data = estimator.state.data
+  var  = estimator.state.var
+  combine(estimator, local_weights(estimator, pₒ, localpars), data[var])
+end

@@ -9,8 +9,8 @@ function gridneighbors(img, i::CartesianIndex, window::Int)
 end
 
 function grid2hd_ids(pdata,pdomain)
-  hd   = coordinates(centroid(pdata))
-  grid = coordinates(centroid(pdomain))
+  hd   = [coordinates(centroid(pdata, i)) for i in 1:nelements(pdata)]
+  grid = [coordinates(centroid(pdomain, i)) for i in 1:nelements(pdomain)]
 
   tree = KDTree(grid)
   idxs, dists = nn(tree, hd)

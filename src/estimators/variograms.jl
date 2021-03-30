@@ -34,15 +34,15 @@ function mwvario(estimator, localpar)
 
 end
 
-function kcfill!(Γ, γ::Variogram, X::AbstractMatrix, localpars)
+function kcfill!(Γ, γ::Variogram, X, localpars)
   # X = neighbors coords
   # need to consider LHS[i,j] = sill(γ) - LHS[i,j] to convert vario to covario
-  m, n = size(X)
+  n = nelements(X)
   @inbounds for j=1:n
-    xj = view(X, :, j)
+    xj = centroid(X, j)
     Qj = localpars[j]
     for i=j+1:n
-      xi = view(X, :, i)
+      xi = centroid(X, i)
       Qi = localpars[i]
       Γ[i,j] = kccov(γ, xi, xj, Qi, Qj)
     end
