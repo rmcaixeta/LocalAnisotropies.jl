@@ -4,7 +4,7 @@
 # only convert: Dir1Angles, Dir1Vector, ....
 
 # convert angles + ranges into LocalParameters
-function LocalParameters(data::GeoData, angles::AbstractVector,
+function LocalParameters(data::SpatialData, angles::AbstractVector,
     semiaxes::AbstractVector, convention=:GSLIB)
     semiaxes = Symbol.(semiaxes)
     angles   = Symbol.(angles)

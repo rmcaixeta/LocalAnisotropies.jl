@@ -1,23 +1,23 @@
 
-function deformspace(obj::GeoData, lpar::LocalParameters, metric::LocalMetric;
+function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric;
 	anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(obj::GeoData, lpar::LocalParameters, metric::LocalMetric,
+function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(hd::GeoData, obj::GeoData, lpar::LocalParameters,
+function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalParameters,
 	metric::LocalMetric; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(hd::GeoData, obj::GeoData, lpar::LocalParameters,
+function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalParameters,
 	metric::LocalMetric, refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
@@ -108,12 +108,10 @@ function outobj(D, coord)
 		n, hn = nvals(D), nall(D)
 		h1 = n+1
 		dc   = view(coord,:,1:n)
-		#dobj = dom isa AbstractDomain ? PointSet(dc) : georef(dom, dc)
-		dobj = georef(dom, dc)
+		dobj = dom isa Domain ? PointSet(dc) : georef(dom, dc)
 		georef(values(sobj(D)), view(coord,:,h1:hn)), dobj
 	else
-		#dobj = dom isa AbstractDomain ? PointSet(coord) : georef(dom, coord)
-		dobj = georef(dom, coord)
+		dobj = dom isa Domain ? PointSet(coord) : georef(dom, coord)
 		dobj
 	end
 	out

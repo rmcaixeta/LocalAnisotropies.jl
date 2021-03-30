@@ -20,31 +20,31 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
 	print(io,"LocalParameters $(ndims(lp))-D")
 end
 
-coords(g, inds::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(g, i)) for i in inds])
+SpatialData = Union{GeoData,Domain,DataView,DomainView}
 
 struct LocalGeoData
-	data::GeoData
-	object::GeoData
+	data::SpatialData
+	object::SpatialData
 	localpars::LocalParameters
 	refvario::Union{Variogram,Nothing}
 	datapars::Union{AbstractVector{Int},Nothing}
     graph::Union{SimpleWeightedGraph,Nothing}
 end
 
-function LocalGeoData(obj::GeoData, lpars::LocalParameters)
+function LocalGeoData(obj::SpatialData, lpars::LocalParameters)
 	LocalGeoData(nothing, obj, lpars, nothing, nothing, nothing)
 end
 
-function LocalGeoData(obj::GeoData, lpars::LocalParameters, refvario::Variogram)
+function LocalGeoData(obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
 	LocalGeoData(nothing, obj, lpars, refvario, nothing, nothing)
 end
 
-function LocalGeoData(hd::GeoData, obj::GeoData, lpars::LocalParameters)
+function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, nothing, hdids, nothing)
 end
 
-function LocalGeoData(hd::GeoData, obj::GeoData, lpars::LocalParameters, refvario::Variogram)
+function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, refvario, hdids, nothing)
 end
@@ -59,7 +59,9 @@ spars(D::LocalGeoData) = D.datapars
 spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]
 spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
-coords(D::LocalGeoData, i::Int) = i<=nvals(D) ? coordinates(centroid(obj(D),i)) : coordinates(centroid(sobj(D),i-nvals(D)))
+centro(D::LocalGeoData, i::Int) = i<=nvals(D) ? centroid(obj(D),i) : centroid(sobj(D),i-nvals(D))
+coords(D::LocalGeoData, i::Int) = coordinates(centro(D,i))
+coords(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(D,x)) for x in i])
 
 rotation(D::LocalGeoData) = D.localpars.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))

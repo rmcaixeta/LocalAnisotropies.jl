@@ -120,8 +120,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     varσ = Vector{V}(undef, nelements(pdomain))
 
     # estimation loop
-    #Threads.@threads for location in traverse(pdomain, LinearPath())
-    for location in traverse(pdomain, LinearPath())
+    Threads.@threads for location in traverse(pdomain, LinearPath())
       # pre-allocate memory
       neighbors = Vector{Int}(undef, maxneighbors)
 
