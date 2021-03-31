@@ -3,9 +3,7 @@
 # ------------------------------------------------------------------
 
 
-function cverror(solver::AbstractSolver,
-               problem::EstimationProblem,
-               eestimator::CrossValidation)
+function cverror(solver, problem::EstimationProblem, eestimator::CrossValidation)
   # problem info
   sdata = data(problem)
   ovars = [v for (v,V) in variables(problem)]

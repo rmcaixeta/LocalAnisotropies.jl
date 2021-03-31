@@ -4,30 +4,28 @@
 
 `LocalAnisotropies.jl` is a implementation of geostatistics methods to deal with the non-stationarity of second order moments (aka locally varying anisotropies). It is developed to be used as an extension of [`GeoStats.jl`](https://github.com/JuliaEarth/GeoStats.jl).
 
-Warning: This package is still under (slow) development. Not all the implementations were fully validated and may give inconsistent results.
+**Warning**: This package is still under (slow) development. Some of the implementations were not fully validated and may give inconsistent results.
 
 ## Introduction
 
 This package offer some solutions to extract local parameters from a reference input, model non-stationary covariance models, and adapt estimation methods to be used with them. There are some extra tools, like local parameters interpolation and conversion to/between different rotation conventions. A list of current implementations:
 
- Local parameters extraction methods:
-- Gradients ()
-- SVD / PCA ()
-
-Nonstationary spatial methods:
-- Moving windows (Haas 1990; ...)
-- Kernel convolution (Higdon 1998; ...)
-- Spatial deformation (Sampson & Guttorp 1992; Boisvert 2010)
-
-Estimation methods adapted to them:
-- Kriging
-- IDW
+- <u>Local parameters extraction methods</u>:
+  - Gradients
+  - SVD / PCA <p>
+- <u>Nonstationary spatial methods</u>:
+  - Moving windows
+  - Kernel convolution
+  - Spatial deformation <p>
+- <u>Estimation methods adapted to them</u>:
+  - Kriging
+  - IDW
 
 ## Installation
 
 First, it is necessary to install Julia. Installation instructions for Windows, Linux and macOS are available [here](https://julialang.org/downloads/platform/).
 
-`LocalAnisotropies.jl` is not released yet. To use it: open the Julia REPL and then type the following command.
+`LocalAnisotropies.jl` is not released yet. To use it: open the Julia REPL and then run the following command.
 
 ```julia
 using Pkg; Pkg.develop(url="https://github.com/rmcaixeta/LocalAnisotropies.jl"); Pkg.add("GeoStats")
@@ -137,11 +135,23 @@ Not available yet
 
 ## References
 
+##### Introduction to local parameters extraction methods:
+[Lillah & Boisvert (2015)](https://doi.org/10.1016/j.cageo.2015.05.015) Inference of locally varying anisotropy fields from diverse data sources
 
+##### Introduction to nonstationary spatial methods:
+[Sampson (2010)](https://doi.org/10.1201/9781420072884-13) Constructions for Nonstationary Spatial Processes
 
+##### Moving windows:
+[Haas (1990)](https://doi.org/10.1016/0960-1686(90)90508-K) Kriging and automated variogram modeling within a moving window <br>
+[Stroet & Snepvangers (2005)](https://doi.org/10.1007/s11004-005-7310-y) Mapping curvilinear structures with local anisotropy kriging
 
+##### Kernel convolution:
+[Higdon (1998)](https://doi.org/10.1023/A:1009666805688) A process-convolution approach to modelling temperatures in the North Atlantic Ocean <br>
+[Fouedjio et al. (2016)](https://doi.org/10.1016/j.spasta.2016.01.002) A generalized convolution model and estimation for non-stationary random functions
 
-
+##### Spatial deformation:
+[Sampson & Guttorp (1992)](https://doi.org/10.1080/01621459.1992.10475181) Nonparametric estimation of nonstationary spatial covariance structure <br>
+[Boisvert (2010)](https://era.library.ualberta.ca/items/5acca59f-6e97-414d-ad13-34c8f97ce223) Geostatistics with locally varying anisotropy
 
 
 
