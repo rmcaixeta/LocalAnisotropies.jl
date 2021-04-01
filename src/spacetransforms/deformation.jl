@@ -116,3 +116,9 @@ function outobj(D, coord)
 	end
 	out
 end
+
+function to3d(s)
+	dom = s.domain
+	c = reduce(hcat,[coordinates(centroid(dom,x))[1:3] for x in 1:nelements(dom)])
+	georef(values(s),PointSet(c))
+end

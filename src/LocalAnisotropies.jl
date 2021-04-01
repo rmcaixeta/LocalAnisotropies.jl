@@ -11,6 +11,7 @@ using LossFunctions
 using Meshes
 using MultivariateStats
 using NearestNeighbors
+using RecipesBase
 using ReferenceFrameRotations
 using Setfield
 using SimpleWeightedGraphs
@@ -36,6 +37,7 @@ include("parametrization/geometric.jl")
 include("parametrization/gradients.jl")
 include("parametrization/interpolation.jl")
 include("parametrization/partitions.jl")
+include("parametrization/recipes.jl")
 include("parametrization/searchers.jl")
 include("parametrization/utilities.jl")
 include("spacetransforms/deformation.jl")
@@ -51,6 +53,7 @@ export
     localpars2vtk,
     rescale_magnitude,
     smoothpars,
+    to3d,
     Geometric,
     Gradients,
     GraphDistance,

@@ -18,7 +18,11 @@ rules = Dict(
   :EulerIntr     => RotationRule(:ZXZ,[:CCW,:CCW,:CCW],true,:x,false),
   :GSLIB         => RotationRule(:ZXY,[:CW,:CCW,:CCW],false,:y,false),
   :Leapfrog      => RotationRule(:ZXZ,[:CW,:CW,:CW],false,:x,false),
-  :Datamine      => RotationRule(:ZXZ,[:CW,:CW,:CW],false,:x,false)
+  :Datamine      => RotationRule(:ZXZ,[:CW,:CW,:CW],false,:x,false),
+  :Datamine313   => RotationRule(:ZXZ,[:CW,:CW,:CW],false,:x,false),
+  :Datamine321   => RotationRule(:ZYZ,[:CW,:CW,:CW],false,:x,false),
+  :Datamine312   => RotationRule(:ZXY,[:CW,:CW,:CW],false,:x,false),
+  :Datamine323   => RotationRule(:ZYZ,[:CW,:CW,:CW],false,:x,false)
 )
 
 function rotmat(semiaxes::AbstractVector, angles::AbstractVector,
