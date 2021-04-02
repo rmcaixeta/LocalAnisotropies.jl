@@ -10,7 +10,7 @@
 	seriestype --> :quiver
 	quiver --> (u,v)
 	line_z --> repeat(c, inner=4)
-	c --> :redsblues
+	seriescolor --> :redsblues
 
 	x,y
 end
