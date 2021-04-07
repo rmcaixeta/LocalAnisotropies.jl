@@ -1,6 +1,7 @@
 # Variogram functions using local parameters
 
 function qmat(q,m)
+  # Anisotropy matrix for Mahalanobis distance
   N = length(m)
   P = quat_to_dcm(q)[SOneTo(N),SOneTo(N)]
   Λ = Diagonal(SVector{N}(one(eltype(m))./m.^2))
@@ -41,9 +42,9 @@ function kcfill!(Γ, γ::Variogram, X, localpars)
       Qi = localpars[i]
       Γ[i,j] = kccov(γ, xi, xj, Qi, Qj)
     end
-    Γ[j,j] = sill(γ) # kccov(γ, xj, xj, Qj, Qj)
+    Γ[j,j] = sill(γ)
     for i=1:j-1
-      Γ[i,j] = Γ[j,i] # leverage the symmetry
+      Γ[i,j] = Γ[j,i]
     end
   end
 end
@@ -63,6 +64,7 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
 end
 
 function setref_axis(localpars::LocalParameters, ax::Symbol)
+  # rescale magnitude according to reference axis
   ix = Dict(:X=>1,:Y=>2,:Z=>3)
   m = localpars.magnitude
   ref = m[ix[ax],:]

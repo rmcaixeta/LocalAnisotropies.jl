@@ -63,5 +63,6 @@ export
     LocalKriging,
     LocalParameters,
     LocalVariogram,
+    RotationRule,
     TestSet
 end
