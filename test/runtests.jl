@@ -6,7 +6,7 @@ import LocalAnisotropies: rotmat
 @testset "LocalAnisotropies.jl" begin
     # convert data to LocalParameters
     dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
-    pars  = LocalParameters(dummy, [:az], [:r1,:r2], :GSLIB)
+    pars  = localparameters(dummy, [:az], [:r1,:r2], :GSLIB)
 
     # convert between different rotation conventions
     angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
