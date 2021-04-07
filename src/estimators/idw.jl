@@ -1,1 +1,1 @@
-# idw estimator with local pars
+# Local IDW estimator using local parameters

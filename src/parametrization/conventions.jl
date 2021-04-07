@@ -1,5 +1,6 @@
 # ------------------------------------------------------------------
-# Adapted from GeoStatsBase.jl
+# Licensed under the MIT License. See LICENSE in the project root.
+# Adapted from an older version of GeoStatsBase.jl
 # ------------------------------------------------------------------
 
 struct RotationRule

@@ -1,5 +1,7 @@
-# Structure adapted from KrigingEstimators.jl
-
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# Adapted from KrigingEstimators.jl
+# ------------------------------------------------------------------
 
 function solve(problem::EstimationProblem, solver::LocalKriging)
   # preprocess user input

@@ -1,3 +1,4 @@
+# Need to be refactored and improved
 
 Base.@kwdef mutable struct TestPars
   refimgs::AbstractVector # [(img,prop1),(img,prop2)]
@@ -15,7 +16,6 @@ Base.@kwdef mutable struct TestPars
   forcegradients::Bool = false
 
 end
-
 
 macro name(arg)
    string(arg)

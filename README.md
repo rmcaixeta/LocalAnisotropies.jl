@@ -19,7 +19,6 @@ This package offer some solutions to extract local parameters from a reference i
   - Spatial deformation <p>
 - <u>Estimation methods adapted to them</u>:
   - Kriging
-  - IDW
 
 ## Installation
 
@@ -144,7 +143,7 @@ plot(plot(to3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 
 ```julia
 # Spatial deformation: geodesic anisotropic distances
-LDa = addgraph(S, G, lpars, LocalAnisotropy(), searcher)
+LDa = graph(S, G, lpars, LocalAnisotropy(), searcher)
 Sd2, Dd2 = deformspace(LDa, GraphDistance(), anchors=1500)
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
 γ2 = GaussianVariogram(sill=35., range=40.)
@@ -158,7 +157,7 @@ plot(plot(to3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 
 ```julia
 # Spatial deformation: geodesic anisotropic variogram distances
-LDv = addgraph(S, G, lpars, LocalVariogram(), γ, searcher)
+LDv = graph(S, G, lpars, LocalVariogram(), γ, searcher)
 Sd3, Dd3 = deformspace(LDv, GraphDistance(), anchors=1500)
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
 γ3 = GaussianVariogram(sill=45., range=40.)
@@ -198,7 +197,7 @@ Some extra tools to work with local parameters:
 ```julia
 # import external local parameters in GSLIB convention
 dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
-pars  = LocalParameters(dummy, [:az], [:r1,:r2], :GSLIB)
+pars  = localparameters(dummy, [:az], [:r1,:r2], :GSLIB)
 
 # interpolate local parameters into a coarser grid
 G_ = CartesianGrid((10,10),(0.5,0.5),(2.0,2.0))

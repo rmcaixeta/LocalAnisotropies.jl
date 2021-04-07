@@ -45,10 +45,10 @@ include("spacetransforms/graph.jl")
 include("spacetransforms/metrics.jl")
 
 export
-    addgraph,
     convertangles,
     deformspace,
     exportpars,
+    graph,
     localparameters,
     localpars2vtk,
     rescale_magnitude,

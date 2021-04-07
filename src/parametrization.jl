@@ -1,4 +1,10 @@
+"""
+    LocalParameters(rotation, magnitude)
 
+Create a `LocalParameters` object. The `rotation` is a vector of
+`ReferenceFrameRotations.Quaternion` and the magnitude is `AbstractArray{Float}`
+of size (number of dimensions, number of elements)
+"""
 struct LocalParameters
   rotation::AbstractVector{Quaternion}
   magnitude::AbstractArray{AbstractFloat,2}
@@ -20,6 +26,12 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
 	print(io,"LocalParameters $(ndims(lp))-D")
 end
 
+"""
+    SpatialData
+
+Union of multiple types of spatial data from GeoStats.jl: `GeoData`, `Domain`,
+`DataView` and `DomainView`
+"""
 SpatialData = Union{GeoData,Domain,DataView,DomainView}
 
 struct LocalGeoData
@@ -31,19 +43,42 @@ struct LocalGeoData
     graph::Union{SimpleWeightedGraph,Nothing}
 end
 
+"""
+    LocalGeoData(object, localpars)
+
+Association of a domain object and its `LocalParameters`.
+"""
 function LocalGeoData(obj::SpatialData, lpars::LocalParameters)
 	LocalGeoData(nothing, obj, lpars, nothing, nothing, nothing)
 end
 
+"""
+    LocalGeoData(object, localpars, refvario)
+
+Association of a domain object, its `LocalParameters` and its reference variogram.
+"""
 function LocalGeoData(obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
 	LocalGeoData(nothing, obj, lpars, refvario, nothing, nothing)
 end
 
+"""
+    LocalGeoData(samples, object, localpars)
+
+Association of samples, a domain object and their `LocalParameters`. The samples
+`LocalParameters` are passed from the domain via nearest neighbors.
+"""
 function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, nothing, hdids, nothing)
 end
 
+"""
+    LocalGeoData(samples, object, localpars, refvario)
+
+Association of samples, a domain object, their `LocalParameters` and the
+reference variogram. The samples `LocalParameters` are passed from the domain
+via nearest neighbors.
+"""
 function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, refvario, hdids, nothing)

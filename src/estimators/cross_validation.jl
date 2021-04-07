@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------
-# Temporarily ported and adapted from GeoStatsBase.jl
+# Licensed under the MIT License. See LICENSE in the project root.
+# Adapted from GeoStatsBase.jl
 # ------------------------------------------------------------------
-
 
 function cverror(solver, problem::EstimationProblem, eestimator::CrossValidation)
   # problem info
@@ -64,7 +64,6 @@ function cverror(solver, problem::EstimationProblem, eestimator::CrossValidation
   # combine error from different folds
   Dict(var => mean(get.(εs, var, 0)) for var in ovars)
 end
-
 
 pars2tuple(p) =
   (;(v=>getfield(p, v) for v in fieldnames(typeof(p)) if v != :__dummy__)...)

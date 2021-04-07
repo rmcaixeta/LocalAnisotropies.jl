@@ -1,33 +1,33 @@
 
-function addgraph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj,lpar)
-	addgraph!(D, metric, searcher)
+	graph!(D, metric, searcher)
 end
 
-function addgraph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj, lpar, refvario)
-	addgraph!(D, metric, searcher)
+	graph!(D, metric, searcher)
 end
 
-function addgraph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj,lpar)
-	addgraph!(D, metric, searcher)
+	graph!(D, metric, searcher)
 end
 
-function addgraph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj, lpar, refvario)
-	addgraph!(D, metric, searcher)
+	graph!(D, metric, searcher)
 end
 
-function addgraph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearchMethod)
+function graph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearchMethod)
 	O = searcher.domain
 	n = nelements(O)
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()

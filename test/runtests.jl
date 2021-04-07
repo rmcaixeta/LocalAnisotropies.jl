@@ -73,13 +73,13 @@ import LocalAnisotropies: rotmat
         s4 = solve(Pd2, Kriging(:P => (variogram=γ,)))
 
         # Spatial deformation: geodesic anisotropic distances
-        LDa = addgraph(S, G, lpars, LocalAnisotropy(), searcher)
+        LDa = graph(S, G, lpars, LocalAnisotropy(), searcher)
         Sd3, Dd3 = deformspace(LDa, GraphDistance(), anchors=1500)
         Pd3 = EstimationProblem(Sd3, Dd3, :P)
         s5 = solve(Pd3, Kriging(:P => (variogram=γ,)))
 
         # Spatial deformation: geodesic anisotropic variogram distances
-        LDv = addgraph(S, G, lpars, LocalVariogram(), γ, searcher)
+        LDv = graph(S, G, lpars, LocalVariogram(), γ, searcher)
         Sd4, Dd4 = deformspace(LDv, GraphDistance(), anchors=1500)
         Pd4 = EstimationProblem(Sd4, Dd4, :P)
         s6 = solve(Pd4, Kriging(:P => (variogram=γ,)))
