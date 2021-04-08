@@ -201,7 +201,7 @@ pars  = localparameters(dummy, [:az], [:r1,:r2], :GSLIB)
 
 # interpolate local parameters into a coarser grid
 G_ = CartesianGrid((10,10),(0.5,0.5),(2.0,2.0))
-lpars_ = IDWpars(lpars, searcher, G_, power=2.0)
+lpars_ = idwpars(lpars, searcher, G_, power=2.0)
 
 # convert between different rotation conventions
 angs1 = convertangles([30,30,30], :GSLIB, :Datamine)

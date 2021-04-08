@@ -7,9 +7,9 @@
     localparameters(data, angles, ranges, convention=:GSLIB)
 
 Import a `LocalParameters` object from an outer source. The `data` is a
-georeferenced object in from GeoStats.jl. It must have the rotation angles
-and ranges/ratios as properties. These property names are informed as vectors
-for the conversion. Check out the available rotation conventions at
+georeferenced object. It must have the rotation angles and ranges/ratios as
+properties. These property names are informed as vectors in `angles` and
+`ranges`for the conversion. Check out the available rotation conventions at
 [`RotationRule`](@ref) docstring.
 
 ## Example

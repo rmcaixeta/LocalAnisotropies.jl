@@ -1,9 +1,55 @@
 
-# adapt to LocalGeoData
-# mean instead median for magnitude? -> mean(magnitude(lpars,neighids),dims=2)
+"""
+    idwpars(localpars, searcher, domain; power=2, metric=Euclidean())
+
+Interpolate `LocalParameters` data into a `domain`, using the
+local neighbors returned from the `searcher`. The interpolation can be inverse
+distance weighted by given `power` and `metric` or a simply averaged if
+`power=0`. The ellipses/ellipsoids rotations are interpolated using
+(weighted) average of quaternions as described by Markley et al (2007). The
+interpolated magnitude is the weighted median of the neighbors magnitude.
+
+## Example
+
+```julia
+searcher = KNearestSearch(data, 10)
+idw3_into_grid = idwpars(localpars, searcher, grid, power=3)
+```
+
+## Reference
+
+Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
+"""
+idwpars(lpars, searcher::NeighborSearchMethod, domain; power=2.0, metric=Euclidean()) =
+	interpolate(lpars, searcher, domain, power=power)
+
+"""
+    smoothpars(localpars, searcher; power=0, metric=Euclidean())
+
+Smooth `LocalParameters`, using the local neighbors returned from the `searcher`.
+The interpolation can be inverse distance weighted by given `power` and `metric`
+or a simply averaged if `power=0`. The ellipses/ellipsoids rotations are
+interpolated using (weighted) average of quaternions as described by Markley
+et al. (2007). The interpolated magnitude is the weighted median of the
+neighbors magnitude.
+
+## Example
+
+```julia
+searcher = KNearestSearch(data, 10)
+averaged_inplace = smoothpars(localpars, searcher)
+```
+
+## Reference
+
+Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
+"""
+smoothpars(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
+	interpolate(lpars, searcher, power=power)
+
 
 function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
-	power::Float64, metric=Euclidean())
+	power::Real=0, metric=Euclidean())
 	D = searcher.domain
 	N = embeddim(D)
 	len = domain==nothing ? nelements(D) : nelements(domain)
@@ -20,7 +66,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 
 		if length(neighids) == 0
 			throw(ErrorException("zero neighbors at some location; adjust searcher"))
-			# or accept missing in LocalParameters
+			# or accept missing in LocalParameters?
 		elseif power==0.0
 			quat[i] = quatavg(rotation(lpars,neighids))
 			if domain!=nothing
@@ -35,23 +81,12 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 			mi      = magnitude(lpars,neighids)
 			wgts    = Weights(weights)
 			m[:,i] .= mapreduce(x->quantile(view(mi,x,:),wgts,0.5), vcat, 1:N)
+			# mean instead median for magnitude?
 		end
     end
 
     LocalParameters(quat, m)
 end
-
-IDWpars(lpars, searcher::NeighborSearchMethod, domain; power=2.0, metric=Euclidean()) =
-	interpolate(lpars, searcher, domain, power=power)
-
-smoothpars(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
-	interpolate(lpars, searcher, power=power)
-
-
-# Rerference: Markley, F. Landis, Yang Cheng, John Lucas Crassidis, and Yaakov Oshman.
-# "Averaging quaternions." Journal of Guidance, Control, and Dynamics 30,
-# no. 4 (2007): 1193-1197.
-# Link: https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf
 
 quat2vector(q) = [q.q0; q.q1; q.q2; q.q3]
 tensor(q) = q' .* q

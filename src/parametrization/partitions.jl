@@ -1,3 +1,1 @@
-"""
- Special partition matching local anisotropy trend direction or plane
-"""
+# Special partition matching local anisotropy trend directions or planes

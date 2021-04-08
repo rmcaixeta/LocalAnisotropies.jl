@@ -48,7 +48,7 @@ import LocalAnisotropies: rotmat
 		else
 			CartesianGrid((5,5,3),(0.5,0.5,0.5),(2.0,2.0,2.0))
 		end
-        lpars_ = IDWpars(lpars, searcher, G_)
+        lpars_ = idwpars(lpars, searcher, G_)
 
         # Estimation problem
         P = EstimationProblem(S, G, :P)
