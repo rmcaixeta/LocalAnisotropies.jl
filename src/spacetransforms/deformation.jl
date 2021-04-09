@@ -1,4 +1,31 @@
+"""
+    deformspace(domain, localpars, metric; kwargs)
+    deformspace(domain, localpars, metric, refvariogram; kwargs)
+	deformspace(samples, domain, localpars, metric; kwargs)
+    deformspace(samples, domain, localpars, metric, refvariogram; kwargs)
+    deformspace(graphobject, metric=GraphDistance(); kwargs)
+	kwargs = (anchors=1500, maxoutdim=10, weights=nothing)
 
+Spatial deformation is a method that transforms coordinates to an isotropic
+space in high dimension where the local anisotropies information are embedded
+into the new distances. Traditional estimations and simulations can be performed
+in this new data configuration. It's necessary to inform the `domain` object
+(and the `samples` if applied). The local parameters are passed via `localpars`
+and `metric` define how the local parameters are used to calculate the new
+data distances. Available metrics to calculate distance between two points are:
+
+* `LocalAnisotropy()` - averaged anisotropic distance
+* `LocalVariogram()`  - variogram distance with averaged anisotropy
+* `GraphDistance()`   - geodesic distances of a informed graph. More details
+  of the graph construction in [`graph`](@ref) docstring.
+
+A reference variogram `refvariogram` is necessary if metric is `LocalVariogram()`.
+Additional keyword arguments are the number of `anchors` to perform landmark MDS
+if the number of data is too big for a traditional MDS. `maxoutdim` is the
+maximum number of dimensions to retain after MDS. `weights` are the declustering
+weights of the domain data (+ samples) in order to help selecting declustered
+anchor points for the transformations.
+"""
 function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric;
 	anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar)
@@ -24,7 +51,7 @@ function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalParameters,
 end
 
 # metric = LocalVariogram, LocalAnisotropy, GraphDistance
-function deformspace(D::LocalGeoData, metric::LocalMetric;
+function deformspace(D::LocalGeoData, metric::LocalMetric=GraphDistance();
 	anchors=1500, maxoutdim=10, weights=nothing)
 
 	#@assert graph exists if GraphDistance
@@ -117,6 +144,13 @@ function outobj(D, coord)
 	out
 end
 
+"""
+    to3d(geodata)
+
+The spatial deformation method often return an output in dimensions higher
+than 3-D. This function create a new spatial object retaining only the
+first three dimensions in order to help plotting of the data.
+"""
 function to3d(s)
 	dom = s.domain
 	c = reduce(hcat,[coordinates(centroid(dom,x))[1:3] for x in 1:nelements(dom)])

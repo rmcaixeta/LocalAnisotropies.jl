@@ -1,4 +1,19 @@
+"""
+    graph(domain, localpars, metric, searcher)
+    graph(domain, localpars, metric, refvariogram, searcher)
+	graph(samples, domain, localpars, metric, searcher)
+    graph(samples, domain, localpars, metric, refvariogram, searcher)
 
+Create a graph connecting `domain` and `samples` points locally. Number of
+edges/neighbors are defined by the `searcher` object associated to the domain.
+Distance between points are based on local parameters `localpars` and the
+desired `metric` to calculate distance between two points. Available metrics:
+
+* `LocalAnisotropy()` - averaged anisotropic distance
+* `LocalVariogram()`  - variogram distance with averaged anisotropy
+
+A reference variogram `refvariogram` is necessary if metric is `LocalVariogram()`.
+"""
 function graph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
 	searcher::NeighborSearchMethod)
 

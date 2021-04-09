@@ -26,7 +26,7 @@ function localparameters(data::SpatialData, angles::AbstractVector,
     tab  = values(data)
     cols = string.(propertynames(tab))
     len  = size(tab,1)
-    @assert string.(angles)   ⊆ cols "angle column name do not exist"
+    @assert string.(angles) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
 
     q = Array{Quaternion}(undef,len)

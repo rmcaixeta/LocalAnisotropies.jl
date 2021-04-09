@@ -7,7 +7,7 @@ of size (number of dimensions, number of elements)
 """
 struct LocalParameters
   rotation::AbstractVector{Quaternion}
-  magnitude::AbstractArray{AbstractFloat,2}
+  magnitude::AbstractArray
 end
 
 Ints = Union{Int,AbstractVector{Int}}
