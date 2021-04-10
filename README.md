@@ -32,7 +32,8 @@ using Pkg; Pkg.develop(url="https://github.com/rmcaixeta/LocalAnisotropies.jl");
 
 ## Documentation
 
-Not available yet. Check below an usage example to have an idea of what the package does.
+The documentation of the main functions are available as docstrings.
+Check below an usage example that illustrate the package applications.
 
 ## References
 
