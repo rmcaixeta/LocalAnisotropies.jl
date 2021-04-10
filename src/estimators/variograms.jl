@@ -1,3 +1,7 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
+
 # Variogram functions using local parameters
 
 function qmat(q,m)

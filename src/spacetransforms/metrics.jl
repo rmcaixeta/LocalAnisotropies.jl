@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 function colwise(D::LocalGeoData, ::LocalAnisotropy, i::Int, xj::Vector{Int})
 	Qi, ix = qmat(rotation(D,i),magnitude(D,i)), coords(D,i)

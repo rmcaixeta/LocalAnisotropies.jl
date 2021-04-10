@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 """
     idwpars(localpars, searcher, domain; power=2, metric=Euclidean())

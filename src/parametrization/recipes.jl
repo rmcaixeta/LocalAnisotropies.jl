@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 @recipe function f(lpars::LocalParameters, D::SpatialData)
   @assert ndims(lpars) == 2 "plot only available for 2D local parameters"

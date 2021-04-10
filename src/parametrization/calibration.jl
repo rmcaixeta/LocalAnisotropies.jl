@@ -1,3 +1,7 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
+
 # Need to be refactored and improved
 
 Base.@kwdef mutable struct TestPars

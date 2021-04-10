@@ -1,7 +1,6 @@
-
-# Develop the methods to extra conventions and conversions:
-# - MainPlaneNormalAngles, MainPlaneNormal, MainPlaneAngles, MainPlaneVector
-# - Dir1Angles, Dir1Vector, ....
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 """
     localparameters(data, angles, ranges, convention=:GSLIB)

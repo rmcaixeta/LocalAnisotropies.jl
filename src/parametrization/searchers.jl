@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 # grid neighborhood for gradients
 function gridneighbors(img, i::CartesianIndex, window::Int)

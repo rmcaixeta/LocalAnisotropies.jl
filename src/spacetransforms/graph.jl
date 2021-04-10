@@ -1,3 +1,7 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
+
 """
     graph(domain, localpars, metric, searcher)
     graph(domain, localpars, metric, refvariogram, searcher)

@@ -1,5 +1,6 @@
-# make rescale function more customizable for ratio/ranges uses
-# export to vtk scaled ellipses/ellipsoid
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
 
 """
     rescale_magnitude(localpars, r1, r2=nothing, r3=nothing;

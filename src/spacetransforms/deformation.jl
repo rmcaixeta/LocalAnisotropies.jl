@@ -1,3 +1,7 @@
+# ------------------------------------------------------------------
+# Licensed under the MIT License. See LICENSE in the project root.
+# ------------------------------------------------------------------
+
 """
     deformspace(domain, localpars, metric; kwargs)
     deformspace(domain, localpars, metric, refvariogram; kwargs)
