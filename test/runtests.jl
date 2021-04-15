@@ -21,7 +21,7 @@ import LocalAnisotropies: rotmat
 
 	# local parameters from pointset coordinates
 	data  = rmat[1] * vcat(rand(2,100),zeros(1,100))
-	pset  = PointSet(coords)
+	pset  = PointSet(data)
 	nhood = KNearestSearch(pset, 10)
     gpars = localparameters(Geometric(), nhood, simplify=true)
     gpars = localparameters(Geometric(), nhood, simplify=false)
