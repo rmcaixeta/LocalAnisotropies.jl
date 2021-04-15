@@ -20,7 +20,7 @@ import LocalAnisotropies: rotmat
     # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
 
 	# local parameters from pointset coordinates
-	data  = rmat * vcat(rand(2,100),zeros(1,100))
+	data  = rmat[1] * vcat(rand(2,100),zeros(1,100))
 	pset  = PointSet(coords)
 	nhood = KNearestSearch(pset, 10)
     gpars = localparameters(Geometric(), nhood, simplify=true)
