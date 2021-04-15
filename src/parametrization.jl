@@ -100,6 +100,7 @@ spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
 centro(D::LocalGeoData, i::Int) = i<=nvals(D) ? centroid(obj(D),i) : centroid(sobj(D),i-nvals(D))
 coords(D::LocalGeoData, i::Int) = coordinates(centro(D,i))
+coords(D::SpatialData) = reduce(hcat, [coordinates(centroid(D,x)) for x in 1:nelements(D)])
 coords(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(D,x)) for x in i])
 
 rotation(D::LocalGeoData) = D.localpars.rotation

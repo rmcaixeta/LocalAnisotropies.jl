@@ -11,12 +11,20 @@ import LocalAnisotropies: rotmat
     # convert between different rotation conventions
     angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
     angs2 = convertangles(angs1, :Datamine, :GSLIB)
-    @test all(rotmat([1,1,1], [30,30,30], :GSLIB) .≈ rotmat([1,1,1], angs1, :Datamine))
-    @test all(rotmat([1,1,1], [30,30,30], :GSLIB) .≈ rotmat([1,1,1], angs2, :GSLIB))
+	rmat  = rotmat([1,1,1], [30,30,30], :GSLIB)
+    @test all(rmat .≈ rotmat([1,1,1], angs1, :Datamine))
+    @test all(rmat .≈ rotmat([1,1,1], angs2, :GSLIB))
     angs_ = convertangles.(pars.rotation, :GSLIB)
 
     # pars_ = convertpars(pars, convention=:Datamine)
     # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
+
+	# local parameters from pointset coordinates
+	data  = rmat * vcat(rand(2,100),zeros(1,100))
+	pset  = PointSet(coords)
+	nhood = KNearestSearch(pset, 10)
+    gpars = localparameters(Geometric(), nhood, simplify=true)
+    gpars = localparameters(Geometric(), nhood, simplify=false)
 
     grid2d = (10,10)
     grid3d = (10,10,5)

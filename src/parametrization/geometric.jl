@@ -3,17 +3,17 @@
 # ------------------------------------------------------------------
 
 """
-    localparameters(Geometric(), searcher; reg=false)
+    localparameters(Geometric(), searcher; simplify=true)
 
 Extract `LocalParameters` from a searcher object. Based on the spatial data and
 the parameters from the searcher object, a group of neighbor points is collected
 at each place. PCA is applied to their spatial coordinates, returning eigenvectors
 that represent a local ellipse/ellipsoid aligned with the directions with more
 clustered points. The magnitude is the ratio of the PCA eigenvalues. It's useful
-to extract local parameters from 3-D surface points. If `reg = true` and data is
-in 3-D, only the minimum direction is extracted from PCA; the other axes are
-calculated (main direction will be always along max dip direction and the
-intermediate axis will be orthogonal to the others).
+to extract local parameters from 3-D surface points. If `simplify = true` and
+data is 3-D, only the minimum direction is extracted from PCA; the other axes
+are calculated (main direction will be always along max dip direction and the
+intermediate axis will be orthogonal to the others). This is default for 3-D.
 
 ## Example
 
@@ -24,17 +24,17 @@ lpars = idwpars(prelpars, searcher, grid) # interpolate local pars to a grid
 ```
 """
 function localparameters(::Geometric, searcher::NeighborSearchMethod;
-	reg::Bool=false)
-	X = coordinates(centroid(searcher.object))
+	simplify::Bool=true)
+	D = searcher.domain
+	X = coords(D)
 	N, len = size(X)
 
     quat = Array{Quaternion}(undef,len)
     m = Array{Vector}(undef,len)
 
     Threads.@threads for i in 1:len
-        icoord = view(X,:,i)
-		neighids = search(icoord, searcher)
-		λ, v = pca(view(X,:,neighids),reg)
+		neighids = search(centroid(D,i), searcher)
+		λ, v = pca(view(X,:,neighids), simplify)
 
 		det(v) < 0 && (v = Diagonal(SVector{3}([-1,1,1])) * v)
 
@@ -58,7 +58,7 @@ function localparameters(::Geometric, searcher::NeighborSearchMethod;
     LocalParameters(quat, m)
 end
 
-function pca(X,reg)
+function pca(X, simplify)
 	N = size(X,1)
 	M = fit(PCA, X, maxoutdim=N, pratio=1)
 	λ = principalvars(M)
@@ -68,15 +68,24 @@ function pca(X,reg)
 	if nv == 1
 		vx = [-v[2,1]; v[1,1]; v[3,1]]
 		v = hcat(v,vx,cross(v[:,1],vx))
-		append!(λ,[1.,1.])
+		append!(λ,[λ[1],λ[1]])
 	elseif nv == 2 && N==3
 		v = hcat(v,cross(v[:,1],v[:,2]))
-		push!(λ,1.)
+		push!(λ,minimum(λ))
 	end
 
-	# if reg && N==3
-	# 	# use maxdip vector and cross(maxdip,normal) as the main vectors
-	# end
+	if simplify && N==3
+		# use maxdip vector and cross(maxdip,normal) as the main vectors
+		az, dp = [atan(v[1,3], v[2,3]), -asin(v[3,3])]
+		if dp < 0
+			dp += pi/2
+		else
+			dp -= pi/2
+		end
+		v[:,1] .= [sin(az)*cos(dp), cos(az)*cos(dp), -sin(dp)]
+		v[:,2] .= cross(v[:,1], v[:,3])
+		λ[1:2] .= [1.0, 1.0]
+	end
 
-	λ[1:N], SMatrix{3,3}(v)
+	λ[1:N], SMatrix{3,3}(v')
 end
