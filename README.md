@@ -8,7 +8,7 @@
 
 ## Introduction
 
-This package offer some solutions to extract local parameters from a reference input, model non-stationary covariance models, and adapt estimation methods to be used with them. There are some extra tools, like local parameters interpolation and conversion to/between different rotation conventions. A list of current implementations:
+This package offer some solutions to extract local parameters from a reference input, model non-stationary covariance models, and adapt estimation methods to be used with them. Designed for 2-D and 3-D data. There are some extra tools, like local parameters interpolation and conversion to/between different rotation conventions. A list of current implementations:
 
 - <u>Local parameters extraction methods</u>:
   - Gradients
@@ -108,8 +108,8 @@ plot!(lpars,D)
 </p>
 
 ```julia
-# plot(lpars) will only work for 2D data
-# it is possible to export to vtk and visualize in Paraview (both 2D and 3D)
+# plot(lpars, spatialobj) will only work for 2D data
+# for 3D or custom visualizations, it's possivle to export it to VTK
 localpars2vtk("ellipses", D, lpars)
 # below the file "ellipses.vtu" loaded in Paraview using TensorGlyph
 ```

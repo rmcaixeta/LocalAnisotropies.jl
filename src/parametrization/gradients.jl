@@ -24,7 +24,7 @@ function localparameters(::Gradients, obj, prop, window)
     # get dimensions
     dims  = obj.domain.dims
     N     = length(dims)
-	propv = getproperty(obj.table,prop)
+	propv = Tables.getcolumn(Tables.columns(values(obj)), prop)
 
     # extract gradients (maybe need an extra method to deal with big datasets)
     factor = maximum(propv) - minimum(propv)

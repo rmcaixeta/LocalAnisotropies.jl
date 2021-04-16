@@ -21,6 +21,7 @@ using Setfield
 using SimpleWeightedGraphs
 using StaticArrays
 using StatsBase:Weights,quantile,mean!
+using Tables
 using Variography
 using WriteVTK
 

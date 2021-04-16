@@ -22,9 +22,9 @@ function localparameters(data::SpatialData, angles::AbstractVector,
     ranges::AbstractVector, convention=:GSLIB)
     ranges = Symbol.(ranges)
     angles = Symbol.(angles)
-    tab  = values(data)
-    cols = string.(propertynames(tab))
-    len  = size(tab,1)
+    tab  = Tables.columns(values(data))
+    cols = string.(Tables.columnnames(tab))
+    len  = nelements(data)
     @assert string.(angles) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
 
@@ -32,8 +32,8 @@ function localparameters(data::SpatialData, angles::AbstractVector,
     m = Array{Vector}(undef,len)
 
     for i in 1:len
-        xranges = [getproperty(tab[i],x) for x in ranges] ./ getproperty(tab[i],ranges[1])
-        xangles = [getproperty(tab[i],x) for x in angles]
+        xranges = [Tables.getcolumn(tab,x)[i] for x in ranges] ./ Tables.getcolumn(tab,ranges[1])[i]
+        xangles = [Tables.getcolumn(tab,x)[i] for x in angles]
 
         P, Λ = rotmat(xranges, xangles, convention; rev=false)
         size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
