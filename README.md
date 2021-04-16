@@ -108,6 +108,17 @@ plot!(lpars,D)
 </p>
 
 ```julia
+# plot(lpars) will only work for 2D data
+# it is possible to export to vtk and visualize in Paraview (both 2D and 3D)
+localpars2vtk("ellipses", D, lpars)
+# below the file "ellipses.vtu" loaded in Paraview using TensorGlyph
+```
+
+<p align="center">
+  <img src="imgs/03.2_localpars_vtk.png">
+</p>
+
+```julia
 # LocalKriging (MW)
 MW = LocalKriging(:P => (variogram=(:X=>γ), localpars=lpars, method=:MovingWindows))
 s1 = solve(P, MW)
