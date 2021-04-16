@@ -43,45 +43,66 @@ function rescale_magnitude(lp::LocalParameters, r1, r2=nothing, r3=nothing;
 end
 
 """
-    localpars2vtk(vtkfile, coords, localpars; dir=:all, magnitude=:ratios)
+    localpars2vtk(vtkfile, coords, localpars; dir=:ellips, magnitude=:ratios)
 
-Export local parameters `localpars` at `coords` to VTK format. It export all
-directions by default, unless `dir` is set to `:X`, `:Y` or `:Z`. The magnitude
-can be expressed as `:ratios` (default) or `:ranges`. In the case of `:ratios`,
-`ratio1=range2/range1` and `ratio2=range3/range1`. Instead of an array of
-coordinates, `coords` can also be just the georeferenced spatial object. The
-output `.vtu` file can be loaded in Paraview or similars and processed as Glyphs
-to plot the directions.
+Export local parameters `localpars` at `coords` to VTK format. It export local
+ellipsoids by default. If `dir` is set to `:X`, `:Y`, `:Z` or `:XYZ`, local
+vectors/arrows are exported on these axes. The magnitude can be expressed as
+`:ratios` (default) or `:ranges`. In the case of `:ratios`, `ratio1=range2/range1`
+and `ratio2=range3/range1`. Instead of an array of coordinates, `coords` can
+also be just the georeferenced spatial object. The output `.vtu` file can be
+loaded in Paraview or similars and processed as Glyphs to plot the directions.
+If `dir = :ellips`, TensorGlyphs must be used for proper visualization.
 """
-function localpars2vtk(vtkfile, coords::AbstractArray, lpars; dir=:all, magnitude=:ratios)
-	@assert dir in [:all, :X, :Y, :Z] "`dir` must be :all, :X, :Y or :Z"
+function localpars2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magnitude=:ratios)
+	@assert dir in [:ellips, :XYZ, :X, :Y, :Z] "`dir` must be :ellips, :XYZ :X, :Y or :Z"
 	@assert magnitude in [:ratios, :ranges] "`magnitude` must be :ratios or :ranges"
 
-	cod = Dict(:X=>1,:Y=>2,:Z=>3)
+	elp = (dir == :ellips)
+	cod = Dict(:X=>1, :Y=>2, :Z=>3)
 	dim = size(coords,1)
 	n   = size(coords,2)
-	axs = dir == :all ? (1:dim) : [cod[dir]]
+	axs = dir in [:XYZ, :ellips] ? (1:dim) : [cod[dir]]
 	xyz = dim == 2 ? vcat(coords, zeros(Float64,1,n)) : coords
 	vtx = [MeshCell( VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
-	ijk = [zeros(Float64, 3, n, 1, 1) for i in axs]
+	ijk = elp ? zeros(Float64, 9, n, 1, 1) : [zeros(Float64, 3, n, 1, 1) for i in axs]
+	zx  = (dim == 2 && elp) ? minimum(lpars.magnitude)/10 : 0.0
+
+	# put data into vtk structure format
 	for x in 1:n
-		dcm = quat_to_dcm(lpars.rotation[x])
-        f = dcm[3,3] < 0 ? -1 : 1
-		for dir in axs
-			ijk[dir][1, x, 1, 1] = f*dcm[dir,1]
-			ijk[dir][2, x, 1, 1] = f*dcm[dir,2]
-			ijk[dir][3, x, 1, 1] = f*dcm[dir,3]
+		if elp
+			mag = lpars.magnitude[:,x]
+			dim == 2 && push!(mag, zx)
+			Λ = Diagonal(SVector{3}(mag))
+			P = quat_to_dcm(lpars.rotation[x])' * Λ
+			for v in 1:length(P)
+				ijk[v, x, 1, 1] = P[v]
+			end
+		else
+			dcm = quat_to_dcm(lpars.rotation[x])
+	        f = dcm[3,3] < 0 ? -1 : 1
+			for d in axs
+				ijk[d][1, x, 1, 1] = f*dcm[d,1]
+				ijk[d][2, x, 1, 1] = f*dcm[d,2]
+				ijk[d][3, x, 1, 1] = f*dcm[d,3]
+			end
 		end
 	end
+
+	# write vtk file
 	outfiles = vtk_grid(vtkfile,xyz,(vtx)) do vtk
-		for dir in axs
-			vtk["dir$dir"] = ijk[dir]
+		if elp
+			vtk["ellips"] = ijk
+		else
+			for d in axs
+				vtk["dir$d"] = ijk[d]
+			end
 		end
-		for dir in 1:dim
+		for d in 1:dim
 			if magnitude == :ranges
-				vtk["range$dir"] = lpars.magnitude[dir,:]
-			elseif dir > 1
-				vtk["ratio$(dir-1)"] = lpars.magnitude[dir,:] ./ lpars.magnitude[1,:]
+				vtk["range$d"] = lpars.magnitude[d,:]
+			elseif d > 1
+				vtk["ratio$(d-1)"] = lpars.magnitude[d,:] ./ lpars.magnitude[1,:]
 			end
 		end
 	end
