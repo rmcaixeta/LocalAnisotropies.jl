@@ -2,7 +2,7 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
-# Variogram functions using local parameters
+# Variogram functions using local anisotropies
 
 function qmat(q,m)
   # Anisotropy matrix for Mahalanobis distance
@@ -34,16 +34,16 @@ function mwvario(estimator, localpar)
 
 end
 
-function kcfill!(Γ, γ::Variogram, X, localpars)
+function kcfill!(Γ, γ::Variogram, X, localaniso)
   # X = neighbors coords
   # need to consider LHS[i,j] = sill(γ) - LHS[i,j] to convert vario to covario
   n = nelements(X)
   @inbounds for j=1:n
     xj = centroid(X, j)
-    Qj = localpars[j]
+    Qj = localaniso[j]
     for i=j+1:n
       xi = centroid(X, i)
-      Qi = localpars[i]
+      Qi = localaniso[i]
       Γ[i,j] = kccov(γ, xi, xj, Qi, Qj)
     end
     Γ[j,j] = sill(γ)
@@ -67,13 +67,13 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end
 
-function setref_axis(localpars::LocalParameters, ax::Symbol)
+function setref_axis(localaniso::LocalAnisotropy, ax::Symbol)
   # rescale magnitude according to reference axis
   ix = Dict(:X=>1,:Y=>2,:Z=>3)
-  m = localpars.magnitude
+  m = localaniso.magnitude
   ref = m[ix[ax],:]
   for i in size(m, 1)
     m[i,:] ./= ref
   end
-  LocalParameters(localpars.rotation,m)
+  LocalAnisotropy(localaniso.rotation,m)
 end

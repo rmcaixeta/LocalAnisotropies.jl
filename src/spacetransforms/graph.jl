@@ -3,43 +3,43 @@
 # ------------------------------------------------------------------
 
 """
-    graph(domain, localpars, metric, searcher)
-    graph(domain, localpars, metric, refvariogram, searcher)
-	graph(samples, domain, localpars, metric, searcher)
-    graph(samples, domain, localpars, metric, refvariogram, searcher)
+    graph(domain, localaniso, metric, searcher)
+    graph(domain, localaniso, metric, refvariogram, searcher)
+	graph(samples, domain, localaniso, metric, searcher)
+    graph(samples, domain, localaniso, metric, refvariogram, searcher)
 
 Create a graph connecting `domain` and `samples` points locally. Number of
 edges/neighbors are defined by the `searcher` object associated to the domain.
-Distance between points are based on local parameters `localpars` and the
+Distance between points are based on local anisotropies `localaniso` and the
 desired `metric` to calculate distance between two points. Available metrics:
 
-* `LocalAnisotropy()` - averaged anisotropic distance
+* `AnisoDistance()` - averaged anisotropic distance
 * `LocalVariogram()`  - variogram distance with averaged anisotropy
 
 A reference variogram `refvariogram` is necessary if metric is `LocalVariogram()`.
 """
-function graph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj,lpar)
 	graph!(D, metric, searcher)
 end
 
-function graph(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj, lpar, refvario)
 	graph!(D, metric, searcher)
 end
 
-function graph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj,lpar)
 	graph!(D, metric, searcher)
 end
 
-function graph(hd::SpatialData, obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj, lpar, refvario)

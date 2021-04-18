@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    idwpars(localpars, searcher, domain; power=2, metric=Euclidean())
+    idwpars(localaniso, searcher, domain; power=2, metric=Euclidean())
 
-Interpolate `LocalParameters` data into a `domain`, using the
+Interpolate `LocalAnisotropy` data into a `domain`, using the
 local neighbors returned from the `searcher`. The interpolation can be inverse
 distance weighted by given `power` and `metric` or a simply averaged if
 `power=0`. The ellipses/ellipsoids rotations are interpolated using
@@ -16,7 +16,7 @@ interpolated magnitude is the weighted median of the neighbors magnitude.
 
 ```julia
 searcher = KNearestSearch(data, 10)
-idw3_into_grid = idwpars(localpars, searcher, grid, power=3)
+idw3_into_grid = idwpars(localaniso, searcher, grid, power=3)
 ```
 
 ## Reference
@@ -27,9 +27,9 @@ idwpars(lpars, searcher::NeighborSearchMethod, domain; power=2.0, metric=Euclide
 	interpolate(lpars, searcher, domain, power=power)
 
 """
-    smoothpars(localpars, searcher; power=0, metric=Euclidean())
+    smooth(localaniso, searcher; power=0, metric=Euclidean())
 
-Smooth `LocalParameters`, using the local neighbors returned from the `searcher`.
+Smooth `LocalAnisotropy`, using the local neighbors returned from the `searcher`.
 The interpolation can be inverse distance weighted by given `power` and `metric`
 or a simply averaged if `power=0`. The ellipses/ellipsoids rotations are
 interpolated using (weighted) average of quaternions as described by Markley
@@ -40,14 +40,14 @@ neighbors magnitude.
 
 ```julia
 searcher = KNearestSearch(data, 10)
-averaged_inplace = smoothpars(localpars, searcher)
+averaged_inplace = smooth(localaniso, searcher)
 ```
 
 ## Reference
 
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
-smoothpars(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
+smooth(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
 	interpolate(lpars, searcher, power=power)
 
 
@@ -56,7 +56,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 	D = searcher.domain
 	N = embeddim(D)
 	len = domain==nothing ? nelements(D) : nelements(domain)
-	@assert nelements(D)==nvals(lpars) "searcher domain must match number of local parameters"
+	@assert nelements(D)==nvals(lpars) "searcher domain must match number of local anisotropies"
 
     quat = Array{Quaternion}(undef,len)
 	mag  = lpars.magnitude
@@ -69,7 +69,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 
 		if length(neighids) == 0
 			throw(ErrorException("zero neighbors at some location; adjust searcher"))
-			# or accept missing in LocalParameters?
+			# or accept missing in LocalAnisotropy?
 		elseif power==0.0
 			quat[i] = quatavg(rotation(lpars,neighids))
 			if domain!=nothing
@@ -88,7 +88,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 		end
     end
 
-    LocalParameters(quat, m)
+    LocalAnisotropy(quat, m)
 end
 
 quat2vector(q) = [q.q0; q.q1; q.q2; q.q3]

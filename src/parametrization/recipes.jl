@@ -2,8 +2,8 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
-@recipe function f(lpars::LocalParameters, D::SpatialData)
-  @assert ndims(lpars) == 2 "plot only available for 2D local parameters"
+@recipe function f(lpars::LocalAnisotropy, D::SpatialData)
+  @assert ndims(lpars) == 2 "plot only available for 2D local anisotropies"
   quats = lpars.rotation
   u = [quat2dcm(quats[x])[1,1] for x in 1:length(quats)]
   v = [quat2dcm(quats[x])[1,2] for x in 1:length(quats)]

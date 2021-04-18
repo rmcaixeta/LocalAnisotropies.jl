@@ -69,21 +69,21 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
       method = varparams.method
       KC = method == :KernelConvolution ? true : false
       ax = varparams.variogram[1]
-      localpars, localparshd = (varparams.localpars, varparams.localparshd)
+      localaniso, localanisohd = (varparams.localaniso, varparams.localanisohd)
       if ax!=:X
-        localpars = setref_axis(localpars, ax)
-        localparshd != nothing && (localparshd = setref_axis(localparshd, ax))
+        localaniso = setref_axis(localaniso, ax)
+        localanisohd != nothing && (localanisohd = setref_axis(localanisohd, ax))
       end
-      (localparshd != nothing && KC) && (localparshd = toqmat(localparshd))
+      (localanisohd != nothing && KC) && (localanisohd = toqmat(localanisohd))
 
       # check pars
       okmeth = method in [:MovingWindows, :KernelConvolution]
       @assert okmeth "method must be :MovingWindows or :KernelConvolution"
 
-      oklocal1 = length(localpars.rotation) == nelements(pdomain)
-      oklocal2 = typeof(localpars) <: LocalParameters
-      @assert oklocal1 "number of local parameters must match domain points"
-      @assert oklocal2 "wrong format of local parameters"
+      oklocal1 = length(localaniso.rotation) == nelements(pdomain)
+      oklocal2 = typeof(localaniso) <: LocalAnisotropy
+      @assert oklocal1 "number of local anisotropies must match domain points"
+      @assert oklocal2 "wrong format of local anisotropies"
 
       # save preprocessed input
       preproc[var] = (estimator=estimator,
@@ -91,8 +91,8 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
                       maxneighbors=maxneighbors,
                       bsearcher=bsearcher,
                       method=method,
-                      localpars=localpars,
-                      localparshd=localparshd)
+                      localaniso=localaniso,
+                      localanisohd=localanisohd)
     end
   end
 
@@ -108,11 +108,11 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     mactypeof = Dict(name(v) => mactype(v) for v in variables(problem))
 
     # unpack preprocessed parameters
-    estimator, minneighbors, maxneighbors, bsearcher, method, localpars, hdlocalpars = preproc[var]
+    estimator, minneighbors, maxneighbors, bsearcher, method, localaniso, hdlocalaniso = preproc[var]
     KC = method == :KernelConvolution ? true : false
 
-    # if KC, pass localpars to hard data
-    (KC && hdlocalpars==nothing) && (hdlocalpars = grid2hd_qmat(pdata,pdomain,localpars))
+    # if KC, pass localaniso to hard data
+    (KC && hdlocalaniso==nothing) && (hdlocalaniso = grid2hd_qmat(pdata,pdomain,localaniso))
 
     # determine value type
     V = mactypeof[var]
@@ -132,7 +132,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
       # find neighbors with previously estimated values
       nneigh = search!(neighbors, pₒ, bsearcher)
 
-      localpar = (rotation(localpars,location),magnitude(localpars,location))
+      localpar = (rotation(localaniso,location),magnitude(localaniso,location))
       localestimator = KC ? nothing : mwvario(estimator, localpar)
 
       # skip location in there are too few neighbors
@@ -151,7 +151,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
           krig = local_fit(localestimator, X, var)
           μ, σ² = local_predict(krig, pₒ)
         else
-          ∑neighs = view(hdlocalpars, nview)
+          ∑neighs = view(hdlocalaniso, nview)
           krig = local_fit(estimator, X, var, ∑neighs)
           Qx₀ = qmat(localpar...)
           μ, σ² = local_predict(krig, pₒ, (Qx₀,∑neighs))
@@ -167,10 +167,10 @@ end
 
 
 function local_fit(estimator::KrigingEstimator, data, var,
-  localpars::AbstractVector=[nothing])
+  localaniso::AbstractVector=[nothing])
 
   # build Kriging system
-  LHS = local_lhs(estimator, domain(data), localpars)
+  LHS = local_lhs(estimator, domain(data), localaniso)
   RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
 
   # factorize LHS
@@ -185,7 +185,7 @@ end
 
 
 function local_lhs(estimator::KrigingEstimator, domain,
-  localpars::AbstractVector)
+  localaniso::AbstractVector)
 
   γ = estimator.γ
   nobs = nelements(domain)
@@ -198,7 +198,7 @@ function local_lhs(estimator::KrigingEstimator, domain,
   LHS = Matrix{T}(undef, m, m)
 
   # set variogram/covariance block
-  KC = (localpars[1] == nothing) ? false : true
+  KC = (localaniso[1] == nothing) ? false : true
 
   if !KC
     Variography.pairwise!(LHS, γ, domain)
@@ -206,7 +206,7 @@ function local_lhs(estimator::KrigingEstimator, domain,
       @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
     end
   else
-    kcfill!(LHS, γ, domain, localpars)
+    kcfill!(LHS, γ, domain, localaniso)
   end
 
   # set blocks of constraints
@@ -217,13 +217,13 @@ end
 
 
 function set_local_rhs!(estimator::FittedKriging, pₒ,
-  localpars::Tuple)
+  localaniso::Tuple)
 
   γ = estimator.estimator.γ
   X = domain(estimator.state.data)
   RHS = estimator.state.RHS
 
-  KC = localpars[1]==nothing ? false : true
+  KC = localaniso[1]==nothing ? false : true
 
   # RHS variogram/covariance
   if !KC
@@ -234,7 +234,7 @@ function set_local_rhs!(estimator::FittedKriging, pₒ,
   else
     @inbounds for j in 1:nelements(X)
       xj = centroid(X, j)
-      RHS[j] = kccov(γ, pₒ, xj, localpars[1], localpars[2][j])
+      RHS[j] = kccov(γ, pₒ, xj, localaniso[1], localaniso[2][j])
     end
   end
 
@@ -242,11 +242,11 @@ function set_local_rhs!(estimator::FittedKriging, pₒ,
 end
 
 function local_weights(estimator::FittedKriging, pₒ,
-  localpars::Tuple)
+  localaniso::Tuple)
 
   nobs = nelements(estimator.state.data)
 
-  set_local_rhs!(estimator, pₒ, localpars)
+  set_local_rhs!(estimator, pₒ, localaniso)
 
   # solve Kriging system
   x = estimator.state.LHS \ estimator.state.RHS
@@ -257,8 +257,8 @@ function local_weights(estimator::FittedKriging, pₒ,
   KrigingWeights(λ, ν)
 end
 
-function local_predict(estimator::FittedKriging, pₒ, localpars::Tuple=(nothing,))
+function local_predict(estimator::FittedKriging, pₒ, localaniso::Tuple=(nothing,))
   data = estimator.state.data
   var  = estimator.state.var
-  combine(estimator, local_weights(estimator, pₒ, localpars), data[var])
+  combine(estimator, local_weights(estimator, pₒ, localaniso), data[var])
 end

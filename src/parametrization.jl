@@ -3,31 +3,31 @@
 # ------------------------------------------------------------------
 
 """
-    LocalParameters(rotation, magnitude)
+    LocalAnisotropy(rotation, magnitude)
 
-Create a `LocalParameters` object. The `rotation` is a vector of
-`ReferenceFrameRotations.Quaternion` and the magnitude is `AbstractArray{Float}`
-of size (number of dimensions, number of elements)
+Create a `LocalAnisotropy` object. The `rotation` is a vector of
+`ReferenceFrameRotations.Quaternion` and the magnitude is an array of size
+(number of dimensions, number of elements)
 """
-struct LocalParameters
+struct LocalAnisotropy
   rotation::AbstractVector{Quaternion}
   magnitude::AbstractArray
 end
 
 Ints = Union{Int,AbstractVector{Int}}
-rotation(L::LocalParameters) = L.rotation
-rotation(L::LocalParameters, i::Int) = L.rotation[i]
-rotation(L::LocalParameters, i::AbstractVector{Int}) = view(L.rotation, i)
-magnitude(L::LocalParameters) = L.magnitude
-magnitude(L::LocalParameters, i::Ints) = view(L.magnitude, :, i)
-slice(L::LocalParameters, i::Ints) = LocalParameters(rotation(L,i),magnitude(L,i))
-nvals(L::LocalParameters) = length(L.rotation)
-ndims(L::LocalParameters) = size(L.magnitude,1)
+rotation(L::LocalAnisotropy) = L.rotation
+rotation(L::LocalAnisotropy, i::Int) = L.rotation[i]
+rotation(L::LocalAnisotropy, i::AbstractVector{Int}) = view(L.rotation, i)
+magnitude(L::LocalAnisotropy) = L.magnitude
+magnitude(L::LocalAnisotropy, i::Ints) = view(L.magnitude, :, i)
+slice(L::LocalAnisotropy, i::Ints) = LocalAnisotropy(rotation(L,i),magnitude(L,i))
+nvals(L::LocalAnisotropy) = length(L.rotation)
+ndims(L::LocalAnisotropy) = size(L.magnitude,1)
 
-Base.show(io::IO, lp::LocalParameters) = print(io, "LocalParameters")
+Base.show(io::IO, lp::LocalAnisotropy) = print(io, "LocalAnisotropy")
 
-function Base.show(io::IO, ::MIME"text/plain", lp::LocalParameters)
-	print(io,"LocalParameters $(ndims(lp))-D")
+function Base.show(io::IO, ::MIME"text/plain", lp::LocalAnisotropy)
+	print(io,"LocalAnisotropy $(ndims(lp))-D")
 end
 
 """
@@ -41,49 +41,49 @@ SpatialData = Union{GeoData,Domain,DataView,DomainView}
 struct LocalGeoData
 	data::SpatialData
 	object::SpatialData
-	localpars::LocalParameters
+	localaniso::LocalAnisotropy
 	refvario::Union{Variogram,Nothing}
 	datapars::Union{AbstractVector{Int},Nothing}
     graph::Union{SimpleWeightedGraph,Nothing}
 end
 
 """
-    LocalGeoData(object, localpars)
+    LocalGeoData(object, localaniso)
 
-Association of a domain object and its `LocalParameters`.
+Association of a spatial data object and its `LocalAnisotropy`.
 """
-function LocalGeoData(obj::SpatialData, lpars::LocalParameters)
+function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy)
 	LocalGeoData(nothing, obj, lpars, nothing, nothing, nothing)
 end
 
 """
-    LocalGeoData(object, localpars, refvario)
+    LocalGeoData(object, localaniso, refvario)
 
-Association of a domain object, its `LocalParameters` and its reference variogram.
+Association of a spatial data object, its `LocalAnisotropy` and its reference variogram.
 """
-function LocalGeoData(obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
+function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy, refvario::Variogram)
 	LocalGeoData(nothing, obj, lpars, refvario, nothing, nothing)
 end
 
 """
-    LocalGeoData(samples, object, localpars)
+    LocalGeoData(samples, object, localaniso)
 
-Association of samples, a domain object and their `LocalParameters`. The samples
-`LocalParameters` are passed from the domain via nearest neighbors.
+Association of samples, a spatial data object and their `LocalAnisotropy`. The
+samples `LocalAnisotropy` are passed from the spatial data via nearest neighbors.
 """
-function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters)
+function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalAnisotropy)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, nothing, hdids, nothing)
 end
 
 """
-    LocalGeoData(samples, object, localpars, refvario)
+    LocalGeoData(samples, object, localaniso, refvario)
 
-Association of samples, a domain object, their `LocalParameters` and the
-reference variogram. The samples `LocalParameters` are passed from the domain
+Association of samples, a spatial data object, their `LocalAnisotropy` and the
+reference variogram. The samples `LocalAnisotropy` are passed from the spatial data
 via nearest neighbors.
 """
-function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalParameters, refvario::Variogram)
+function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalAnisotropy, refvario::Variogram)
 	hdids = grid2hd_ids(hd,obj)
 	LocalGeoData(hd, obj, lpars, refvario, hdids, nothing)
 end
@@ -103,9 +103,9 @@ coords(D::LocalGeoData, i::Int) = coordinates(centro(D,i))
 coords(D::SpatialData) = reduce(hcat, [coordinates(centroid(D,x)) for x in 1:nelements(D)])
 coords(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(D,x)) for x in i])
 
-rotation(D::LocalGeoData) = D.localpars.rotation
+rotation(D::LocalGeoData) = D.localaniso.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))
-magnitude(D::LocalGeoData) = D.localpars.magnitude
+magnitude(D::LocalGeoData) = D.localaniso.magnitude
 smagnitude(D::LocalGeoData) = view(magnitude(D),:,spars(D))
 
 rotation(D::LocalGeoData, i::Int) = i<=nvals(D) ? rotation(D)[i] : rotation(D)[spars(D,i)]
@@ -124,6 +124,6 @@ struct Gradients <: LocalParMethods end
 
 
 abstract type LocalMetric end
-struct LocalAnisotropy <: LocalMetric end
+struct AnisoDistance <: LocalMetric end
 struct LocalVariogram  <: LocalMetric end
 struct GraphDistance   <: LocalMetric end

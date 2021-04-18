@@ -2,7 +2,7 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
-function colwise(D::LocalGeoData, ::LocalAnisotropy, i::Int, xj::Vector{Int})
+function colwise(D::LocalGeoData, ::AnisoDistance, i::Int, xj::Vector{Int})
 	Qi, ix = qmat(rotation(D,i),magnitude(D,i)), coords(D,i)
 	d = Vector{Float64}()
 	for j in xj
@@ -31,7 +31,7 @@ function colwise(D::LocalGeoData, ::GraphDistance, i::Int, j::Ints)
 end
 
 
-function evaluate(D::LocalGeoData, ::LocalAnisotropy, i::Int, j::Int)
+function evaluate(D::LocalGeoData, ::AnisoDistance, i::Int, j::Int)
 	Qi, Qj = [qmat(rotation(D,x),magnitude(D,x)) for x in (i,j)]
 	ix, jx = [coords(D,x) for x in (i,j)]
 	Qij = (Qi+Qj)/2

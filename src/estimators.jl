@@ -12,14 +12,14 @@ and `param` is a `NamedTuple` containing the parameters below:
 
 * `variogram` - Reference direction and variogram model informed as `axis => γ`.
   The model is fixed in that direction and rescaled in the others according to
-  `LocalParameters` information. e.g. :X => ExponentialVariogram()
+  `LocalAnisotropy` information. e.g. :X => ExponentialVariogram()
 * `mean`      - Simple Kriging mean
 * `method`    - LocalKriging method. :MovingWindows or :KernelConvolution
   (default to :MovingWindows)
-* `localpars`    - Local parameters of the domain
-* `localparshd`  - Local parameters of the samples. Only necessary for
+* `localaniso`    - Local parameters of the domain
+* `localanisohd`  - Local parameters of the samples. Only necessary for
   :KernelConvolution method. They are automatically passed via NN from
-  `localpars` if not informed.
+  `localaniso` if not informed.
 * `minneighbors` - Minimum number of neighbors (default to 1)
 * `maxneighbors` - Maximum number of neighbors (default to 20)
 * `neighborhood` - Search neighborhood (default to `nothing`)
@@ -29,8 +29,8 @@ and `param` is a `NamedTuple` containing the parameters below:
   @param variogram = (:X => ExponentialVariogram())
   @param mean = nothing #0.0 or [1.0,0.8,....]
   @param method = :MovingWindows
-  @param localpars = nothing
-  @param localparshd = nothing
+  @param localaniso = nothing
+  @param localanisohd = nothing
   @param minneighbors = 1
   @param maxneighbors = 20
   @param neighborhood = nothing

@@ -3,10 +3,10 @@
 # ------------------------------------------------------------------
 
 """
-    deformspace(domain, localpars, metric; kwargs)
-    deformspace(domain, localpars, metric, refvariogram; kwargs)
-	deformspace(samples, domain, localpars, metric; kwargs)
-    deformspace(samples, domain, localpars, metric, refvariogram; kwargs)
+    deformspace(domain, localaniso, metric; kwargs)
+    deformspace(domain, localaniso, metric, refvariogram; kwargs)
+	deformspace(samples, domain, localaniso, metric; kwargs)
+    deformspace(samples, domain, localaniso, metric, refvariogram; kwargs)
     deformspace(graphobject, metric=GraphDistance(); kwargs)
 	kwargs = (anchors=1500, maxoutdim=10, weights=nothing)
 
@@ -14,11 +14,11 @@ Spatial deformation is a method that transforms coordinates to an isotropic
 space in high dimension where the local anisotropies information are embedded
 into the new distances. Traditional estimations and simulations can be performed
 in this new data configuration. It's necessary to inform the `domain` object
-(and the `samples` if applied). The local parameters are passed via `localpars`
-and `metric` define how the local parameters are used to calculate the new
+(and the `samples` if applied). The local anisotropies are passed via `localaniso`
+and `metric` define how the local anisotropies are used to calculate the new
 data distances. Available metrics to calculate distance between two points are:
 
-* `LocalAnisotropy()` - averaged anisotropic distance
+* `AnisoDistance()` - averaged anisotropic distance
 * `LocalVariogram()`  - variogram distance with averaged anisotropy
 * `GraphDistance()`   - geodesic distances of a informed graph. More details
   of the graph construction in [`graph`](@ref) docstring.
@@ -30,31 +30,31 @@ maximum number of dimensions to retain after MDS. `weights` are the declustering
 weights of the domain data (+ samples) in order to help selecting declustered
 anchor points for the transformations.
 """
-function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric;
+function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric;
 	anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(obj::SpatialData, lpar::LocalParameters, metric::LocalMetric,
+function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
 	refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalParameters,
+function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy,
 	metric::LocalMetric; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalParameters,
+function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy,
 	metric::LocalMetric, refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-# metric = LocalVariogram, LocalAnisotropy, GraphDistance
+# metric = LocalVariogram, AnisoDistance, GraphDistance
 function deformspace(D::LocalGeoData, metric::LocalMetric=GraphDistance();
 	anchors=1500, maxoutdim=10, weights=nothing)
 

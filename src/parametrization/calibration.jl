@@ -25,7 +25,7 @@ macro name(arg)
    string(arg)
 end
 
-function localparameters(t::TestPars, problem::EstimationProblem)
+function localanisotropies(t::TestPars, problem::EstimationProblem)
     ip = Iterators.product
     vars = [v for (v,V) in variables(problem)]
 
@@ -38,13 +38,13 @@ function localparameters(t::TestPars, problem::EstimationProblem)
     for (img,w) in ip(t.refimgs, t.smooth)
         M = typeof(img[1]) <: CartesianGrid || t.forcegradients
         #lpars = M ? gradients(img[1],img[2],w) : geometry(img,w)
-        lpars = localparameters(Gradients,img[1],img[2],w)
+        lpars = localanisotropies(Gradients,img[1],img[2],w)
 
         for (r1,r2) in ip(t.ratio1, t.ratio2)
             lx = rescale_magnitude(lpars, r1, r2)
 
             for (v,n,e,γ) in ip(vars, t.maxneighbors, t.meths, t.variogram)
-                p = (variogram=γ, localpars=lx, method=e, maxneighbors=n)
+                p = (variogram=γ, localaniso=lx, method=e, maxneighbors=n)
                 solver = LocalKriging(v => p)
                 cv = CrossValidation(t.folds)
                 ε = cverror(solver, problem, cv)

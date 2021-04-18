@@ -2,22 +2,18 @@
 
 [![Build Status][build-img]][build-url] [![Coverage][codecov-img]][codecov-url]
 
-`LocalAnisotropies.jl` is a implementation of geostatistics methods to deal with the non-stationarity of second order moments (aka locally varying anisotropies). It is developed to be used as an extension of [`GeoStats.jl`](https://github.com/JuliaEarth/GeoStats.jl).
-
 **Warning**: This package is still under (slow) development. Some of the implementations were not fully validated and may give inconsistent results.
 
-## Introduction
+This package deals with local anisotropy in geostatistics. It offers some solutions to extract them from a reference input. Then, it's possible to use the local anisotropies to model non-stationary covariance models, which can be incorporated to estimation methods such as kriging. There are also some extra tools, like anisotropy interpolation and conversion to/between different rotation conventions. It is designed for 2-D and 3-D data and is developed to be used as an extension of [`GeoStats.jl`](https://github.com/JuliaEarth/GeoStats.jl). A list of current implementations:
 
-This package offer some solutions to extract local parameters from a reference input, model non-stationary covariance models, and adapt estimation methods to be used with them. Designed for 2-D and 3-D data. There are some extra tools, like local parameters interpolation and conversion to/between different rotation conventions. A list of current implementations:
-
-- <u>Local parameters extraction methods</u>:
+- <u>Local anisotropies extraction methods</u>:
   - Gradients
   - SVD / PCA <p>
 - <u>Nonstationary spatial methods</u>:
   - Moving windows
   - Kernel convolution
   - Spatial deformation <p>
-- <u>Estimation methods adapted to them</u>:
+- <u>Solvers adapted to these nonstationary spatial methods</u>:
   - Kriging
 
 ## Installation
@@ -30,14 +26,9 @@ First, it is necessary to install Julia. Installation instructions for Windows, 
 using Pkg; Pkg.develop(url="https://github.com/rmcaixeta/LocalAnisotropies.jl"); Pkg.add("GeoStats")
 ```
 
-## Documentation
-
-The documentation of the main functions are available as docstrings.
-Check below an usage example that illustrate the package applications.
-
 ## References
 
-#### Introduction to local parameters extraction methods:
+#### Introduction to local anisotropies extraction methods:
 [Lillah & Boisvert (2015)](https://doi.org/10.1016/j.cageo.2015.05.015) Inference of locally varying anisotropy fields from diverse data sources
 
 #### Introduction to nonstationary spatial methods:
@@ -54,6 +45,11 @@ Check below an usage example that illustrate the package applications.
 #### Spatial deformation:
 [Sampson & Guttorp (1992)](https://doi.org/10.1080/01621459.1992.10475181) Nonparametric estimation of nonstationary spatial covariance structure <br>
 [Boisvert (2010)](https://era.library.ualberta.ca/items/5acca59f-6e97-414d-ad13-34c8f97ce223) Geostatistics with locally varying anisotropy
+
+## Documentation
+
+The documentation of the main functions are available as docstrings.
+Check below an usage example that illustrate the package applications.
 
 ## Usage example
 
@@ -75,6 +71,7 @@ P = EstimationProblem(S, G, :P)
 
 searcher = KNearestSearch(G, 10)
 
+# plot reference scenario and samples extracted for further estimations
 splot = plot(G)
 splot = plot!(S)
 plot(plot(D),splot)
@@ -85,42 +82,42 @@ plot(plot(D),splot)
 </p>
 
 ```julia
-# get local parameters
-rawlpars = localparameters(Gradients(), D, :P, 8)
+# get local anisotropies
+rawlpars = localanisotropies(Gradients(), D, :P, 8)
 plot(D, alpha=0.6, colorbar=false)
 plot!(rawlpars,D)
 ```
 
 <p align="center">
-  <img src="imgs/02_localpars.png">
+  <img src="imgs/02_localaniso.png">
 </p>
 
 ```julia
-# rescale magnitude and average 10 nearest local parameters
+# rescale magnitude and average 10 nearest local anisotropies
 lpars = rescale_magnitude(rawlpars, (0.5,1.0))
-lpars = smoothpars(lpars, searcher)
+lpars = smooth(lpars, searcher)
 plot(D, alpha=0.6, colorbar=false)
 plot!(lpars,D)
 ```
 
 <p align="center">
-  <img src="imgs/03_localpars_smooth.png">
+  <img src="imgs/03_localaniso_smooth.png">
 </p>
 
 ```julia
 # plot(lpars, spatialobj) will only work for 2D data
 # for 3D or custom visualizations, it's possivle to export it to VTK
-localpars2vtk("ellipses", D, lpars)
+localaniso2vtk("ellipses", D, lpars)
 # below the file "ellipses.vtu" loaded in Paraview using TensorGlyph
 ```
 
 <p align="center">
-  <img src="imgs/03.2_localpars_vtk.png">
+  <img src="imgs/03.2_localaniso_vtk.png">
 </p>
 
 ```julia
 # LocalKriging (MW)
-MW = LocalKriging(:P => (variogram=(:X=>γ), localpars=lpars, method=:MovingWindows))
+MW = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:MovingWindows))
 s1 = solve(P, MW)
 plot(s1,[:P])
 ```
@@ -131,7 +128,7 @@ plot(s1,[:P])
 
 ```julia
 # LocalKriging (KC)
-KC = LocalKriging(:P => (variogram=(:X=>γ), localpars=lpars, method=:KernelConvolution))
+KC = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:KernelConvolution))
 s2 = solve(P, KC)
 plot(s2,[:P])
 ```
@@ -155,7 +152,7 @@ plot(plot(to3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 
 ```julia
 # Spatial deformation: geodesic anisotropic distances
-LDa = graph(S, G, lpars, LocalAnisotropy(), searcher)
+LDa = graph(S, G, lpars, AnisoDistance(), searcher)
 Sd2, Dd2 = deformspace(LDa, GraphDistance(), anchors=1500)
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
 γ2 = GaussianVariogram(sill=35., range=40.)
@@ -204,14 +201,14 @@ bar(solvers,errors,legend=false,ylabel="Mean squared error",xlabel="Estimation m
   <img src="imgs/10_comp.png">
 </p>
 
-Some extra tools to work with local parameters:
+Some extra tools to work with local anisotropies:
 
 ```julia
-# import external local parameters in GSLIB convention
+# import external local anisotropies in GSLIB convention
 dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
-pars  = localparameters(dummy, [:az], [:r1,:r2], :GSLIB)
+pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 
-# interpolate local parameters into a coarser grid
+# interpolate local anisotropies into a coarser grid
 G_ = CartesianGrid((10,10),(0.5,0.5),(2.0,2.0))
 lpars_ = idwpars(lpars, searcher, G_, power=2.0)
 

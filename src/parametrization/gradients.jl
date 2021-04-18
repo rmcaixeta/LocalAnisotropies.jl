@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    localparameters(Gradients(), grid, propname, w)
+    localanisotropies(Gradients(), grid, propname, w)
 
-Extract `LocalParameters` from a reference scenario. The `propname` variable
+Extract `LocalAnisotropy` from a reference scenario. The `propname` variable
 from the cartesian `grid` object is scanned and local gradients are extracted
 from it. These gradients are smoothed within a squared/cubic window sized
 2`w` x 2`w` (x 2`w`) in order to return an ellipse/ellipsoid along the
@@ -17,10 +17,10 @@ function.
 ## Example
 
 ```julia
-lpars = localparameters(Gradients(), grid, :CO2, 5)
+lpars = localanisotropies(Gradients(), grid, :CO2, 5)
 ```
 """
-function localparameters(::Gradients, obj, prop, window)
+function localanisotropies(::Gradients, obj, prop, window)
     # get dimensions
     dims  = obj.domain.dims
     N     = length(dims)
@@ -61,5 +61,5 @@ function localparameters(::Gradients, obj, prop, window)
         m[i] = λ/λ[1]
     end
 
-    LocalParameters(vec(quat), reduce(hcat,vec(m)))
+    LocalAnisotropy(vec(quat), reduce(hcat,vec(m)))
 end

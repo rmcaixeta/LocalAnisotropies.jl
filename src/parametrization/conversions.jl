@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    localparameters(data, angles, ranges, convention=:GSLIB)
+    localanisotropies(data, angles, ranges, convention=:GSLIB)
 
-Import a `LocalParameters` object from an outer source. The `data` is a
+Import a `LocalAnisotropy` object from an outer source. The `data` is a
 georeferenced object. It must have the rotation angles and ranges/ratios as
 properties. These property names are informed as vectors in `angles` and
 `ranges`for the conversion. Check out the available rotation conventions at
@@ -14,11 +14,11 @@ properties. These property names are informed as vectors in `angles` and
 ## Example
 
 ```julia
-localparameters(data, [:rot1], [:range1, :range2], convention=:EulerIntr) # 2D
-localparameters(data, [:rot1, :rot2, :rot3], [:range1, :range2, :range3]) # 3D
+localanisotropies(data, [:rot1], [:range1, :range2], convention=:EulerIntr) # 2D
+localanisotropies(data, [:rot1, :rot2, :rot3], [:range1, :range2, :range3]) # 3D
 ```
 """
-function localparameters(data::SpatialData, angles::AbstractVector,
+function localanisotropies(data::SpatialData, angles::AbstractVector,
     ranges::AbstractVector, convention=:GSLIB)
     ranges = Symbol.(ranges)
     angles = Symbol.(angles)
@@ -41,7 +41,7 @@ function localparameters(data::SpatialData, angles::AbstractVector,
         m[i] = xranges
     end
 
-    LocalParameters(q, reduce(hcat,m))
+    LocalAnisotropy(q, reduce(hcat,m))
 end
 
 #
@@ -76,25 +76,25 @@ function convertangles(quat::Quaternion, convention::Symbol)
 end
 
 """
-    exportpars(filename, localpars, convention)
+    exportpars(filename, localaniso, convention)
 
-Export local parameters to a CSV table. The angles are exported in the form of
+Export local anisotropies to a CSV table. The angles are exported in the form of
 the given convention. Check out the available rotation conventions at
 [`RotationRule`](@ref) docstring.
 
 ## Example
 
 ```julia
-exportpars("path/localpars.csv", localpars, :GSLIB)
+exportpars("path/localaniso.csv", localaniso, :GSLIB)
 ```
 """
-function exportpars(out, lpars::LocalParameters, convention=:GSLIB)
+function exportpars(out, lpars::LocalAnisotropy, convention=:GSLIB)
     table = convertpars(lpars, convention)
     CSV.write(out, table)
 end
 
-# convert LocalParameters into angles + ranges
-function convertpars(lpars::LocalParameters, convention=:GSLIB)
+# convert LocalAnisotropy into angles + ranges
+function convertpars(lpars::LocalAnisotropy, convention=:GSLIB)
     pars = []
     len  = nvals(lpars)
     for i in 1:len

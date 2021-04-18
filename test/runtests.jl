@@ -4,9 +4,9 @@ using Test
 import LocalAnisotropies: rotmat
 
 @testset "LocalAnisotropies.jl" begin
-    # convert data to LocalParameters
+    # convert data to LocalAnisotropy
     dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
-    pars  = localparameters(dummy, [:az], [:r1,:r2], :GSLIB)
+    pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 
     # convert between different rotation conventions
     angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
@@ -19,12 +19,12 @@ import LocalAnisotropies: rotmat
     # pars_ = convertpars(pars, convention=:Datamine)
     # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
 
-	# local parameters from pointset coordinates
+	# local anisotropies from pointset coordinates
 	data  = rmat[1] * vcat(rand(2,100),zeros(1,100))
 	pset  = PointSet(data)
 	nhood = KNearestSearch(pset, 10)
-    gpars = localparameters(Geometric(), nhood, simplify=true)
-    gpars = localparameters(Geometric(), nhood, simplify=false)
+    gpars = localanisotropies(Geometric(), nhood, simplify=true)
+    gpars = localanisotropies(Geometric(), nhood, simplify=false)
 
     grid2d = (10,10)
     grid3d = (10,10,5)
@@ -43,12 +43,12 @@ import LocalAnisotropies: rotmat
         G = CartesianGrid(dims...)
         searcher = KNearestSearch(G, 10)
 
-        # get local parameters
-        lpars = localparameters(Gradients(), D, :P, 3)
+        # get local anisotropies
+        lpars = localanisotropies(Gradients(), D, :P, 3)
 
-        # rescale magnitude and interpolate local parameters
+        # rescale magnitude and interpolate local anisotropies
         lpars = rescale_magnitude(lpars, (0.2,1.0))
-        lpars = smoothpars(lpars, searcher)
+        lpars = smooth(lpars, searcher)
 
         # interpolate in a coarser grid
         G_ = if R==2
@@ -63,15 +63,15 @@ import LocalAnisotropies: rotmat
         γ = NuggetEffect(0.1) + 0.9*ExponentialVariogram(range=60.0)
 
         # LocalKriging (MW)
-        MW = LocalKriging(:P => (variogram=(:X=>γ), localpars=lpars, method=:MovingWindows))
+        MW = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:MovingWindows))
         s1 = solve(P, MW)
 
         # LocalKriging (KC)
-        KC = LocalKriging(:P => (variogram=(:X=>γ), localpars=lpars, method=:KernelConvolution))
+        KC = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:KernelConvolution))
         s2 = solve(P, KC)
 
         # Spatial deformation: anisotropic distances
-        Sd1, Dd1 = deformspace(S, G, lpars, LocalAnisotropy(), anchors=1500)
+        Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance(), anchors=1500)
         Pd1 = EstimationProblem(Sd1, Dd1, :P)
         s3 = solve(Pd1, Kriging(:P => (variogram=γ,)))
 		x3 = to3d(s3)
@@ -83,7 +83,7 @@ import LocalAnisotropies: rotmat
 		x4 = to3d(s4)
 
         # Spatial deformation: geodesic anisotropic distances
-        LDa = graph(S, G, lpars, LocalAnisotropy(), searcher)
+        LDa = graph(S, G, lpars, AnisoDistance(), searcher)
         Sd3, Dd3 = deformspace(LDa, GraphDistance(), anchors=1500)
         Pd3 = EstimationProblem(Sd3, Dd3, :P)
         s5 = solve(Pd3, Kriging(:P => (variogram=γ,)))

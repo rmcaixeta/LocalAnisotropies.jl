@@ -23,7 +23,7 @@ function grid2hd_ids(pdata,pdomain)
 end
 
 # nearest grid data mahalanobis matrix to some other sample data
-function grid2hd_qmat(pdata,pdomain,localpars)
+function grid2hd_qmat(pdata,pdomain,localaniso)
   idxs = grid2hd_ids(pdata,pdomain)
-  [qmat(rotation(localpars,i),magnitude(localpars,i)) for i in idxs]
+  [qmat(rotation(localaniso,i),magnitude(localaniso,i)) for i in idxs]
 end
