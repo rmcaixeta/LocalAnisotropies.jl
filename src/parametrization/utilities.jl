@@ -5,6 +5,8 @@
 """
     rescale_magnitude(localpars, r1, r2=nothing, r3=nothing;
     clip=[0.05,0.95], magnitude=:ratios)
+	rescale_magnitude(localpars; r1=nothing, r2=nothing, r3=nothing
+    clip=[0.05,0.95], magnitude=:ratios)
 
 Rescale magnitude values of `localpars` to desired limits using min-max scaling.
 `r1` and `r2` set the limits for the ratios between (range2/range1) and
@@ -18,7 +20,7 @@ In the 2-D example, the max local anisotropy is 5x and the minimum is 1x
 
 ```julia
 example2d = rescale_magnitude(localpars2d, (0.2,1.0))
-example3d = rescale_magnitude(localpars3d, (0.5,1.0), (0.1,0.5))
+example3d = rescale_magnitude(localpars3d, r1=(0.5,1.0), r2=(0.1,0.5))
 ```
 """
 function rescale_magnitude(lp::LocalParameters, r1, r2=nothing, r3=nothing;
@@ -40,6 +42,11 @@ function rescale_magnitude(lp::LocalParameters, r1, r2=nothing, r3=nothing;
     end
 
     LocalParameters(lp.rotation,m)
+end
+
+function rescale_magnitude(lp::LocalParameters; r1=nothing, r2=nothing,
+	                       r3=nothing, clip=[0.05,0.95], magnitude=:ratios)
+    rescale_magnitude(lp, r1, r2, r3, clip=clip, magnitude=magnitude)
 end
 
 """
