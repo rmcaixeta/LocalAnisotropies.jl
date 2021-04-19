@@ -59,7 +59,7 @@ Converting 3D rotation [30, 30 30] from GSLIB convention to Datamine convention
 new_angs = convertangles([30,30,30], :GSLIB, :Datamine)
 ```
 """
-function convertangles(angles::AbstractVector, convention1::Symbol, convention2::Symbol)
+function convertangles(angles::AbstractVector, convention1, convention2)
     P, _  = rotmat([1,1,1], angles, convention1)
     rotmat2angles(P, convention2)
 end
@@ -70,7 +70,7 @@ end
 Convert a `ReferenceFrameRotations.Quaternion` to angles in a given convention.
 Check out the available rotation conventions at [`RotationRule`](@ref) docstring.
 """
-function convertangles(quat::Quaternion, convention::Symbol)
+function convertangles(quat::Quaternion, convention)
     dcm    = quat_to_dcm(quat)
     rotmat2angles(dcm, convention)
 end
@@ -109,11 +109,11 @@ function convertpars(lpars::LocalAnisotropy, convention=:GSLIB)
 end
 
 # reverse transformation of rotation matrix to angles
-function rotmat2angles(dcm::AbstractMatrix, convention::Symbol)
+function rotmat2angles(dcm::AbstractMatrix, convention)
   N = size(dcm, 1)
   P = N == 2 ? DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]) : dcm
 
-  rule = rules[convention]
+  rule = convention isa Symbol ? rules[convention] : convention
   !rule.extrinsic && (P = P')
   preangs = dcm_to_angle(P, rule.order)
   angles  = [preangs.a1, preangs.a2, preangs.a3]

@@ -7,7 +7,7 @@
     deformspace(domain, localaniso, metric, refvariogram; kwargs)
 	deformspace(samples, domain, localaniso, metric; kwargs)
     deformspace(samples, domain, localaniso, metric, refvariogram; kwargs)
-    deformspace(graphobject, metric=GraphDistance(); kwargs)
+    deformspace(graphobject, metric=GraphDistance; kwargs)
 	kwargs = (anchors=1500, maxoutdim=10, weights=nothing)
 
 Spatial deformation is a method that transforms coordinates to an isotropic
@@ -18,44 +18,44 @@ in this new data configuration. It's necessary to inform the `domain` object
 and `metric` define how the local anisotropies are used to calculate the new
 data distances. Available metrics to calculate distance between two points are:
 
-* `AnisoDistance()` - averaged anisotropic distance
-* `LocalVariogram()`  - variogram distance with averaged anisotropy
-* `GraphDistance()`   - geodesic distances of a informed graph. More details
+* `AnisoDistance`   - averaged anisotropic distance
+* `KernelVariogram` - non-stationary variogram kernel estimator
+* `GraphDistance`   - geodesic distances of a informed graph. More details
   of the graph construction in [`graph`](@ref) docstring.
 
-A reference variogram `refvariogram` is necessary if metric is `LocalVariogram()`.
+A reference variogram `refvariogram` is necessary if metric is `KernelVariogram`.
 Additional keyword arguments are the number of `anchors` to perform landmark MDS
 if the number of data is too big for a traditional MDS. `maxoutdim` is the
 maximum number of dimensions to retain after MDS. `weights` are the declustering
 weights of the domain data (+ samples) in order to help selecting declustered
 anchor points for the transformations.
 """
-function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric;
+function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric};
 	anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
+function deformspace(obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric},
 	refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
 function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy,
-	metric::LocalMetric; anchors=1500, maxoutdim=10, weights=nothing)
+	metric::Type{<:LocalMetric}; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
 function deformspace(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy,
-	metric::LocalMetric, refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
+	metric::Type{<:LocalMetric}, refvario::Variogram; anchors=1500, maxoutdim=10, weights=nothing)
 	D = LocalGeoData(hd,obj,lpar,refvario)
 	deformspace(D, metric, anchors=anchors, maxoutdim=maxoutdim, weights=weights)
 end
 
-# metric = LocalVariogram, AnisoDistance, GraphDistance
-function deformspace(D::LocalGeoData, metric::LocalMetric=GraphDistance();
+# metric = KernelVariogram, AnisoDistance, GraphDistance
+function deformspace(D::LocalGeoData, metric::Type{<:LocalMetric}=GraphDistance;
 	anchors=1500, maxoutdim=10, weights=nothing)
 
 	#@assert graph exists if GraphDistance
@@ -94,7 +94,7 @@ function setanchors(n,anchors,weights)
 	sort!(ianchors)
 end
 
-function dissmatrix!(ADM, D::LocalGeoData, metric::LocalMetric, iax::Vector{Int})
+function dissmatrix!(ADM, D::LocalGeoData, metric::Type{<:LocalMetric}, iax::Vector{Int})
 	n = size(ADM,1)
 	for (i,ia) in enumerate(iax)
 		dcols = colwise(D, metric, ia, iax[i:n])
@@ -127,7 +127,7 @@ function anchors_mds(ADM, maxoutdim)
 	atcoords, M1, M3
 end
 
-function triangulation(D::LocalGeoData, metric::LocalMetric,i,j,M1,M3)
+function triangulation(D::LocalGeoData, metric::Type{<:LocalMetric},i,j,M1,M3)
 	M2 = colwise(D, metric, i, j) .^ 2
 	-0.5*M1*(M2-M3)
 end

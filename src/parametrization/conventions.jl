@@ -64,12 +64,12 @@ rules = Dict(
 )
 
 function rotmat(semiaxes::AbstractVector, angles::AbstractVector,
-                convention::Symbol=:TaitBryanExtr; rev=false)
+                convention=:TaitBryanExtr; rev=false)
   N = length(semiaxes)
   @assert all(semiaxes .> 0) "semiaxes must be positive"
   @assert N ∈ [2,3] "dimension must be either 2 or 3"
 
-  rule = rules[convention]
+  rule = convention isa Symbol ? rules[convention] : convention
 
   # invert x and y if necessary
   if rule.main == :y

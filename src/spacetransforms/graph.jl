@@ -13,40 +13,40 @@ edges/neighbors are defined by the `searcher` object associated to the domain.
 Distance between points are based on local anisotropies `localaniso` and the
 desired `metric` to calculate distance between two points. Available metrics:
 
-* `AnisoDistance()` - averaged anisotropic distance
-* `LocalVariogram()`  - variogram distance with averaged anisotropy
+* `AnisoDistance`   - averaged anisotropic distance
+* `KernelVariogram` - non-stationary variogram kernel estimator
 
-A reference variogram `refvariogram` is necessary if metric is `LocalVariogram()`.
+A reference variogram `refvariogram` is necessary if metric is `KernelVariogram`.
 """
-function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric},
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj,lpar)
 	graph!(D, metric, searcher)
 end
 
-function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
+function graph(obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric},
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(obj, lpar, refvario)
 	graph!(D, metric, searcher)
 end
 
-function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric},
 	searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj,lpar)
 	graph!(D, metric, searcher)
 end
 
-function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::LocalMetric,
+function graph(hd::SpatialData, obj::SpatialData, lpar::LocalAnisotropy, metric::Type{<:LocalMetric},
 	refvario::Variogram, searcher::NeighborSearchMethod)
 
 	D = LocalGeoData(hd, obj, lpar, refvario)
 	graph!(D, metric, searcher)
 end
 
-function graph!(D::LocalGeoData, metric::LocalMetric, searcher::NeighborSearchMethod)
+function graph!(D::LocalGeoData, metric::Type{<:LocalMetric}, searcher::NeighborSearchMethod)
 	O = searcher.domain
 	n = nelements(O)
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()

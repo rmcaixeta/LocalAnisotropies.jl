@@ -2,9 +2,17 @@
 
 [![Build Status][build-img]][build-url] [![Coverage][codecov-img]][codecov-url]
 
-**Warning**: This package is still under (slow) development. Some of the implementations were not fully validated and may give inconsistent results.
 
-This package deals with local anisotropy in geostatistics. It offers some solutions to extract them from a reference input. Then, it's possible to use the local anisotropies to model non-stationary covariance models, which can be incorporated to estimation methods such as kriging. There are also some extra tools, like anisotropy interpolation and conversion to/between different rotation conventions. It is designed for 2-D and 3-D data and is developed to be used as an extension of [`GeoStats.jl`](https://github.com/JuliaEarth/GeoStats.jl). A list of current implementations:
+<p align="center">
+  <img src="imgs/00_intro.png" width="300">
+</p>
+<p align="center"><i>
+  Local anisotropies ellipses extracted from reference data
+</i></p>
+
+## Introduction
+
+This package deals with local anisotropies in geostatistics. It offers some solutions to extract them from a reference input. Then, it's possible to use the local anisotropies to create nonstationary spatial models, which can be used into estimation methods such as kriging. There are also some extra tools, like anisotropy interpolation and conversion to/between different rotation conventions. It is designed for 2-D and 3-D data and is developed to be used as an extension of [`GeoStats.jl`](https://github.com/JuliaEarth/GeoStats.jl) when dealing with nonstationarity of second order moments. A list of current implementations:
 
 - <u>Local anisotropies extraction methods</u>:
   - Gradients
@@ -16,14 +24,16 @@ This package deals with local anisotropy in geostatistics. It offers some soluti
 - <u>Solvers adapted to these nonstationary spatial methods</u>:
   - Kriging
 
+**Warning**: This package is still under (slow) development. Some of the implementations were not fully validated and may give inconsistent results. Debugging, contributions and suggestions are welcome.
+
 ## Installation
 
 First, it is necessary to install Julia. Installation instructions for Windows, Linux and macOS are available [here](https://julialang.org/downloads/platform/).
 
-`LocalAnisotropies.jl` is not released yet. To use it: open the Julia REPL and then run the following command.
+To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl` and `Plots.jl` packages are installed together to run the usage example.
 
 ```julia
-using Pkg; Pkg.develop(url="https://github.com/rmcaixeta/LocalAnisotropies.jl"); Pkg.add("GeoStats")
+using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","Plots"])
 ```
 
 ## References
@@ -48,28 +58,27 @@ using Pkg; Pkg.develop(url="https://github.com/rmcaixeta/LocalAnisotropies.jl");
 
 ## Documentation
 
-The documentation of the main functions are available as docstrings.
+The documentation of the main functions are available as [docstrings](https://juliahub.com/docs/LocalAnisotropies)
 Check below an usage example that illustrate the package applications.
 
 ## Usage example
 
 ```julia
+# load libraries for the example
 using LocalAnisotropies
 using GeoStats
 using Plots
 using Random
 Random.seed!(1234)
 
-# reference scenario for tests
+# create a reference scenario for tests
 D = georef((P=[25-abs(0.2*i^2-j) for i in -10:9, j in 1:20],))
 S = sample(D, 80, replace=false)
 G = CartesianGrid(20,20)
 
-# Estimation problem
+# create an estimation problem and a variogram model
 P = EstimationProblem(S, G, :P)
 γ = GaussianVariogram(sill=35., range=11.)
-
-searcher = KNearestSearch(G, 10)
 
 # plot reference scenario and samples extracted for further estimations
 splot = plot(G)
@@ -82,8 +91,8 @@ plot(plot(D),splot)
 </p>
 
 ```julia
-# get local anisotropies
-rawlpars = localanisotropies(Gradients(), D, :P, 8)
+# get local anisotropies using gradients of a 8x8 radius window
+rawlpars = localanisotropies(Gradients, D, :P, 8)
 plot(D, alpha=0.6, colorbar=false)
 plot!(rawlpars,D)
 ```
@@ -95,6 +104,7 @@ plot!(rawlpars,D)
 ```julia
 # rescale magnitude and average 10 nearest local anisotropies
 lpars = rescale_magnitude(rawlpars, (0.5,1.0))
+searcher = KNearestSearch(G, 10)
 lpars = smooth(lpars, searcher)
 plot(D, alpha=0.6, colorbar=false)
 plot!(lpars,D)
@@ -105,8 +115,8 @@ plot!(lpars,D)
 </p>
 
 ```julia
-# plot(lpars, spatialobj) will only work for 2D data
-# for 3D or custom visualizations, it's possivle to export it to VTK
+# plot(lpars, data) will only work for 2D spatial data
+# for 3D or custom visualizations, it's possible to export it to VTK
 localaniso2vtk("ellipses", D, lpars)
 # below the file "ellipses.vtu" loaded in Paraview using TensorGlyph
 ```
@@ -116,7 +126,7 @@ localaniso2vtk("ellipses", D, lpars)
 </p>
 
 ```julia
-# LocalKriging (MW)
+# kriging using moving windows method
 MW = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:MovingWindows))
 s1 = solve(P, MW)
 plot(s1,[:P])
@@ -127,7 +137,7 @@ plot(s1,[:P])
 </p>
 
 ```julia
-# LocalKriging (KC)
+# kriging using kernel convolution method
 KC = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:KernelConvolution))
 s2 = solve(P, KC)
 plot(s2,[:P])
@@ -138,8 +148,8 @@ plot(s2,[:P])
 </p>
 
 ```julia
-# Spatial deformation: anisotropic variogram distances
-Sd1, Dd1 = deformspace(S, G, lpars, LocalVariogram(), γ, anchors=1500)
+# deform space using kernel variogram as dissimilarity input
+Sd1, Dd1 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=1500)
 Pd1 = EstimationProblem(Sd1, Dd1, :P)
 γ1 = GaussianVariogram(sill=35., range=40.)
 s3 = solve(Pd1, Kriging(:P => (variogram=γ1,)))
@@ -151,9 +161,11 @@ plot(plot(to3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# Spatial deformation: geodesic anisotropic distances
-LDa = graph(S, G, lpars, AnisoDistance(), searcher)
-Sd2, Dd2 = deformspace(LDa, GraphDistance(), anchors=1500)
+# deform space based on a graph built with average anisotropic distances of the
+# 10 nearest data
+LDa = graph(S, G, lpars, AnisoDistance, searcher)
+Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
+# traditional kriging in the new multidimensional space
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
 γ2 = GaussianVariogram(sill=35., range=40.)
 s4 = solve(Pd2, Kriging(:P => (variogram=γ2,)))
@@ -165,9 +177,10 @@ plot(plot(to3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# Spatial deformation: geodesic anisotropic variogram distances
-LDv = graph(S, G, lpars, LocalVariogram(), γ, searcher)
-Sd3, Dd3 = deformspace(LDv, GraphDistance(), anchors=1500)
+# deform space based on a graph built with kernel variogram of the 10 nearest data
+LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
+Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
+# traditional kriging in the new multidimensional space
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
 γ3 = GaussianVariogram(sill=45., range=40.)
 s5 = solve(Pd3, Kriging(:P => (variogram=γ3,)))
@@ -179,7 +192,7 @@ plot(plot(to3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# Ordinary kriging for comparison
+# ordinary kriging for comparison
 OK = Kriging(:P => (variogram=γ, maxneighbors=20))
 s0 = solve(P, OK)
 plot(s0,[:P])

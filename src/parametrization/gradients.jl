@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    localanisotropies(Gradients(), grid, propname, w)
+    localanisotropies(Gradients, grid, propname, w)
 
 Extract `LocalAnisotropy` from a reference scenario. The `propname` variable
 from the cartesian `grid` object is scanned and local gradients are extracted
@@ -17,10 +17,10 @@ function.
 ## Example
 
 ```julia
-lpars = localanisotropies(Gradients(), grid, :CO2, 5)
+lpars = localanisotropies(Gradients, grid, :CO2, 5)
 ```
 """
-function localanisotropies(::Gradients, obj, prop, window)
+function localanisotropies(::Type{Gradients}, obj, prop, window)
     # get dimensions
     dims  = obj.domain.dims
     N     = length(dims)

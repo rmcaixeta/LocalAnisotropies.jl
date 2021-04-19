@@ -53,7 +53,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
             bsearcher = KBallSearch(pdata, maxneighbors, neigh)
           else
             searcher  = NeighborhoodSearch(pdata, neigh)
-            bsearcher = BoundedSearch(searcher, maxneighbors)
+            bsearcher = FilteredSearch(searcher, maxneighbors)
           end
         else
           # nearest neighbor search with a distance
