@@ -98,7 +98,7 @@ function convertpars(lpars::LocalAnisotropy, convention=:GSLIB)
     pars = []
     len  = nvals(lpars)
     for i in 1:len
-        dcm    = quat_to_dcm(rotation(lpars, i))
+        dcm    = rotmat(lpars, i)
         angles = rotmat2angles(dcm, convention)
         ranges = magnitude(lpars, i)
         push!(pars, append!(angles,ranges))

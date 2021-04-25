@@ -41,10 +41,10 @@ include("parametrization/conversions.jl")
 include("parametrization/geometric.jl")
 include("parametrization/gradients.jl")
 include("parametrization/interpolation.jl")
-include("parametrization/partitions.jl")
 include("parametrization/recipes.jl")
 include("parametrization/searchers.jl")
 include("parametrization/utilities.jl")
+include("parametrization/variograms.jl")
 include("spacetransforms/deformation.jl")
 include("spacetransforms/graph.jl")
 include("spacetransforms/metrics.jl")
@@ -57,6 +57,8 @@ export
     idwpars,
     localanisotropies,
     localaniso2vtk,
+    localvariography,
+    nnpars,
     rescale_magnitude,
     smooth,
     to3d,
@@ -68,6 +70,5 @@ export
     LocalGeoData,
     LocalKriging,
     KernelVariogram,
-    RotationRule,
-    TestSet
+    RotationRule
 end

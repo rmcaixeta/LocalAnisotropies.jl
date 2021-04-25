@@ -66,10 +66,9 @@ function localaniso2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magn
 	@assert magnitude in [:ratios, :ranges] "`magnitude` must be :ratios or :ranges"
 
 	elp = (dir == :ellips)
-	cod = Dict(:X=>1, :Y=>2, :Z=>3)
 	dim = size(coords,1)
 	n   = size(coords,2)
-	axs = dir in [:XYZ, :ellips] ? (1:dim) : [cod[dir]]
+	axs = dir in [:XYZ, :ellips] ? (1:dim) : [iaxis(dir)]
 	xyz = dim == 2 ? vcat(coords, zeros(Float64,1,n)) : coords
 	vtx = [MeshCell( VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
 	ijk = elp ? zeros(Float64, 9, n, 1, 1) : [zeros(Float64, 3, n, 1, 1) for i in axs]
@@ -81,12 +80,12 @@ function localaniso2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magn
 			mag = lpars.magnitude[:,x]
 			dim == 2 && push!(mag, zx)
 			Λ = Diagonal(SVector{3}(mag))
-			P = quat_to_dcm(lpars.rotation[x])' * Λ
+			P = rotmat(lpars, x)' * Λ
 			for v in 1:length(P)
 				ijk[v, x, 1, 1] = P[v]
 			end
 		else
-			dcm = quat_to_dcm(lpars.rotation[x])
+			dcm = rotmat(lpars, x)
 	        f = dcm[3,3] < 0 ? -1 : 1
 			for d in axs
 				ijk[d][1, x, 1, 1] = f*dcm[d,1]

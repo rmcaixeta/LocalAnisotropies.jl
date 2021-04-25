@@ -69,9 +69,8 @@ end
 
 function setref_axis(localaniso::LocalAnisotropy, ax::Symbol)
   # rescale magnitude according to reference axis
-  ix = Dict(:X=>1,:Y=>2,:Z=>3)
   m = localaniso.magnitude
-  ref = m[ix[ax],:]
+  ref = m[iaxis(ax),:]
   for i in size(m, 1)
     m[i,:] ./= ref
   end

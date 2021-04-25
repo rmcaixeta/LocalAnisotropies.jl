@@ -18,11 +18,17 @@ Ints = Union{Int,AbstractVector{Int}}
 rotation(L::LocalAnisotropy) = L.rotation
 rotation(L::LocalAnisotropy, i::Int) = L.rotation[i]
 rotation(L::LocalAnisotropy, i::AbstractVector{Int}) = view(L.rotation, i)
+rotmat(L::LocalAnisotropy, i::Int) = quat_to_dcm(L.rotation[i])
 magnitude(L::LocalAnisotropy) = L.magnitude
 magnitude(L::LocalAnisotropy, i::Ints) = view(L.magnitude, :, i)
+ratio1(L::LocalAnisotropy) = L.magnitude[2,:] ./ L.magnitude[1,:]
+ratio1(L::LocalAnisotropy, i::Ints) = L.magnitude[2,i] / L.magnitude[1,i]
+ratio2(L::LocalAnisotropy) = L.magnitude[3,:] ./ L.magnitude[1,:]
+ratio2(L::LocalAnisotropy, i::Ints) = L.magnitude[3,i] / L.magnitude[1,i]
 slice(L::LocalAnisotropy, i::Ints) = LocalAnisotropy(rotation(L,i),magnitude(L,i))
 nvals(L::LocalAnisotropy) = length(L.rotation)
 ndims(L::LocalAnisotropy) = size(L.magnitude,1)
+iaxis(ax) = (X=1, Y=2, Z=3)[ax]
 
 Base.show(io::IO, lp::LocalAnisotropy) = print(io, "LocalAnisotropy")
 
@@ -30,12 +36,6 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalAnisotropy)
 	print(io,"LocalAnisotropy $(ndims(lp))-D")
 end
 
-"""
-    SpatialData
-
-Union of multiple types of spatial data from GeoStats.jl: `GeoData`, `Domain`,
-`DataView` and `DomainView`
-"""
 SpatialData = Union{GeoData,Domain,DataView,DomainView}
 
 struct LocalGeoData
