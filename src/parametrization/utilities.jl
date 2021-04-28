@@ -23,30 +23,63 @@ example2d = rescale_magnitude(localaniso2d, (0.2,1.0))
 example3d = rescale_magnitude(localaniso3d, r1=(0.5,1.0), r2=(0.1,0.5))
 ```
 """
-function rescale_magnitude(lp::LocalAnisotropy, r1, r2=nothing, r3=nothing;
+function rescale_magnitude!(lp::LocalAnisotropy, r1, r2=nothing, r3=nothing;
 	                       clip=[0.05,0.95], magnitude=:ratios)
     N = ndims(lp)
     m = lp.magnitude
-    bounds = [r1,r2]
+	rvals = [r1,r2,r3]
 
-    for i in 2:N
-		bounds[i-1] == nothing && continue
+	if magnitude == :ratios
+		ref = m[1,:]
+		fixaxis!(lp, :X)
+		rvals = [nothing,r1,r2]
+	end
+
+    for i in 1:N
+		rvals[i] == nothing && continue
         mi = m[i,:]
         qx = quantile(mi, clip)
         mi[mi .< qx[1]] .= qx[1]
         mi[mi .> qx[2]] .= qx[2]
-        r = (mi .- qx[1]) ./ (qx[2]-qx[1])
-        typeof(bounds[i-1]) <: Number && (bounds[i-1]=(bounds[i-1],bounds[i-1]))
-        b1, b2 = bounds[i-1]
-        m[i,:] .= (b1 .+ (b2-b1) .* r)
+        mi = (mi .- qx[1]) ./ (qx[2]-qx[1])
+        rvals[i] isa Number && (rvals[i]=(rvals[i],rvals[i]))
+        b1, b2 = rvals[i]
+        m[i,:] .= (b1 .+ (b2-b1) .* mi)
+		magnitude == :ratios && (m[i,:] .*= ref)
     end
-
-    LocalAnisotropy(lp.rotation,m)
+	lp
 end
 
-function rescale_magnitude(lp::LocalAnisotropy; r1=nothing, r2=nothing,
-	                       r3=nothing, clip=[0.05,0.95], magnitude=:ratios)
-    rescale_magnitude(lp, r1, r2, r3, clip=clip, magnitude=magnitude)
+function rescale_magnitude!(lp::LocalAnisotropy; r1=nothing, r2=nothing,
+	                       r3=nothing, kwargs...)
+    rescale_magnitude!(lp, r1, r2, r3; kwargs...)
+end
+
+function rescale_magnitude(lpo::LocalAnisotropy, r1, r2=nothing, r3=nothing;
+	                       clip=[0.05,0.95], magnitude=:ratios)
+    lp = deepcopy(lpo)
+	rescale_magnitude!(lp, r1, r2, r3; clip=clip, magnitude=magnitude)
+end
+
+function rescale_magnitude(lpo::LocalAnisotropy; r1=nothing, r2=nothing,
+	                       r3=nothing, kwargs...)
+    lp = deepcopy(lpo)
+	rescale_magnitude!(lp, r1, r2, r3; kwargs...)
+end
+
+function fixaxis(lpar::LocalAnisotropy, ax::Symbol)
+  lp = deepcopy(lpar)
+  fixaxis!(lp, ax)
+end
+
+function fixaxis!(lpar::LocalAnisotropy, ax::Symbol)
+  # rescale magnitude according to reference axis
+  m = lpar.magnitude
+  ref = m[iaxis(ax),:]
+  for i in 1:size(m, 1)
+    m[i,:] ./= ref
+  end
+  lpar
 end
 
 """

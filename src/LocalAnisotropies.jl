@@ -53,6 +53,7 @@ export
     convertangles,
     deformspace,
     exportpars,
+    fixaxis!,
     graph,
     idwpars,
     localanisotropies,

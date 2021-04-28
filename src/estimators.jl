@@ -10,9 +10,7 @@ and `param` is a `NamedTuple` containing the parameters below:
 
 ## Parameters
 
-* `variogram` - Reference direction and variogram model informed as `axis => γ`.
-  The model is fixed in that direction and rescaled in the others according to
-  `LocalAnisotropy` information. e.g. :X => ExponentialVariogram()
+* `variogram` - Reference variogram model
 * `mean`      - Simple Kriging mean
 * `method`    - LocalKriging method. :MovingWindows or :KernelConvolution
   (default to :MovingWindows)
@@ -26,7 +24,7 @@ and `param` is a `NamedTuple` containing the parameters below:
 * `distance`     - Distance used to find nearest neighbors (default to `Euclidean()`)
 """
 @estimsolver LocalKriging begin
-  @param variogram = (:X => ExponentialVariogram())
+  @param variogram = ExponentialVariogram()
   @param mean = nothing #0.0 or [1.0,0.8,....]
   @param method = :MovingWindows
   @param localaniso = nothing

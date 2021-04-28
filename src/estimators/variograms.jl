@@ -66,13 +66,3 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
 
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end
-
-function setref_axis(localaniso::LocalAnisotropy, ax::Symbol)
-  # rescale magnitude according to reference axis
-  m = localaniso.magnitude
-  ref = m[iaxis(ax),:]
-  for i in size(m, 1)
-    m[i,:] ./= ref
-  end
-  LocalAnisotropy(localaniso.rotation,m)
-end
