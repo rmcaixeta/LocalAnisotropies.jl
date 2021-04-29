@@ -47,8 +47,11 @@ import LocalAnisotropies: rotmat
         lpars = localanisotropies(Gradients, D, :P, 3)
 
         # rescale magnitude and interpolate local anisotropies
-        lpars = rescale_magnitude(lpars, (0.2,1.0))
+        lpars = rescale_magnitude(lpars, r2=(0.2,1.0))
+        lpars = reference_magnitude(lpars, :Y)
         lpars = smooth(lpars, searcher)
+
+		spars = nnpars(lpars, D, S)
 
         # interpolate in a coarser grid
         G_ = if R==2
@@ -63,11 +66,11 @@ import LocalAnisotropies: rotmat
         γ = NuggetEffect(0.1) + 0.9*ExponentialVariogram(range=60.0)
 
         # LocalKriging (MW)
-        MW = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:MovingWindows))
+        MW = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:MovingWindows))
         s1 = solve(P, MW)
 
         # LocalKriging (KC)
-        KC = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:KernelConvolution))
+        KC = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:KernelConvolution))
         s2 = solve(P, KC)
 
         # Spatial deformation: anisotropic distances
