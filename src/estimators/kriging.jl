@@ -65,7 +65,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
         bsearcher = nothing
       end
 
-      # local inputs; adjust ratios according to axis of ref vario
+      # local inputs
       method = varparams.method
       KC = method == :KernelConvolution ? true : false
       localaniso, localanisohd = (varparams.localaniso, varparams.localanisohd)

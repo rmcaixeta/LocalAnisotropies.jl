@@ -39,8 +39,8 @@ end
 SpatialData = Union{GeoData,Domain,DataView,DomainView}
 
 struct LocalGeoData
-	data::SpatialData
-	object::SpatialData
+	data::Union{SpatialData,Nothing}
+	domain::SpatialData
 	localaniso::LocalAnisotropy
 	refvario::Union{Variogram,Nothing}
 	datapars::Union{AbstractVector{Int},Nothing}
@@ -48,27 +48,27 @@ struct LocalGeoData
 end
 
 """
-    LocalGeoData(object, localaniso)
+    LocalGeoData(domain, localaniso)
 
-Association of a spatial data object and its `LocalAnisotropy`.
+Association of a spatial domain and its `LocalAnisotropy`.
 """
 function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy)
 	LocalGeoData(nothing, obj, lpars, nothing, nothing, nothing)
 end
 
 """
-    LocalGeoData(object, localaniso, refvario)
+    LocalGeoData(domain, localaniso, refvario)
 
-Association of a spatial data object, its `LocalAnisotropy` and its reference variogram.
+Association of a spatial domain, its `LocalAnisotropy` and its reference variogram.
 """
 function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy, refvario::Variogram)
 	LocalGeoData(nothing, obj, lpars, refvario, nothing, nothing)
 end
 
 """
-    LocalGeoData(samples, object, localaniso)
+    LocalGeoData(samples, domain, localaniso)
 
-Association of samples, a spatial data object and their `LocalAnisotropy`. The
+Association of samples, a spatial domain and their `LocalAnisotropy`. The
 samples `LocalAnisotropy` are passed from the spatial data via nearest neighbors.
 """
 function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalAnisotropy)
@@ -77,9 +77,9 @@ function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalAnisotropy)
 end
 
 """
-    LocalGeoData(samples, object, localaniso, refvario)
+    LocalGeoData(samples, domain, localaniso, refvario)
 
-Association of samples, a spatial data object, their `LocalAnisotropy` and the
+Association of samples, a spatial domain, their `LocalAnisotropy` and the
 reference variogram. The samples `LocalAnisotropy` are passed from the spatial data
 via nearest neighbors.
 """
@@ -88,11 +88,11 @@ function LocalGeoData(hd::SpatialData, obj::SpatialData, lpars::LocalAnisotropy,
 	LocalGeoData(hd, obj, lpars, refvario, hdids, nothing)
 end
 
-obj(D::LocalGeoData) = D.object
+obj(D::LocalGeoData) = D.domain
 sobj(D::LocalGeoData) = D.data
-ndims(D::LocalGeoData) = embeddim(D.object)
+ndims(D::LocalGeoData) = embeddim(D.domain)
 sdata(D::LocalGeoData) = sobj(D) != nothing
-nvals(D::LocalGeoData) = nelements(D.object)
+nvals(D::LocalGeoData) = nelements(D.domain)
 snvals(D::LocalGeoData) = nelements(D.data)
 spars(D::LocalGeoData) = D.datapars
 spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]

@@ -20,7 +20,7 @@ Similar (but not equal) to https://github.com/rmcaixeta/Local_variography
 function localvariography(obj::SpatialData, lpars::LocalAnisotropy, var₁, var₂=var₁;
                           axis=:X, tol=1e-6, maxratio1=Inf, maxratio2=Inf, kwargs...)
   p = pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)
-  p, EmpiricalVariogram(p, var₁, var₂; kwargs...)
+  EmpiricalVariogram(p, var₁, var₂; kwargs...)
 end
 
 function pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)

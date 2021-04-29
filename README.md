@@ -17,6 +17,10 @@ This package deals with local anisotropies in geostatistics. It offers some solu
 - <u>Local anisotropies extraction methods</u>:
   - Gradients
   - SVD / PCA <p>
+- <u>Local anisotropies operations</u>:
+  - Interpolation of directional data (via quaternions)
+  - Import/export/convert to different conventions
+  - Unconventional local variography using local anisotropies <p>
 - <u>Nonstationary spatial methods</u>:
   - Moving windows
   - Kernel convolution
@@ -76,9 +80,8 @@ D = georef((P=[25-abs(0.2*i^2-j) for i in -10:9, j in 1:20],))
 S = sample(D, 80, replace=false)
 G = CartesianGrid(20,20)
 
-# create an estimation problem and a variogram model
+# create an estimation problem
 P = EstimationProblem(S, G, :P)
-γ = GaussianVariogram(sill=35., range=11.)
 
 # plot reference scenario and samples extracted for further estimations
 splot = plot(G)
@@ -102,10 +105,16 @@ plot!(rawlpars,D)
 </p>
 
 ```julia
-# rescale magnitude and average 10 nearest local anisotropies
-lpars = rescale_magnitude(rawlpars, (0.5,1.0))
+# average 10 nearest local anisotropies
 searcher = KNearestSearch(G, 10)
-lpars = smooth(lpars, searcher)
+lpars = smooth(rawlpars, searcher)
+
+# rescale magnitude of range2 to between 0.25 and 1.0
+rescale_magnitude!(lpars, r2=(0.25,1.0))
+
+# set reference axis to Y; range will be fixed in that direction
+reference_magnitude!(lpars, :Y)
+
 plot(D, alpha=0.6, colorbar=false)
 plot!(lpars,D)
 ```
@@ -117,8 +126,8 @@ plot!(lpars,D)
 ```julia
 # plot(lpars, data) will only work for 2D spatial data
 # for 3D or custom visualizations, it's possible to export it to VTK
-localaniso2vtk("ellipses", D, lpars)
-# below the file "ellipses.vtu" loaded in Paraview using TensorGlyph
+to_vtk("ellipses", D, lpars)
+# below the file "ellipses.vtu" loaded in Paraview using TensorGlyph (disable extract eigenvalues)
 ```
 
 <p align="center">
@@ -126,8 +135,23 @@ localaniso2vtk("ellipses", D, lpars)
 </p>
 
 ```julia
+# pass local anisotropies to samples
+spars = nnpars(lpars, D, S)
+
+# do an unconventional variography along local Y axis
+expvario = localvariography(S, lpars, :P, tol=2, maxlag=20, nlags=20, axis=:Y)
+plot(expvario)
+γ = GaussianVariogram(sill=31., range=8.)
+plot!(γ)
+```
+
+<p align="center">
+  <img src="imgs/03.3_localaniso_vario.png">
+</p>
+
+```julia
 # kriging using moving windows method
-MW = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:MovingWindows))
+MW = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:MovingWindows))
 s1 = solve(P, MW)
 plot(s1,[:P])
 ```
@@ -138,7 +162,7 @@ plot(s1,[:P])
 
 ```julia
 # kriging using kernel convolution method
-KC = LocalKriging(:P => (variogram=(:X=>γ), localaniso=lpars, method=:KernelConvolution))
+KC = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:KernelConvolution))
 s2 = solve(P, KC)
 plot(s2,[:P])
 ```
@@ -151,9 +175,9 @@ plot(s2,[:P])
 # deform space using kernel variogram as dissimilarity input
 Sd1, Dd1 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=1500)
 Pd1 = EstimationProblem(Sd1, Dd1, :P)
-γ1 = GaussianVariogram(sill=35., range=40.)
+γ1 = GaussianVariogram(sill=25., range=25.)
 s3 = solve(Pd1, Kriging(:P => (variogram=γ1,)))
-plot(plot(to3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
+plot(plot(to_3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 ```
 
 <p align="center">
@@ -161,15 +185,16 @@ plot(plot(to3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# deform space based on a graph built with average anisotropic distances of the
-# 10 nearest data
+# deform space based on a graph built with average anisotropic distances
+# of the ten nearest data; do variography in multidimensional space
 LDa = graph(S, G, lpars, AnisoDistance, searcher)
 Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
+γ2 = GaussianVariogram(sill=35., range=18.)
+
 # traditional kriging in the new multidimensional space
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
-γ2 = GaussianVariogram(sill=35., range=40.)
 s4 = solve(Pd2, Kriging(:P => (variogram=γ2,)))
-plot(plot(to3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
+plot(plot(to_3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 ```
 
 <p align="center">
@@ -177,14 +202,16 @@ plot(plot(to3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# deform space based on a graph built with kernel variogram of the 10 nearest data
+# deform space based on a graph built with kernel variogram of the ten
+# nearest data; do variography in multidimensional space
 LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
 Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
+γ3 = GaussianVariogram(sill=9., range=30.)
+
 # traditional kriging in the new multidimensional space
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
-γ3 = GaussianVariogram(sill=45., range=40.)
 s5 = solve(Pd3, Kriging(:P => (variogram=γ3,)))
-plot(plot(to3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
+plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 ```
 
 <p align="center">
@@ -192,8 +219,8 @@ plot(plot(to3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 </p>
 
 ```julia
-# ordinary kriging for comparison
-OK = Kriging(:P => (variogram=γ, maxneighbors=20))
+γomni = GaussianVariogram(sill=35., range=11.)
+OK = Kriging(:P => (variogram=γomni, maxneighbors=20))
 s0 = solve(P, OK)
 plot(s0,[:P])
 ```
