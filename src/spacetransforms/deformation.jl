@@ -149,13 +149,13 @@ function outobj(D, coord)
 end
 
 """
-    to3d(geodata)
+    to_3d(geodata)
 
 The spatial deformation method often return an output in dimensions higher
 than 3-D. This function create a new spatial object retaining only the
 first three dimensions in order to help plotting of the data.
 """
-function to3d(s)
+function to_3d(s)
 	dom = s.domain
 	c = reduce(hcat,[coordinates(centroid(dom,x))[1:3] for x in 1:nelements(dom)])
 	georef(values(s),PointSet(c))

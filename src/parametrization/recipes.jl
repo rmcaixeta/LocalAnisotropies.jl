@@ -2,19 +2,23 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
-@recipe function f(lpars::LocalAnisotropy, D::SpatialData)
+@recipe function f(lpars::LocalAnisotropy, D::SpatialData, axis=:Y)
   @assert ndims(lpars) == 2 "plot only available for 2D local anisotropies"
   quats = lpars.rotation
   u = [quat2dcm(quats[x])[1,1] for x in 1:length(quats)]
   v = [quat2dcm(quats[x])[1,2] for x in 1:length(quats)]
   x = [coordinates(centroid(D,x))[1] for x in 1:nelements(D)]
   y = [coordinates(centroid(D,x))[2] for x in 1:nelements(D)]
-  c = lpars.magnitude[2,:]
+  c = lpars.magnitude[iaxis(axis),:]
 
   seriestype --> :quiver
   quiver --> (u,v)
   line_z --> repeat(c, inner=4)
-  seriescolor --> :redsblues
+  if maximum(c) <= 1
+    seriescolor --> :redsblues
+  else
+    seriescolor --> :bluesreds
+  end
 
   x,y
 end

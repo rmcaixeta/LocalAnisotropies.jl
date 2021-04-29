@@ -3,73 +3,110 @@
 # ------------------------------------------------------------------
 
 """
-    rescale_magnitude(localaniso, r1, r2=nothing, r3=nothing;
-    clip=[0.05,0.95], magnitude=:ratios)
-	rescale_magnitude(localaniso; r1=nothing, r2=nothing, r3=nothing
-    clip=[0.05,0.95], magnitude=:ratios)
+    rescale_magnitude(localaniso; r1, r2, r3, clip=[0.05,0.95])
+    rescale_magnitude!(localaniso; r1, r2, r3, clip=[0.05,0.95])
 
 Rescale magnitude values of `localaniso` to desired limits using min-max scaling.
-`r1` and `r2` set the limits for the ratios between (range2/range1) and
-(range3/range1) respectively. `clip` define the quantiles to which min and max
-limits are defined. The default is set to [0.05,0.95] to avoid outliers influence.
+`r1`, `r2` and `r3` refer to the ranges along each main axis. `clip` defines
+the quantiles to which min and max limits are defined. The default is set to
+[0.05,0.95] to avoid outliers influence.
 
 ## Example
 
-In the 2-D example, the max local anisotropy is 5x and the minimum is 1x
-(isotropic). In the 3-D example, the max local anisotropy is 2x and the minimum is 1x
+In the example below, a 3-D local anisotropy object is rescaled. `r1` has all the
+values set to 1.0. `r2` and `r3` are rescaled between (0.2, 1.0) and (0.1, 0.5)
+respectively. That means that if we associate it to a SphericalVariogram of range=10,
+range1 will be equal to 10 at every place. range2 will vary between 2 and 10.
+And range3 will vary between 1 and 5.
 
 ```julia
-example2d = rescale_magnitude(localaniso2d, (0.2,1.0))
-example3d = rescale_magnitude(localaniso3d, r1=(0.5,1.0), r2=(0.1,0.5))
+example = rescale_magnitude(localaniso3d, r1=1, r2=(0.2,1.0), r3=(0.1,0.5))
 ```
 """
-function rescale_magnitude(lp::LocalAnisotropy, r1, r2=nothing, r3=nothing;
-	                       clip=[0.05,0.95], magnitude=:ratios)
+function rescale_magnitude!(lp::LocalAnisotropy; r1=nothing, r2=nothing,
+	                        r3=nothing, clip=[0.05,0.95])
     N = ndims(lp)
     m = lp.magnitude
-    bounds = [r1,r2]
+	rvals = (r1,r2,r3)
 
-    for i in 2:N
-		bounds[i-1] == nothing && continue
+    for i in 1:N
+		rvals[i] == nothing && continue
+
         mi = m[i,:]
         qx = quantile(mi, clip)
-        mi[mi .< qx[1]] .= qx[1]
-        mi[mi .> qx[2]] .= qx[2]
-        r = (mi .- qx[1]) ./ (qx[2]-qx[1])
-        typeof(bounds[i-1]) <: Number && (bounds[i-1]=(bounds[i-1],bounds[i-1]))
-        b1, b2 = bounds[i-1]
-        m[i,:] .= (b1 .+ (b2-b1) .* r)
-    end
 
-    LocalAnisotropy(lp.rotation,m)
+		if rvals[i] isa Number
+			m[i,:] .= rvals[i]
+		elseif qx[1] == qx[2]
+			throw(ArgumentError("clipped values are unique; inform a single value to r$i"))
+		else
+	        mi[mi .< qx[1]] .= qx[1]
+	        mi[mi .> qx[2]] .= qx[2]
+	        mi = (mi .- qx[1]) ./ (qx[2]-qx[1])
+	        b1, b2 = rvals[i] isa Number ? (rvals[i],rvals[i]) : rvals[i]
+	        m[i,:] .= (b1 .+ (b2-b1) .* mi)
+		end
+    end
+	lp
 end
 
-function rescale_magnitude(lp::LocalAnisotropy; r1=nothing, r2=nothing,
-	                       r3=nothing, clip=[0.05,0.95], magnitude=:ratios)
-    rescale_magnitude(lp, r1, r2, r3, clip=clip, magnitude=magnitude)
+function rescale_magnitude(lpo::LocalAnisotropy; kwargs...)
+    lp = deepcopy(lpo)
+	rescale_magnitude!(lp; kwargs...)
 end
 
 """
-    localaniso2vtk(vtkfile, coords, localaniso; dir=:ellips, magnitude=:ratios)
+    reference_magnitude(localaniso, axis)
+    reference_magnitude!(localaniso, axis)
+
+Rescale the magnitudes of `localaniso` by setting `axis` as a unit reference.
+`axis` can be :X, :Y or :Z.
+
+## Example
+
+For example, consider a point with magnitude equal to [1.0, 0.2]. After scaling
+it with a ExponentialVariogram of range=10m, the range in X would be 10m and in
+Y would be 2m at this point. If we first call `reference_magnitude!(localaniso, :Y)`,
+the magnitude will turn to [5.0, 1.0], and after scaling to the same previous
+variogram, the range in X would be 50m and in Y would be 10m.
+"""
+function reference_magnitude!(lpar::LocalAnisotropy, ax::Symbol)
+  # rescale magnitude according to reference axis
+  m = lpar.magnitude
+  ref = m[iaxis(ax),:]
+  for i in 1:size(m, 1)
+    m[i,:] ./= ref
+  end
+  lpar
+end
+
+function reference_magnitude(lpar::LocalAnisotropy, ax::Symbol)
+  lp = deepcopy(lpar)
+  reference_magnitude!(lp, ax)
+end
+
+"""
+    to_vtk(vtkfile, coords, localaniso; dir=:ellips, magnitude=:ranges)
 
 Export local anisotropies `localaniso` at `coords` to VTK format. It export local
 ellipsoids by default. If `dir` is set to `:X`, `:Y`, `:Z` or `:XYZ`, local
 vectors/arrows are exported on these axes. The magnitude can be expressed as
-`:ratios` (default) or `:ranges`. In the case of `:ratios`, `ratio1=range2/range1`
+`:ranges` (default) or `:ratios`. In the case of `:ratios`, `ratio1=range2/range1`
 and `ratio2=range3/range1`. Instead of an array of coordinates, `coords` can
 also be just the georeferenced spatial object. The output `.vtu` file can be
 loaded in Paraview or similars and processed as Glyphs to plot the directions.
-If `dir = :ellips`, TensorGlyphs must be used for proper visualization.
+If `dir = :ellips`, TensorGlyphs must be used for proper visualization (need to
+disable extract eigenvalues).
 """
-function localaniso2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magnitude=:ratios)
+function to_vtk(vtkfile, coords::AbstractArray, lpars::LocalAnisotropy;
+	            dir=:ellips, magnitude=:ranges)
 	@assert dir in [:ellips, :XYZ, :X, :Y, :Z] "`dir` must be :ellips, :XYZ :X, :Y or :Z"
 	@assert magnitude in [:ratios, :ranges] "`magnitude` must be :ratios or :ranges"
 
 	elp = (dir == :ellips)
-	cod = Dict(:X=>1, :Y=>2, :Z=>3)
 	dim = size(coords,1)
 	n   = size(coords,2)
-	axs = dir in [:XYZ, :ellips] ? (1:dim) : [cod[dir]]
+	axs = dir in [:XYZ, :ellips] ? (1:dim) : [iaxis(dir)]
 	xyz = dim == 2 ? vcat(coords, zeros(Float64,1,n)) : coords
 	vtx = [MeshCell( VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
 	ijk = elp ? zeros(Float64, 9, n, 1, 1) : [zeros(Float64, 3, n, 1, 1) for i in axs]
@@ -81,12 +118,12 @@ function localaniso2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magn
 			mag = lpars.magnitude[:,x]
 			dim == 2 && push!(mag, zx)
 			Λ = Diagonal(SVector{3}(mag))
-			P = quat_to_dcm(lpars.rotation[x])' * Λ
+			P = rotmat(lpars, x)' * Λ
 			for v in 1:length(P)
 				ijk[v, x, 1, 1] = P[v]
 			end
 		else
-			dcm = quat_to_dcm(lpars.rotation[x])
+			dcm = rotmat(lpars, x)
 	        f = dcm[3,3] < 0 ? -1 : 1
 			for d in axs
 				ijk[d][1, x, 1, 1] = f*dcm[d,1]
@@ -115,9 +152,9 @@ function localaniso2vtk(vtkfile, coords::AbstractArray, lpars; dir=:ellips, magn
 	end
 end
 
-function localaniso2vtk(vtkfile, D::SpatialData, lpars; kwargs...)
+function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
 	coords = reduce(hcat, [coordinates(centroid(D,x)) for x in 1:nelements(D)])
-	localaniso2vtk(vtkfile, coords, lpars; kwargs...)
+	to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 
 toqmat(lp) = [qmat(rotation(lp,i),magnitude(lp,i)) for i in 1:nvals(lp)]

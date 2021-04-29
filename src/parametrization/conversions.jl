@@ -6,7 +6,7 @@
     localanisotropies(data, angles, ranges, convention=:GSLIB)
 
 Import a `LocalAnisotropy` object from an outer source. The `data` is a
-georeferenced object. It must have the rotation angles and ranges/ratios as
+georeferenced object. It must have the rotation angles and ranges as
 properties. These property names are informed as vectors in `angles` and
 `ranges`for the conversion. Check out the available rotation conventions at
 [`RotationRule`](@ref) docstring.
@@ -19,7 +19,7 @@ localanisotropies(data, [:rot1, :rot2, :rot3], [:range1, :range2, :range3]) # 3D
 ```
 """
 function localanisotropies(data::SpatialData, angles::AbstractVector,
-    ranges::AbstractVector, convention=:GSLIB)
+                           ranges::AbstractVector, convention=:GSLIB)
     ranges = Symbol.(ranges)
     angles = Symbol.(angles)
     tab  = Tables.columns(values(data))
@@ -27,6 +27,8 @@ function localanisotropies(data::SpatialData, angles::AbstractVector,
     len  = nelements(data)
     @assert string.(angles) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
+    dim = length(ranges)
+    rules[convention].main == :y && (ranges = ranges[reverse(1:dim,1,2)])
 
     q = Array{Quaternion}(undef,len)
     m = Array{Vector}(undef,len)
@@ -98,7 +100,7 @@ function convertpars(lpars::LocalAnisotropy, convention=:GSLIB)
     pars = []
     len  = nvals(lpars)
     for i in 1:len
-        dcm    = quat_to_dcm(rotation(lpars, i))
+        dcm    = rotmat(lpars, i)
         angles = rotmat2angles(dcm, convention)
         ranges = magnitude(lpars, i)
         push!(pars, append!(angles,ranges))
