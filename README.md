@@ -139,7 +139,7 @@ to_vtk("ellipses", D, lpars)
 spars = nnpars(lpars, D, S)
 
 # do an unconventional variography along local Y axis
-expvario = localvariography(S, lpars, :P, tol=2, maxlag=20, nlags=20, axis=:Y)
+expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:Y)
 plot(expvario)
 γ = GaussianVariogram(sill=31., range=8.)
 plot!(γ)
