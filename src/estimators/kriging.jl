@@ -52,7 +52,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
           if neigh isa MetricBall
             bsearcher = KBallSearch(pdata, maxneighbors, neigh)
           else
-            searcher  = NeighborhoodSearch(pdata, neigh)
+            searcher  = BallSearch(pdata, neigh)
             bsearcher = BoundedSearch(searcher, maxneighbors)
           end
         else
