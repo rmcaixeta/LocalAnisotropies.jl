@@ -49,7 +49,7 @@ import LocalAnisotropies: rotmat
         # rescale magnitude and interpolate local anisotropies
         lpars = rescale_magnitude(lpars, r2=(0.2,1.0))
         lpars = reference_magnitude(lpars, :Y)
-        lpars = smooth(lpars, searcher)
+        lpars = smoothpars(lpars, searcher)
 
 		spars = nnpars(lpars, D, S)
 

@@ -107,7 +107,7 @@ plot!(rawlpars,D)
 ```julia
 # average 10 nearest local anisotropies
 searcher = KNearestSearch(G, 10)
-lpars = smooth(rawlpars, searcher)
+lpars = smoothpars(rawlpars, searcher)
 
 # rescale magnitude of range2 to between 0.25 and 1.0
 rescale_magnitude!(lpars, r2=(0.25,1.0))

@@ -35,7 +35,7 @@ idwpars(lpars, searcher::NeighborSearchMethod, domain; power=2.0, metric=Euclide
 	interpolate(lpars, searcher, domain, power=power)
 
 """
-    smooth(localaniso, searcher; power=0, metric=Euclidean())
+    smoothpars(localaniso, searcher; power=0, metric=Euclidean())
 
 Smooth `LocalAnisotropy`, using the local neighbors returned from the `searcher`.
 The interpolation can be inverse distance weighted by given `power` and `metric`
@@ -48,14 +48,14 @@ neighbors magnitude.
 
 ```julia
 searcher = KNearestSearch(data, 10)
-averaged_inplace = smooth(localaniso, searcher)
+averaged_inplace = smoothpars(localaniso, searcher)
 ```
 
 ## Reference
 
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
-smooth(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
+smoothpars(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean()) =
 	interpolate(lpars, searcher, power=power)
 
 

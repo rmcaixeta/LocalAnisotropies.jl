@@ -156,7 +156,7 @@ than 3-D. This function create a new spatial object retaining only the
 first three dimensions in order to help plotting of the data.
 """
 function to_3d(s)
-	dom = s.domain
+	dom = domain(s)
 	c = reduce(hcat,[coordinates(centroid(dom,x))[1:3] for x in 1:nelements(dom)])
 	georef(values(s),PointSet(c))
 end

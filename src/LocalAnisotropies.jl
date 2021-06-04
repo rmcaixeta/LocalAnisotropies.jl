@@ -11,7 +11,6 @@ using ImageFiltering
 using KrigingEstimators
 using LightGraphs:dijkstra_shortest_paths,connected_components
 using LinearAlgebra
-using LossFunctions
 using Meshes
 using MultivariateStats
 using NearestNeighbors
@@ -31,11 +30,9 @@ import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
 
 include("estimators.jl")
 include("parametrization.jl")
-#include("estimators/cross_validation.jl")
 include("estimators/idw.jl")
 include("estimators/kriging.jl")
 include("estimators/variograms.jl")
-#include("parametrization/calibration.jl")
 include("parametrization/conventions.jl")
 include("parametrization/conversions.jl")
 include("parametrization/geometric.jl")
@@ -61,7 +58,7 @@ export
     nnpars,
     reference_magnitude, reference_magnitude!,
     rescale_magnitude, rescale_magnitude!,
-    smooth,
+    smoothpars,
     to_3d,
     to_vtk,
     AnisoDistance,
