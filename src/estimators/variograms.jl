@@ -37,12 +37,12 @@ end
 function kcfill!(Γ, γ::Variogram, X, localaniso)
   # X = neighbors coords
   # need to consider LHS[i,j] = sill(γ) - LHS[i,j] to convert vario to covario
-  n = nelements(X)
-  @inbounds for j=1:n
-    xj = centroid(X, j)
+  n = length(X)
+  @inbounds for j in 1:n
+    xj = X[j]
     Qj = localaniso[j]
     for i=j+1:n
-      xi = centroid(X, i)
+      xi = X[i]
       Qi = localaniso[i]
       Γ[i,j] = kccov(γ, xi, xj, Qi, Qj)
     end
