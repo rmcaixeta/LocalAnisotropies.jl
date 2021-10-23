@@ -9,7 +9,7 @@ using Distances
 using GeoStatsBase
 using ImageFiltering
 using KrigingEstimators
-using LightGraphs:dijkstra_shortest_paths,connected_components
+using Graphs:dijkstra_shortest_paths,connected_components
 using LinearAlgebra
 using Meshes
 using MultivariateStats
