@@ -40,6 +40,7 @@ import LocalAnisotropies: rotmat
 
         n = round(Int, 0.2*prod(dims))
         S = sample(D, n, replace=false)
+        S = georef(values(S), PointSet(centroid.(domain(S))))
         G = CartesianGrid(dims...)
         searcher = KNearestSearch(G, 10)
 

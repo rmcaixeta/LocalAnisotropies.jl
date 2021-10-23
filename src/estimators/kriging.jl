@@ -22,7 +22,8 @@ end
 function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
   # retrieve problem info
   pdomain = domain(problem)
-  pdata = data(problem)
+  pdata   = data(problem)
+  ndata   = nelements(pdata)
 
   # result of preprocessing
   preproc = Dict{Symbol,NamedTuple}()
@@ -45,6 +46,8 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
 
       # determine neighborhood search method
       if varparams.maxneighbors ≠ nothing
+        # upper bound in maxneighbors
+        maxneighbors > ndata && (maxneighbors = ndata)
         if varparams.neighborhood ≠ nothing
           # local search with a neighborhood
           neigh = varparams.neighborhood
@@ -183,12 +186,12 @@ function local_lhs(estimator::KrigingEstimator, domain,
   localaniso::AbstractVector)
 
   γ = estimator.γ
-  nobs = nelements(domain)
+  nobs = length(domain)
   ncons = nconstraints(estimator)
 
   # pre-allocate memory for LHS
-  x = centroid(domain, 1)
-  T = Variography.result_type(γ, x, x)
+  u = first(domain)
+  T = Variography.result_type(γ, u, u)
   m = nobs + ncons
   LHS = Matrix{T}(undef, m, m)
 

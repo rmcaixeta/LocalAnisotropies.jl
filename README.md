@@ -78,6 +78,7 @@ Random.seed!(1234)
 # create a reference scenario for tests
 D = georef((P=[25-abs(0.2*i^2-j) for i in -10:9, j in 1:20],))
 S = sample(D, 80, replace=false)
+S = georef(values(S), PointSet(centroid.(domain(S))))
 G = CartesianGrid(20,20)
 
 # create an estimation problem
