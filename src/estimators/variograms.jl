@@ -10,13 +10,13 @@ function qmat(q,m)
   P = quat_to_dcm(q)[SOneTo(N),SOneTo(N)]
   Λ = Diagonal(SVector{N}(one(eltype(m))./m.^2))
   Q = P'*Λ*P
-  Q
+  convert(Array{Float32}, Q)
 end
 
 function mwvario(estimator, localpar)
   # get local Mahalanobis
   Q = qmat(localpar[1],localpar[2])
-  local_d = Mahalanobis(Array(Q))
+  local_d = Mahalanobis(Q)
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(estimator.γ)
@@ -55,7 +55,7 @@ end
 
 function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   Qij = (Qi+Qj)/2
-  local_d = Mahalanobis(Array(Qij))
+  local_d = Mahalanobis(Qij)
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(γ)

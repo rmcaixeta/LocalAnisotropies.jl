@@ -9,7 +9,7 @@ function colwise(D::LocalGeoData, ::Type{AnisoDistance}, i::Int, xj::Vector{Int}
 		Qj = qmat(rotation(D,j),magnitude(D,j))
 		Qij = (Qi+Qj)/2
 		jx = coords(D,j)
-		push!(d,Distances.evaluate(Mahalanobis(Array(Qij)), ix, jx))
+		push!(d,Distances.evaluate(Mahalanobis(Qij), ix, jx))
 	end
 	d
 end
@@ -35,7 +35,7 @@ function evaluate(D::LocalGeoData, ::Type{AnisoDistance}, i::Int, j::Int)
 	Qi, Qj = [qmat(rotation(D,x),magnitude(D,x)) for x in (i,j)]
 	ix, jx = [coords(D,x) for x in (i,j)]
 	Qij = (Qi+Qj)/2
-	Distances.evaluate(Mahalanobis(Array(Qij)), ix, jx)
+	Distances.evaluate(Mahalanobis(Qij), ix, jx)
 end
 
 function evaluate(D::LocalGeoData, ::Type{KernelVariogram}, i::Int, j::Int)
