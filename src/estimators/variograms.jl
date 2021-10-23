@@ -16,7 +16,7 @@ end
 function mwvario(estimator, localpar)
   # get local Mahalanobis
   Q = qmat(localpar[1],localpar[2])
-  local_d = Mahalanobis(Q)
+  local_d = Mahalanobis(Array(Q))
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(estimator.γ)
@@ -55,7 +55,7 @@ end
 
 function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   Qij = (Qi+Qj)/2
-  local_d = Mahalanobis(Qij)
+  local_d = Mahalanobis(Array(Qij))
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(γ)

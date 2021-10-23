@@ -146,13 +146,13 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 
         # fit estimator to data and predict mean and variance
         if !KC
-          krig = local_fit(localestimator, X, var)
-          μ, σ² = local_predict(krig, pₒ)
+          krig = local_fit(localestimator, X)
+          μ, σ² = local_predict(krig, var, pₒ)
         else
           ∑neighs = view(hdlocalaniso, nview)
-          krig = local_fit(estimator, X, var, ∑neighs)
+          krig = local_fit(estimator, X, ∑neighs)
           Qx₀ = qmat(localpar...)
-          μ, σ² = local_predict(krig, pₒ, (Qx₀,∑neighs))
+          μ, σ² = local_predict(krig, var, pₒ, (Qx₀,∑neighs))
         end
 
         varμ[location] = μ
@@ -164,7 +164,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 end
 
 
-function local_fit(estimator::KrigingEstimator, data, var,
+function local_fit(estimator::KrigingEstimator, data,
   localaniso::AbstractVector=[nothing])
 
   # build Kriging system
@@ -175,7 +175,7 @@ function local_fit(estimator::KrigingEstimator, data, var,
   FLHS = factorize(estimator, LHS)
 
   # record Kriging state
-  state = KrigingState(data, var, FLHS, RHS)
+  state = KrigingState(data, FLHS, RHS)
 
   # return fitted estimator
   FittedKriging(estimator, state)
@@ -255,8 +255,7 @@ function local_weights(estimator::FittedKriging, pₒ,
   KrigingWeights(λ, ν)
 end
 
-function local_predict(estimator::FittedKriging, pₒ, localaniso::Tuple=(nothing,))
+function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
   data = estimator.state.data
-  var  = estimator.state.var
   combine(estimator, local_weights(estimator, pₒ, localaniso), data[var])
 end
