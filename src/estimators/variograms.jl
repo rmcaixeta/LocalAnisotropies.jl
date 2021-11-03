@@ -10,13 +10,15 @@ function qmat(q,m)
   P = quat_to_dcm(q)[SOneTo(N),SOneTo(N)]
   Λ = Diagonal(SVector{N}(one(eltype(m))./m.^2))
   Q = P'*Λ*P
-  convert(Array{Float32}, Q)
+  # need to explicitly set Symmetric(Q), but then det(Q) will fail with StaticArrays
+  # while not fixed, setting Symmetric only when calling Mahalanobis
+  # https://github.com/JuliaArrays/StaticArrays.jl/issues/955
 end
 
 function mwvario(estimator, localpar)
   # get local Mahalanobis
   Q = qmat(localpar[1],localpar[2])
-  local_d = Mahalanobis(Q)
+  local_d = Mahalanobis(Symmetric(Q))
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(estimator.γ)
@@ -55,7 +57,7 @@ end
 
 function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   Qij = (Qi+Qj)/2
-  local_d = Mahalanobis(Qij)
+  local_d = Mahalanobis(Symmetric(Qij))
 
   # get reference pars. and apply local anisotropy to given structures
   p = structures(γ)
@@ -63,6 +65,5 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
     γ = @set γ.distance = local_d
   end
   γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
-
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end
