@@ -16,14 +16,13 @@ function qmat(q,m)
 end
 
 function mwvario(estimator, localpar)
-  # get local Mahalanobis
+  # get local Mahalanobis matrix
   Q = qmat(localpar[1],localpar[2])
-  local_d = Mahalanobis(Symmetric(Q))
-
   # get reference pars. and apply local anisotropy to given structures
   p = structures(estimator.γ)
   γs = map(p[3]) do γ
-    γ = @set γ.distance = local_d
+    Qs = Q ./ radii(γ.ball)' .^ 2
+    γ = @set γ.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
   end
   γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
 
@@ -38,7 +37,6 @@ end
 
 function kcfill!(Γ, γ::Variogram, X, localaniso)
   # X = neighbors coords
-  # need to consider LHS[i,j] = sill(γ) - LHS[i,j] to convert vario to covario
   n = length(X)
   @inbounds for j in 1:n
     xj = X[j]
@@ -57,13 +55,14 @@ end
 
 function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   Qij = (Qi+Qj)/2
-  local_d = Mahalanobis(Symmetric(Qij))
 
-  # get reference pars. and apply local anisotropy to given structures
-  p = structures(γ)
-  γs = map(p[3]) do γ
-    γ = @set γ.distance = local_d
-  end
-  γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
+  ## this modified approach is unstable; check better later
+  # p = structures(γ)
+  # γs = map(p[3]) do γx
+  #   Qs = Qij ./ radii(γx.ball)' .^ 2
+  #   γx = @set γx.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
+  # end
+  # γl = NuggetEffect(p[1]) + sum(c*γx for (c, γx) in zip(p[2], γs))
+
   (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
 end
