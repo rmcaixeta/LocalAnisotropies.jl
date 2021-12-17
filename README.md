@@ -113,8 +113,9 @@ lpars = smoothpars(rawlpars, searcher)
 # rescale magnitude of range2 to between 0.25 and 1.0
 rescale_magnitude!(lpars, r2=(0.25,1.0))
 
-# set reference axis to Y; range will be fixed in that direction
-reference_magnitude!(lpars, :Y)
+# set possible reference axes to X and Y; ranges will be fixed in those directions
+lparsx = reference_magnitude(lpars, :X)
+lparsy = reference_magnitude(lpars, :Y)
 
 plot(D, alpha=0.6, colorbar=false)
 plot!(lpars,D)
@@ -139,11 +140,12 @@ to_vtk("ellipses", D, lpars)
 # pass local anisotropies to samples
 spars = nnpars(lpars, D, S)
 
-# do an unconventional variography along local Y axis
-expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:Y)
+# do an unconventional variography along local X axis (same can be done for Y)
+expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
 plot(expvario)
-γ = GaussianVariogram(sill=31., range=8.)
-plot!(γ)
+γx = ExponentialVariogram(sill=32., range=40.)
+γy = GaussianVariogram(sill=32., range=8.)
+plot!(γx)
 ```
 
 <p align="center">
@@ -152,7 +154,7 @@ plot!(γ)
 
 ```julia
 # kriging using moving windows method
-MW = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:MovingWindows))
+MW = LocalKriging(:P => (variogram=γx, localaniso=lparsx, method=:MovingWindows))
 s1 = solve(P, MW)
 plot(s1,[:P])
 ```
@@ -162,8 +164,8 @@ plot(s1,[:P])
 </p>
 
 ```julia
-# kriging using kernel convolution method
-KC = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:KernelConvolution))
+# kriging using kernel convolution method (smaller search; unstable with many local variations)
+KC = LocalKriging(:P => (variogram=γy, localaniso=lparsy, method=:KernelConvolution, maxneighbors=6))
 s2 = solve(P, KC)
 plot(s2,[:P])
 ```
@@ -174,9 +176,9 @@ plot(s2,[:P])
 
 ```julia
 # deform space using kernel variogram as dissimilarity input
-Sd1, Dd1 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=1500)
+Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
 Pd1 = EstimationProblem(Sd1, Dd1, :P)
-γ1 = GaussianVariogram(sill=25., range=25.)
+γ1 = GaussianVariogram(sill=21.3, range=22.5)
 s3 = solve(Pd1, Kriging(:P => (variogram=γ1,)))
 plot(plot(to_3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 ```
@@ -188,9 +190,9 @@ plot(plot(to_3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 ```julia
 # deform space based on a graph built with average anisotropic distances
 # of the ten nearest data; do variography in multidimensional space
-LDa = graph(S, G, lpars, AnisoDistance, searcher)
+LDa = graph(S, G, lparsx, AnisoDistance, searcher)
 Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
-γ2 = GaussianVariogram(sill=35., range=18.)
+γ2 = GaussianVariogram(sill=22., range=22.)
 
 # traditional kriging in the new multidimensional space
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
@@ -205,9 +207,9 @@ plot(plot(to_3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 ```julia
 # deform space based on a graph built with kernel variogram of the ten
 # nearest data; do variography in multidimensional space
-LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
+LDv = graph(S, G, lparsy, KernelVariogram, γy, searcher)
 Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
-γ3 = GaussianVariogram(sill=9., range=30.)
+γ3 = NuggetEffect(1.0) + GaussianVariogram(sill=21., range=22.)
 
 # traditional kriging in the new multidimensional space
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
@@ -220,7 +222,7 @@ plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 </p>
 
 ```julia
-γomni = GaussianVariogram(sill=35., range=11.)
+γomni = GaussianVariogram(sill=32., range=11.)
 OK = Kriging(:P => (variogram=γomni, maxneighbors=20))
 s0 = solve(P, OK)
 plot(s0,[:P])

@@ -36,7 +36,6 @@ function mwvario(estimator, localpar)
 end
 
 function kcfill!(Γ, γ::Variogram, X, localaniso)
-  # X = neighbors coords
   n = length(X)
   @inbounds for j in 1:n
     xj = X[j]
@@ -56,13 +55,14 @@ end
 function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   Qij = (Qi+Qj)/2
 
-  ## this modified approach is unstable; check better later
-  # p = structures(γ)
-  # γs = map(p[3]) do γx
-  #   Qs = Qij ./ radii(γx.ball)' .^ 2
-  #   γx = @set γx.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
-  # end
-  # γl = NuggetEffect(p[1]) + sum(c*γx for (c, γx) in zip(p[2], γs))
+  ## modify variogram with average anisotropy matrix
+  p = structures(γ)
+  γs = map(p[3]) do γx
+    Qs = Qij ./ radii(γx.ball)' .^ 2
+    γx = @set γx.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
+  end
+  γl = NuggetEffect(p[1]) + sum(c*γx for (c, γx) in zip(p[2], γs))
 
-  (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*(sill(γ)-γ(xi,xj))
+  Cij = (sill(γl)-γl(xi,xj))
+  (det(Qi)^0.25)*(det(Qj)^0.25)*(det(Qij)^-0.5)*Cij
 end

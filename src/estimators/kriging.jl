@@ -144,6 +144,9 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
         # get neighbors centroid and values
         X = view(pdata, nview)
 
+        # not using block kriging yet, need more tests
+        # uₒ = pdomain[location]
+
         # fit estimator to data and predict mean and variance
         if !KC
           krig = local_fit(localestimator, X)
@@ -161,24 +164,6 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     end
 
     varμ, varσ
-end
-
-
-function local_fit(estimator::KrigingEstimator, data,
-  localaniso::AbstractVector=[nothing])
-
-  # build Kriging system
-  LHS = local_lhs(estimator, domain(data), localaniso)
-  RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
-
-  # factorize LHS
-  FLHS = factorize(estimator, LHS)
-
-  # record Kriging state
-  state = KrigingState(data, FLHS, RHS)
-
-  # return fitted estimator
-  FittedKriging(estimator, state)
 end
 
 
@@ -200,8 +185,10 @@ function local_lhs(estimator::KrigingEstimator, domain,
 
   if !KC
     Variography.pairwise!(LHS, γ, domain)
-    for j=1:nobs, i=1:nobs
-      @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
+    if isstationary(γ)
+      for j=1:nobs, i=1:nobs
+        @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
+      end
     end
   else
     kcfill!(LHS, γ, domain, localaniso)
@@ -239,6 +226,25 @@ function set_local_rhs!(estimator::FittedKriging, pₒ,
   set_constraints_rhs!(estimator, pₒ)
 end
 
+
+function local_fit(estimator::KrigingEstimator, data,
+  localaniso::AbstractVector=[nothing])
+
+  # build Kriging system
+  LHS = local_lhs(estimator, domain(data), localaniso)
+  RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
+
+  # factorize LHS
+  FLHS = factorize(estimator, LHS)
+
+  # record Kriging state
+  state = KrigingState(data, FLHS, RHS)
+
+  # return fitted estimator
+  FittedKriging(estimator, state)
+end
+
+
 function local_weights(estimator::FittedKriging, pₒ,
   localaniso::Tuple)
 
@@ -254,6 +260,7 @@ function local_weights(estimator::FittedKriging, pₒ,
 
   KrigingWeights(λ, ν)
 end
+
 
 function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
   data = estimator.state.data
