@@ -117,7 +117,7 @@ function rotmat2angles(dcm::AbstractMatrix, convention)
 
   rule = convention isa Symbol ? rules[convention] : convention
   !rule.extrinsic && (P = P')
-  preangs = dcm_to_angle(P, rule.order)
+  preangs = dcm_to_angle(DCM(P), rule.order)
   angles  = [preangs.a1, preangs.a2, preangs.a3]
 
   intr = @. (rule.motion == :CW)  & !rule.extrinsic

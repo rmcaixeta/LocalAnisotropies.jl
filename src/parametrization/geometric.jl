@@ -38,7 +38,7 @@ function localanisotropies(::Type{Geometric}, searcher::NeighborSearchMethod;
 
 		det(v) < 0 && (v = Diagonal(SVector{3}([-1,1,1])) * v)
 
-        q = dcm_to_quat(v)
+        q = dcm_to_quat(DCM(v))
         quat[i] = q
         m[i] = λ/λ[1]
     end

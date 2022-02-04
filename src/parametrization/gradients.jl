@@ -55,7 +55,7 @@ function localanisotropies(::Type{Gradients}, obj, prop, window)
             eigv[3,3] = 1.0
             eigv = SMatrix{3,3}(eigv)
         end
-        q = dcm_to_quat(eigv)
+        q = dcm_to_quat(DCM(eigv))
         λ = sort(T.values, rev=true)
         quat[i] = q
         m[i] = λ/λ[1]
