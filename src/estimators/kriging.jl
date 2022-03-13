@@ -230,15 +230,18 @@ end
 function local_fit(estimator::KrigingEstimator, data,
   localaniso::AbstractVector=[nothing])
 
+  D = domain(data)
+
   # build Kriging system
-  LHS = local_lhs(estimator, domain(data), localaniso)
+  LHS = local_lhs(estimator, D, localaniso)
   RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
 
   # factorize LHS
   FLHS = factorize(estimator, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS)
+  VARTYPE = Variography.result_type(estimator.γ, first(D), first(D))
+  state = KrigingState(data, FLHS, RHS, VARTYPE)
 
   # return fitted estimator
   FittedKriging(estimator, state)
