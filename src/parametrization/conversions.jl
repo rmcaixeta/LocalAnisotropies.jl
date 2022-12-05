@@ -24,7 +24,7 @@ function localanisotropies(data::SpatialData, angles::AbstractVector,
     angles = Symbol.(angles)
     tab  = Tables.columns(values(data))
     cols = string.(Tables.columnnames(tab))
-    len  = nelements(data)
+    len  = nvals(data)
     @assert string.(angles) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
     dim = length(ranges)

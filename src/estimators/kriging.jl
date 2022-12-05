@@ -23,7 +23,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
   # retrieve problem info
   pdomain = domain(problem)
   pdata   = data(problem)
-  ndata   = nelements(pdata)
+  ndata   = nvals(pdata)
 
   # result of preprocessing
   preproc = Dict{Symbol,NamedTuple}()
@@ -61,7 +61,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
         else
           # nearest neighbor search with a distance
           distance = varparams.distance
-          bsearcher = KNearestSearch(pdata, maxneighbors, metric=distance)
+          bsearcher = KNearestSearch(pdomain, maxneighbors, metric=distance)
         end
       else
         # use all data points as neighbors
@@ -78,7 +78,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
       okmeth = method in [:MovingWindows, :KernelConvolution]
       @assert okmeth "method must be :MovingWindows or :KernelConvolution"
 
-      oklocal1 = length(localaniso.rotation) == nelements(pdomain)
+      oklocal1 = length(localaniso.rotation) == nvals(pdomain)
       oklocal2 = typeof(localaniso) <: LocalAnisotropy
       @assert oklocal1 "number of local anisotropies must match domain points"
       @assert oklocal2 "wrong format of local anisotropies"
@@ -116,8 +116,8 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     V = mactypeof[var]
 
     # pre-allocate memory for result
-    varμ = Vector{V}(undef, nelements(pdomain))
-    varσ = Vector{V}(undef, nelements(pdomain))
+    varμ = Vector{V}(undef, nvals(pdomain))
+    varσ = Vector{V}(undef, nvals(pdomain))
 
     # estimation loop
     Threads.@threads for location in traverse(pdomain, LinearPath())
@@ -135,14 +135,15 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 
       # skip location in there are too few neighbors
       if nneigh < minneighbors
-        varμ[location] = NaN
-        varσ[location] = NaN
+        varμ[location] = missing
+        varσ[location] = missing
       else
         # final set of neighbors
         nview = view(neighbors, 1:nneigh)
 
         # get neighbors centroid and values
         X = view(pdata, nview)
+        println("NVALS: $(nvals(pdata)) $nneigh $neighbors")
 
         # not using block kriging yet, need more tests
         # uₒ = pdomain[location]
@@ -171,13 +172,14 @@ function local_lhs(estimator::KrigingEstimator, domain,
   localaniso::AbstractVector)
 
   γ = estimator.γ
-  nobs = length(domain)
+  nobs = nvals(domain)
   ncons = nconstraints(estimator)
 
   # pre-allocate memory for LHS
   u = first(domain)
   T = Variography.result_type(γ, u, u)
   m = nobs + ncons
+  println("Check: $nobs $ncons $m $(length(domain))")
   LHS = Matrix{T}(undef, m, m)
 
   # set variogram/covariance block
@@ -212,12 +214,12 @@ function set_local_rhs!(estimator::FittedKriging, pₒ,
 
   # RHS variogram/covariance
   if !KC
-    @inbounds for j in 1:nelements(X)
+    @inbounds for j in 1:nvals(X)
       xj = centroid(X, j)
       RHS[j] = isstationary(γ) ? sill(γ) - γ(xj, pₒ) : γ(xj, pₒ)
     end
   else
-    @inbounds for j in 1:nelements(X)
+    @inbounds for j in 1:nvals(X)
       xj = centroid(X, j)
       RHS[j] = kccov(γ, pₒ, xj, localaniso[1], localaniso[2][j])
     end
@@ -251,7 +253,7 @@ end
 function local_weights(estimator::FittedKriging, pₒ,
   localaniso::Tuple)
 
-  nobs = nelements(estimator.state.data)
+  nobs = nvals(estimator.state.data)
 
   set_local_rhs!(estimator, pₒ, localaniso)
 

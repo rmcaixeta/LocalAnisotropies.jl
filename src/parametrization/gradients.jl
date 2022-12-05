@@ -22,7 +22,7 @@ lpars = localanisotropies(Gradients, grid, :CO2, 5)
 """
 function localanisotropies(::Type{Gradients}, obj, prop, window)
     # get dimensions
-    dims  = domain(obj).dims
+    dims  = size(domain(obj))
     N     = length(dims)
 	propv = Tables.getcolumn(Tables.columns(values(obj)), prop)
 

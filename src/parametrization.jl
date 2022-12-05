@@ -38,6 +38,22 @@ end
 
 SpatialData = Union{GeoData,Domain,DataView,DomainView}
 
+function nvals(d::SpatialData)
+	if d isa Domain || d isa DomainView
+		return nelements(d)
+	else
+		return nelements(domain(d))
+	end
+end
+
+function centro(d::SpatialData, i::Int)
+	if d isa Domain || d isa DomainView
+		return centroid(d,i)
+	else
+		return centroid(domain(d),i)
+	end
+end
+
 struct LocalGeoData
 	data::Union{SpatialData,Nothing}
 	domain::SpatialData
@@ -92,16 +108,16 @@ obj(D::LocalGeoData) = D.domain
 sobj(D::LocalGeoData) = D.data
 ndims(D::LocalGeoData) = embeddim(D.domain)
 sdata(D::LocalGeoData) = sobj(D) != nothing
-nvals(D::LocalGeoData) = nelements(D.domain)
-snvals(D::LocalGeoData) = nelements(D.data)
+nvals(D::LocalGeoData) = nvals(D.domain)
+snvals(D::LocalGeoData) = nvals(D.data)
 spars(D::LocalGeoData) = D.datapars
 spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]
 spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
-centro(D::LocalGeoData, i::Int) = i<=nvals(D) ? centroid(obj(D),i) : centroid(sobj(D),i-nvals(D))
+centro(D::LocalGeoData, i::Int) = i<=nvals(D) ? centro(obj(D),i) : centro(sobj(D),i-nvals(D))
 coords(D::LocalGeoData, i::Int) = coordinates(centro(D,i))
-coords(D::SpatialData) = reduce(hcat, [coordinates(centroid(D,x)) for x in 1:nelements(D)])
-coords(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [coordinates(centroid(D,x)) for x in i])
+coords(D::SpatialData) = reduce(hcat, [coordinates(centro(D,x)) for x in 1:nvals(D)])
+coords(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [coordinates(centro(D,x)) for x in i])
 
 rotation(D::LocalGeoData) = D.localaniso.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))

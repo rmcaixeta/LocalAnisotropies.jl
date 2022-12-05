@@ -7,8 +7,8 @@
   quats = lpars.rotation
   u = [quat_to_dcm(quats[x])[1,1] for x in 1:length(quats)]
   v = [quat_to_dcm(quats[x])[1,2] for x in 1:length(quats)]
-  x = [coordinates(centroid(D,x))[1] for x in 1:nelements(D)]
-  y = [coordinates(centroid(D,x))[2] for x in 1:nelements(D)]
+  x = [coordinates(centroid(D,x))[1] for x in 1:nvals(D)]
+  y = [coordinates(centroid(D,x))[2] for x in 1:nvals(D)]
   c = lpars.magnitude[iaxis(axis),:]
 
   seriestype --> :quiver

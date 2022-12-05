@@ -26,7 +26,7 @@ end
 function pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)
   subs = []
   dims = ndims(lpars)
-  n = nelements(obj)
+  n = nvals(obj)
   for i in 1:n
     maxratio1 != Inf && ratio1(lpars,i) > maxratio1 && continue
     maxratio2 != Inf && ratio2(lpars,i) > maxratio2 && continue

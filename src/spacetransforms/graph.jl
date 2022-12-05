@@ -48,7 +48,7 @@ end
 
 function graph!(D::LocalGeoData, metric::Type{<:LocalMetric}, searcher::NeighborSearchMethod)
 	O = searcher.domain
-	n = nelements(O)
+	n = nvals(O)
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()
 
 	for i in 1:n

@@ -63,8 +63,8 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 	power::Real=0, metric=Euclidean())
 	D = searcher.domain
 	N = embeddim(D)
-	len = domain==nothing ? nelements(D) : nelements(domain)
-	@assert nelements(D)==nvals(lpars) "searcher domain must match number of local anisotropies"
+	len = domain==nothing ? nvals(D) : nvals(domain)
+	@assert nvals(D)==nvals(lpars) "searcher domain must match number of local anisotropies"
 
     quat = Array{Quaternion}(undef,len)
 	mag  = lpars.magnitude
