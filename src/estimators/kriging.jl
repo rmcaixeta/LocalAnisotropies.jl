@@ -21,9 +21,10 @@ end
 
 function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
   # retrieve problem info
-  pdomain = domain(problem)
   pdata   = data(problem)
-  ndata   = nvals(pdata)
+  dtable  = values(pdata)
+  ddomain = domain(pdata)
+  pdomain = domain(problem)
 
   # result of preprocessing
   preproc = Dict{Symbol,NamedTuple}()
@@ -32,6 +33,21 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
     for var in covars.names
       # get user parameters
       varparams = covars.params[(var,)]
+
+      # find non-missing samples for variable
+      cols = Tables.columns(dtable)
+      vals = Tables.getcolumn(cols, var)
+      inds = findall(!ismissing, vals)
+
+      # assert at least one sample is non-missing
+      if isempty(inds)
+        throw(AssertionError("all samples of $var are missing, aborting..."))
+      end
+
+      # subset of non-missing samples
+      vtable  = (;var => collect(skipmissing(vals)))
+      vdomain = view(ddomain, inds)
+      samples = georef(vtable, vdomain)
 
       # determine which Kriging variant to use
       if varparams.mean ≠ nothing
@@ -45,28 +61,10 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
       maxneighbors = varparams.maxneighbors
 
       # determine neighborhood search method
-      if varparams.maxneighbors ≠ nothing
-        # upper bound in maxneighbors
-        maxneighbors > ndata && (maxneighbors = ndata)
-        if varparams.neighborhood ≠ nothing
-          # local search with a neighborhood
-          neigh = varparams.neighborhood
-
-          if neigh isa MetricBall
-            bsearcher = KBallSearch(pdata, maxneighbors, neigh)
-          else
-            searcher  = BallSearch(pdata, neigh)
-            bsearcher = BoundedSearch(searcher, maxneighbors)
-          end
-        else
-          # nearest neighbor search with a distance
-          distance = varparams.distance
-          bsearcher = KNearestSearch(pdomain, maxneighbors, metric=distance)
-        end
-      else
-        # use all data points as neighbors
-        bsearcher = nothing
-      end
+      bsearcher = searcher_ui(vdomain,
+                              maxneighbors,
+                              varparams.distance,
+                              varparams.neighborhood)
 
       # local inputs
       method = varparams.method
@@ -143,7 +141,6 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 
         # get neighbors centroid and values
         X = view(pdata, nview)
-        println("NVALS: $(nvals(pdata)) $nneigh $neighbors")
 
         # not using block kriging yet, need more tests
         # uₒ = pdomain[location]
@@ -179,7 +176,6 @@ function local_lhs(estimator::KrigingEstimator, domain,
   u = first(domain)
   T = Variography.result_type(γ, u, u)
   m = nobs + ncons
-  println("Check: $nobs $ncons $m $(length(domain))")
   LHS = Matrix{T}(undef, m, m)
 
   # set variogram/covariance block
@@ -268,6 +264,7 @@ end
 
 
 function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
-  data = estimator.state.data
-  combine(estimator, local_weights(estimator, pₒ, localaniso), data[var])
+  wgts = local_weights(estimator, pₒ, localaniso)
+  data = getproperty(estimator.state.data, var)
+  combine(estimator, wgts, data)
 end
