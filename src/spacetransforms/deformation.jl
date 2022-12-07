@@ -157,6 +157,6 @@ first three dimensions in order to help plotting of the data.
 """
 function to_3d(s)
 	dom = domain(s)
-	c = reduce(hcat,[coordinates(centroid(dom,x))[1:3] for x in 1:nvals(dom)])
+	c = reduce(hcat,[coordinates(centro(dom,x))[1:3] for x in 1:nvals(dom)])
 	georef(values(s),PointSet(c))
 end

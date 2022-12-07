@@ -71,7 +71,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
     m    = domain==nothing && power==0 ? mag : Array{Float64}(undef,N,len)
 
     Threads.@threads for i in 1:len
-        ic  = domain==nothing ? centroid(D,i) : centroid(domain,i)
+        ic  = domain==nothing ? centro(D,i) : centro(domain,i)
 		icoords  = coordinates(ic)
 		neighids = search(ic, searcher)
 

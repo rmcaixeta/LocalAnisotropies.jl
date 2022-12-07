@@ -52,7 +52,7 @@ function graph!(D::LocalGeoData, metric::Type{<:LocalMetric}, searcher::Neighbor
 	sources, dest, wgts = Vector{Int}(), Vector{Int}(), Vector{Float64}()
 
 	for i in 1:n
-		icoord = centroid(O,i)
+		icoord = centro(O,i)
 		idxs   = search(icoord, searcher)
 		for j in idxs
 			push!(sources, i)

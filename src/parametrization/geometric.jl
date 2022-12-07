@@ -33,7 +33,7 @@ function localanisotropies(::Type{Geometric}, searcher::NeighborSearchMethod;
     m = Array{Vector}(undef,len)
 
     Threads.@threads for i in 1:len
-		neighids = search(centroid(D,i), searcher)
+		neighids = search(centro(D,i), searcher)
 		λ, v = pca(view(X,:,neighids), simplify)
 
 		det(v) < 0 && (v = Diagonal(SVector{3}([-1,1,1])) * v)

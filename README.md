@@ -34,10 +34,10 @@ This package deals with local anisotropies in geostatistics. It offers some solu
 
 First, it is necessary to install Julia. Installation instructions for Windows, Linux and macOS are available [here](https://julialang.org/downloads/platform/).
 
-To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl` and `Plots.jl` packages are installed together to run the usage example.
+To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl`, `GeoStatsPlots` and `Plots.jl` packages are installed together to run the usage example.
 
 ```julia
-using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","Plots"])
+using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","GeoStatsPlots","Plots"])
 ```
 
 ## References
@@ -71,6 +71,7 @@ Check below an usage example that illustrate the package applications.
 # load libraries for the example
 using LocalAnisotropies
 using GeoStats
+using GeoStatsPlots
 using Plots
 using Random
 Random.seed!(1234)
@@ -236,7 +237,7 @@ plot(s0,[:P])
 # comparison of the different estimates
 mse(a,b) = sum((a .- b) .^ 2)/length(b)
 solvers = ["OK","MW","KC","SD1","SD2","SD3"]
-errors  = [mse(x[:P],D[:P]) for x in [s0,s1,s2,s3,s4,s5]]
+errors  = [mse(getproperty(x,:P),getproperty(D,:P)) for x in [s0,s1,s2,s3,s4,s5]]
 bar(solvers,errors,legend=false,ylabel="Mean squared error",xlabel="Estimation method")
 ```
 

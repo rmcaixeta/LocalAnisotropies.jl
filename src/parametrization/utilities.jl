@@ -153,7 +153,7 @@ function to_vtk(vtkfile, coords::AbstractArray, lpars::LocalAnisotropy;
 end
 
 function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
-	coords = reduce(hcat, [coordinates(centroid(D,x)) for x in 1:nvals(D)])
+	coords = reduce(hcat, [coordinates(centro(D,x)) for x in 1:nvals(D)])
 	to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 
