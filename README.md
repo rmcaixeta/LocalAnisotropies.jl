@@ -262,7 +262,7 @@ angs2 = convertangles.(pars.rotation, :GSLIB)
 ```
 
 
-[build-img]: https://img.shields.io/github/workflow/status/rmcaixeta/LocalAnisotropies.jl/CI?style=flat-square
+[build-img]: https://img.shields.io/github/actions/workflow/status/rmcaixeta/LocalAnisotropies.jl/CI.yml?branch=master
 [build-url]: https://github.com/rmcaixeta/LocalAnisotropies.jl/actions
 
 [codecov-img]: https://codecov.io/gh/rmcaixeta/LocalAnisotropies.jl/branch/master/graph/badge.svg
