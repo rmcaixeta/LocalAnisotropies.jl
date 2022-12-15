@@ -3,10 +3,13 @@ using GeoStats
 using Test
 import LocalAnisotropies: rotmat
 
+
 @testset "LocalAnisotropies.jl" begin
+
     # convert data to LocalAnisotropy
-    dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
+    dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(reshape(1:20,(2,10))/10))
     pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
+	@test round(pars.rotation[1][4],digits=4) ≈ 0.0087
 
     # convert between different rotation conventions
     angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
@@ -15,16 +18,19 @@ import LocalAnisotropies: rotmat
     @test all(rmat .≈ rotmat([1,1,1], angs1, :Datamine))
     @test all(rmat .≈ rotmat([1,1,1], angs2, :GSLIB))
     angs_ = convertangles.(pars.rotation, :GSLIB)
+	@test all([x[1] for x in angs_] .≈ 1:10)
 
     # pars_ = convertpars(pars, convention=:Datamine)
     # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
 
 	# local anisotropies from pointset coordinates
-	data  = rmat[1] * vcat(rand(2,100),zeros(1,100))
+	data  = rmat[1] * vcat(reshape(1:200,(2,100))/10,zeros(1,100))
 	pset  = PointSet(data)
 	nhood = KNearestSearch(pset, 10)
     gpars = localanisotropies(Geometric, nhood, simplify=true)
+	@test round(gpars.rotation[1][4],digits=4) ≈ 0.5869
     gpars = localanisotropies(Geometric, nhood, simplify=false)
+	@test round(gpars.rotation[1][4],digits=4) ≈ -0.6969
 
     grid2d = (10,10)
     grid3d = (10,10,5)
@@ -52,7 +58,9 @@ import LocalAnisotropies: rotmat
         lpars = reference_magnitude(lpars, :Y)
         lpars = smoothpars(lpars, searcher)
 
+		# pass to samples and calculate expvario
 		spars = nnpars(lpars, D, S)
+		expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
 
         # interpolate in a coarser grid
         G_ = if R==2
@@ -75,27 +83,27 @@ import LocalAnisotropies: rotmat
         s2 = solve(P, KC)
 
         # Spatial deformation: anisotropic distances
-        Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors=1500)
+        Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors=250)
         Pd1 = EstimationProblem(Sd1, Dd1, :P)
         s3 = solve(Pd1, Kriging(:P => (variogram=γ,)))
 		x3 = to_3d(s3)
 
         # Spatial deformation: anisotropic variogram distances
-        Sd2, Dd2 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=1500)
+        Sd2, Dd2 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=250)
         Pd2 = EstimationProblem(Sd2, Dd2, :P)
         s4 = solve(Pd2, Kriging(:P => (variogram=γ,)))
 		x4 = to_3d(s4)
 
         # Spatial deformation: geodesic anisotropic distances
         LDa = graph(S, G, lpars, AnisoDistance, searcher)
-        Sd3, Dd3 = deformspace(LDa, GraphDistance, anchors=1500)
+        Sd3, Dd3 = deformspace(LDa, GraphDistance, anchors=250)
         Pd3 = EstimationProblem(Sd3, Dd3, :P)
         s5 = solve(Pd3, Kriging(:P => (variogram=γ,)))
 		x5 = to_3d(s5)
 
         # Spatial deformation: geodesic anisotropic variogram distances
         LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
-        Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors=1500)
+        Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors=250)
         Pd4 = EstimationProblem(Sd4, Dd4, :P)
         s6 = solve(Pd4, Kriging(:P => (variogram=γ,)))
 		x6 = to_3d(s6)
