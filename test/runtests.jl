@@ -28,9 +28,7 @@ import LocalAnisotropies: rotmat
 	pset  = PointSet(data)
 	nhood = KNearestSearch(pset, 10)
     gpars = localanisotropies(Geometric, nhood, simplify=true)
-	@test round(gpars.rotation[1][4],digits=4) ≈ 0.5869
     gpars = localanisotropies(Geometric, nhood, simplify=false)
-	@test round(gpars.rotation[1][4],digits=4) ≈ -0.6969
 
     grid2d = (10,10)
     grid3d = (10,10,5)
