@@ -27,7 +27,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [compat]
 CSV = "0.10"
 Distances = "0.10"
-GeoStatsBase = "0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35"
+GeoStatsBase = "0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36"
 Graphs = "1.4"
 ImageFiltering = "0.7"
 KrigingEstimators = "0.10, 0.11, 0.12"
