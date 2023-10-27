@@ -7,8 +7,9 @@ module LocalAnisotropies
 using CSV
 using Distances
 using GeoStatsBase
+using GeoTables
 using ImageFiltering
-using KrigingEstimators
+using GeoStatsModels
 using Graphs:dijkstra_shortest_paths,connected_components
 using LinearAlgebra
 using Meshes
@@ -25,8 +26,8 @@ using Variography
 using WriteVTK
 
 import GeoStatsBase: solve
-import KrigingEstimators: FittedKriging, KrigingState, KrigingWeights,
- combine, factorize, nconstraints, set_constraints_rhs!, set_constraints_lhs!
+import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights,
+ predictmean, predictvar, factorize, nconstraints, set_constraints_rhs!, set_constraints_lhs!
 
 include("estimators.jl")
 include("parametrization.jl")

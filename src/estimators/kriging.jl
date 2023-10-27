@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------
 # Licensed under the MIT License. See LICENSE in the project root.
-# Adapted from KrigingEstimators.jl
+# Adapted from GeoStatsModels.jl
 # ------------------------------------------------------------------
 
 function solve(problem::EstimationProblem, solver::LocalKriging)
@@ -165,8 +165,7 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
 end
 
 
-function local_lhs(estimator::KrigingEstimator, domain,
-  localaniso::AbstractVector)
+function local_lhs(estimator, domain,  localaniso::AbstractVector)
 
   γ = estimator.γ
   nobs = nvals(domain)
@@ -225,8 +224,7 @@ function set_local_rhs!(estimator::FittedKriging, pₒ,
 end
 
 
-function local_fit(estimator::KrigingEstimator, data,
-  localaniso::AbstractVector=[nothing])
+function local_fit(estimator, data, localaniso::AbstractVector=[nothing])
 
   D = domain(data)
 
@@ -266,5 +264,5 @@ end
 function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
   wgts = local_weights(estimator, pₒ, localaniso)
   data = getproperty(estimator.state.data, var)
-  combine(estimator, wgts, data)
+  predictmean(estimator, wgts, data), predictvar(estimator, wgts)
 end
