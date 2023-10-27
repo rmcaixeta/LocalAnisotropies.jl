@@ -36,10 +36,10 @@ function Base.show(io::IO, ::MIME"text/plain", lp::LocalAnisotropy)
 	print(io,"LocalAnisotropy $(ndims(lp))-D")
 end
 
-SpatialData = Union{GeoTable,Domain}
+SpatialData = Union{GeoTable,Domain,GeoTables.SubGeoTable,Meshes.SubDomain}
 
 function nvals(d::SpatialData)
-	if d isa Domain# || d isa DomainView
+	if d isa Domain || d isa Meshes.SubDomain
 		return nelements(d)
 	else
 		return nelements(domain(d))
@@ -47,7 +47,7 @@ function nvals(d::SpatialData)
 end
 
 function centro(d::SpatialData, i::Int)
-	if d isa Domain# || d isa DomainView
+	if d isa Domain || d isa Meshes.SubDomain
 		return centroid(d,i)
 	else
 		return centroid(domain(d),i)

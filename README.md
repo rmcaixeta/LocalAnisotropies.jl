@@ -180,7 +180,7 @@ plot(s2,[:P])
 Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
 Pd1 = EstimationProblem(Sd1, Dd1, :P)
 γ1 = GaussianVariogram(sill=21.3, range=22.5)
-s3 = solve(Pd1, Kriging(:P => (variogram=γ1,)))
+s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ1,)))
 plot(plot(to_3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
 ```
 
@@ -197,7 +197,7 @@ Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
 
 # traditional kriging in the new multidimensional space
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
-s4 = solve(Pd2, Kriging(:P => (variogram=γ2,)))
+s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ2,)))
 plot(plot(to_3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
 ```
 
@@ -214,7 +214,7 @@ Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
 
 # traditional kriging in the new multidimensional space
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
-s5 = solve(Pd3, Kriging(:P => (variogram=γ3,)))
+s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ3,)))
 plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 ```
 
@@ -224,7 +224,7 @@ plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 
 ```julia
 γomni = GaussianVariogram(sill=32., range=11.)
-OK = Kriging(:P => (variogram=γomni, maxneighbors=20))
+OK = KrigingSolver(:P => (variogram=γomni, maxneighbors=20))
 s0 = solve(P, OK)
 plot(s0,[:P])
 ```

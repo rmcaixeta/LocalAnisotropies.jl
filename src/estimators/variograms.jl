@@ -27,10 +27,10 @@ function mwvario(estimator, localpar)
   γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
 
   # return local estimator
-  if typeof(estimator) <: SimpleKriging
-    return SimpleKriging(γl, estimator.mean)
-  elseif typeof(estimator) <: OrdinaryKriging
-    return OrdinaryKriging(γl)
+  if typeof(estimator) <: GeoStatsModels.SimpleKriging
+    return GeoStatsModels.SimpleKriging(γl, estimator.mean)
+  elseif typeof(estimator) <: GeoStatsModels.OrdinaryKriging
+    return GeoStatsModels.OrdinaryKriging(γl)
   end
 
 end

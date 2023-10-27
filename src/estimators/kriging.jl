@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------
 # Licensed under the MIT License. See LICENSE in the project root.
-# Adapted from GeoStatsModels.jl
+# Adapted from GeoStatsModels.jl and GeoStatsSolvers.jl
 # ------------------------------------------------------------------
 
 function solve(problem::EstimationProblem, solver::LocalKriging)
@@ -9,7 +9,7 @@ function solve(problem::EstimationProblem, solver::LocalKriging)
 
   # results for each variable
   μs = []; σs = []
-  for var in name.(variables(problem))
+  for var in keys(variables(problem))
     varμ, varσ = local_solve_approx(problem, var, preproc)
     push!(μs, var => varμ)
     push!(σs, Symbol(var,"-variance") => varσ)
@@ -32,7 +32,7 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
   for covars in covariables(problem, solver)
     for var in covars.names
       # get user parameters
-      varparams = covars.params[(var,)]
+      varparams = covars.params[Set([var])]
 
       # find non-missing samples for variable
       cols = Tables.columns(dtable)
@@ -51,9 +51,9 @@ function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
 
       # determine which Kriging variant to use
       if varparams.mean ≠ nothing
-        estimator = SimpleKriging(varparams.variogram, varparams.mean)
+        estimator = GeoStatsModels.SimpleKriging(varparams.variogram, varparams.mean)
       else
-        estimator = OrdinaryKriging(varparams.variogram)
+        estimator = GeoStatsModels.OrdinaryKriging(varparams.variogram)
       end
 
       # determine minimum/maximum number of neighbors
@@ -101,8 +101,6 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     pdata = data(problem)
     pdomain = domain(problem)
 
-    mactypeof = Dict(name(v) => mactype(v) for v in variables(problem))
-
     # unpack preprocessed parameters
     estimator, minneighbors, maxneighbors, bsearcher, method, localaniso, hdlocalaniso = preproc[var]
     KC = method == :KernelConvolution ? true : false
@@ -110,12 +108,9 @@ function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
     # if KC, pass localaniso to hard data
     (KC && hdlocalaniso==nothing) && (hdlocalaniso = grid2hd_qmat(pdata,pdomain,localaniso))
 
-    # determine value type
-    V = mactypeof[var]
-
     # pre-allocate memory for result
-    varμ = Vector{V}(undef, nvals(pdomain))
-    varσ = Vector{V}(undef, nvals(pdomain))
+    varμ = Vector(undef, nvals(pdomain))
+    varσ = Vector(undef, nvals(pdomain))
 
     # estimation loop
     Threads.@threads for location in traverse(pdomain, LinearPath())
@@ -201,7 +196,7 @@ end
 function set_local_rhs!(estimator::FittedKriging, pₒ,
   localaniso::Tuple)
 
-  γ = estimator.estimator.γ
+  γ = estimator.model.γ
   X = domain(estimator.state.data)
   RHS = estimator.state.RHS
 
@@ -264,5 +259,48 @@ end
 function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
   wgts = local_weights(estimator, pₒ, localaniso)
   data = getproperty(estimator.state.data, var)
-  predictmean(estimator, wgts, data), predictvar(estimator, wgts)
+  combine(estimator, wgts, data)
+end
+
+
+function searcher_ui(domain, maxneighbors, metric, neighborhood)
+  # number of domain elements
+  nelem = nelements(domain)
+
+  # number of neighbors
+  nmax = if isnothing(maxneighbors)
+    nelem
+  elseif maxneighbors < 1 || maxneighbors > nelem
+    @warn "Invalid maximum number of neighbors. Adjusting to $nelem..."
+    nelem
+  else
+    maxneighbors
+  end
+
+  if isnothing(neighborhood)
+    # nearest neighbor search with a metric
+    KNearestSearch(domain, nmax; metric)
+  else
+    # neighbor search with ball neighborhood
+    KBallSearch(domain, nmax, neighborhood)
+  end
+end
+
+function combine(fitted::FittedKriging, weights::KrigingWeights, z::AbstractVector)
+  γ = fitted.model.γ
+  b = fitted.state.RHS
+  λ = weights.λ
+  ν = weights.ν
+
+  # compute b⋅[λ;ν]
+  nobs  = length(λ)
+  c₁ = view(b, 1:nobs) ⋅ λ
+  c₂ = view(b, nobs+1:length(b)) ⋅ ν
+  c = c₁ + c₂
+
+  if isstationary(γ)
+    z⋅λ, sill(γ) - c
+  else
+    z⋅λ, c
+  end
 end
