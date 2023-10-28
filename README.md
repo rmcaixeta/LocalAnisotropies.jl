@@ -34,10 +34,10 @@ This package deals with local anisotropies in geostatistics. It offers some solu
 
 First, it is necessary to install Julia. Installation instructions for Windows, Linux and macOS are available [here](https://julialang.org/downloads/platform/).
 
-To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl`, `GeoStatsPlots` and `Plots.jl` packages are installed together to run the usage example.
+To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl`, `Makie.jl` and `WGLMakie.jl` packages are installed together to run the usage example.
 
 ```julia
-using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","GeoStatsPlots","Plots"])
+using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","Makie","WGLMakie"])
 ```
 
 ## References
@@ -71,9 +71,8 @@ Check below an usage example that illustrate the package applications.
 # load libraries for the example
 using LocalAnisotropies
 using GeoStats
-using GeoStatsPlots
-using Plots
 using Random
+import WGLMakie as Mke
 Random.seed!(1234)
 
 # create a reference scenario for tests
@@ -86,9 +85,11 @@ G = CartesianGrid(20,20)
 P = EstimationProblem(S, G, :P)
 
 # plot reference scenario and samples extracted for further estimations
-splot = plot(G)
-splot = plot!(S)
-plot(plot(D),splot)
+fig0 = Mke.Figure()
+Mke.plot(fig0[1,1],D.geometry,color=D.P)
+Mke.plot(fig0[1,2],G,showfacets=true,color=:white)
+Mke.plot!(fig0[1,2],S.geometry,color=S.P)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -98,8 +99,8 @@ plot(plot(D),splot)
 ```julia
 # get local anisotropies using gradients of a 8x8 radius window
 rawlpars = localanisotropies(Gradients, D, :P, 8)
-plot(D, alpha=0.6, colorbar=false)
-plot!(rawlpars,D)
+Mke.plot(D.geometry, color=D.P, alpha=0.6)
+## Mke.plot!(rawlpars,D) ## need to migrate to Makie - soon 
 ```
 
 <p align="center">
@@ -118,8 +119,8 @@ rescale_magnitude!(lpars, r2=(0.25,1.0))
 lparsx = reference_magnitude(lpars, :X)
 lparsy = reference_magnitude(lpars, :Y)
 
-plot(D, alpha=0.6, colorbar=false)
-plot!(lpars,D)
+Mke.plot(D.geometry, color=D.P, alpha=0.6)
+## Mke.plot!(lpars,D) ## need to migrate to Makie - soon 
 ```
 
 <p align="center">
@@ -127,7 +128,6 @@ plot!(lpars,D)
 </p>
 
 ```julia
-# plot(lpars, data) will only work for 2D spatial data
 # for 3D or custom visualizations, it's possible to export it to VTK
 to_vtk("ellipses", D, lpars)
 # below the file "ellipses.vtu" loaded in Paraview using TensorGlyph (disable extract eigenvalues)
@@ -143,10 +143,11 @@ spars = nnpars(lpars, D, S)
 
 # do an unconventional variography along local X axis (same can be done for Y)
 expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
-plot(expvario)
+Mke.plot(expvario)
 γx = ExponentialVariogram(sill=32., range=40.)
 γy = GaussianVariogram(sill=32., range=8.)
-plot!(γx)
+Mke.plot!(γx)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -157,7 +158,7 @@ plot!(γx)
 # kriging using moving windows method
 MW = LocalKriging(:P => (variogram=γx, localaniso=lparsx, method=:MovingWindows))
 s1 = solve(P, MW)
-plot(s1,[:P])
+Mke.plot(s1.geometry,color=s1.P)
 ```
 
 <p align="center">
@@ -168,7 +169,7 @@ plot(s1,[:P])
 # kriging using kernel convolution method (smaller search; unstable with many local variations)
 KC = LocalKriging(:P => (variogram=γy, localaniso=lparsy, method=:KernelConvolution, maxneighbors=6))
 s2 = solve(P, KC)
-plot(s2,[:P])
+Mke.plot(s2.geometry,color=s2.P)
 ```
 
 <p align="center">
@@ -181,7 +182,12 @@ Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
 Pd1 = EstimationProblem(Sd1, Dd1, :P)
 γ1 = GaussianVariogram(sill=21.3, range=22.5)
 s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ1,)))
-plot(plot(to_3d(s3),[:P]), plot(georef(values(s3),G),[:P],colorbar=false))
+
+# plot
+fig3 = Mke.Figure()
+Mke.plot(fig3[1,1],to_3d(s3).geometry,color=s3.P)
+Mke.plot(fig3[1,2],G,color=s3.P)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -198,7 +204,12 @@ Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
 # traditional kriging in the new multidimensional space
 Pd2 = EstimationProblem(Sd2, Dd2, :P)
 s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ2,)))
-plot(plot(to_3d(s4),[:P]), plot(georef(values(s4),G),[:P],colorbar=false))
+
+# plot
+fig4 = Mke.Figure()
+Mke.plot(fig4[1,1],to_3d(s4).geometry,color=s4.P)
+Mke.plot(fig4[1,2],G,color=s4.P)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -215,7 +226,12 @@ Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
 # traditional kriging in the new multidimensional space
 Pd3 = EstimationProblem(Sd3, Dd3, :P)
 s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ3,)))
-plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
+
+# plot
+fig5 = Mke.Figure()
+Mke.plot(fig5[1,1],to_3d(s5).geometry,color=s5.P)
+Mke.plot(fig5[1,2],G,color=s5.P)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -226,7 +242,7 @@ plot(plot(to_3d(s5),[:P]), plot(georef(values(s5),G),[:P],colorbar=false))
 γomni = GaussianVariogram(sill=32., range=11.)
 OK = KrigingSolver(:P => (variogram=γomni, maxneighbors=20))
 s0 = solve(P, OK)
-plot(s0,[:P])
+Mke.plot(s0.geometry,color=s0.P)
 ```
 
 <p align="center">
@@ -238,7 +254,7 @@ plot(s0,[:P])
 mse(a,b) = sum((a .- b) .^ 2)/length(b)
 solvers = ["OK","MW","KC","SD1","SD2","SD3"]
 errors  = [mse(getproperty(x,:P),getproperty(D,:P)) for x in [s0,s1,s2,s3,s4,s5]]
-bar(solvers,errors,legend=false,ylabel="Mean squared error",xlabel="Estimation method")
+Mke.barplot(1:6,errors,axis=(xticks=(1:6,solvers),ylabel="Mean squared error",xlabel="Estimation method"))
 ```
 
 <p align="center">
