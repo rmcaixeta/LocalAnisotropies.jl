@@ -8,6 +8,14 @@ using LocalAnisotropies
 import Makie
 
 
+Makie.@recipe(LA, lpars, geom) do scene
+    return Makie.Attributes(;
+        alpha=0.6,
+    )
+end
+
+Makie.plottype(::LocalAnisotropy, ::LocalAnisotropies.SpatialData) = LA{<:Tuple{LocalAnisotropy, LocalAnisotropies.SpatialData}}
+
 function pre_ellipsoid(lpars, geom, f)
   # pre process
   coords = LocalAnisotropies.coords(geom)
@@ -21,19 +29,16 @@ function pre_ellipsoid(lpars, geom, f)
   x, y, z, s, q
 end
 
-
-Makie.plottype(::LocalAnisotropy, ::LocalAnisotropies.SpatialData) = Makie.MeshScatter
+# https://github.com/MakieOrg/Makie.jl/issues/837
 #Makie.used_attributes(::Makie.PlotFunc, ::LocalAnisotropy, ::LocalAnisotropies.SpatialData; kw...) = (:markersize, :rotations)
-Makie.plot!(P::Type{<:Makie.MeshScatter}, x, y, z, s, q) = Makie.meshscatter!(P, x, y, z, markersize=s, rotations=q, alpha=0.6)
+#Makie.used_attributes(::Type{<: GraphPlot}, graph::Graph) = (:algorithm,)
 
-function Makie.convert_arguments(P::Type{<:Makie.MeshScatter}, lpars::LocalAnisotropy, geom::LocalAnisotropies.SpatialData)
-	x, y, z, s, q = pre_ellipsoid(lpars, geom, 0.5)
-	x, y, z, s, q
+function Makie.convert_arguments(P::Type{<:LA}, lpars::LocalAnisotropy, geom::LocalAnisotropies.SpatialData)
+	lpars, geom
 end
 
 
-
-function Makie.plot!(plot::Makie.MeshScatter{<:Tuple{LocalAnisotropy, LocalAnisotropies.SpatialData}})
+function Makie.plot!(plot::LA)
   # input pars
   lpars = plot[1]
   geom  = plot[2]
@@ -46,23 +51,7 @@ function Makie.plot!(plot::Makie.MeshScatter{<:Tuple{LocalAnisotropy, LocalAniso
   s = Makie.@lift $out[4]
   q = Makie.@lift $out[5]
 
-  Makie.meshscatter!(x, y, z, s, q, alpha=0.6)
+  Makie.meshscatter!(plot, x, y, z, markersize=s, rotations=q, alpha=0.6)
 end
 
-
-# function Makie.plot!(plot::Makie.Combined{Any, S} where S<:Tuple{LocalAnisotropy, LocalAnisotropies.SpatialData})
-# function Makie.plot!(plot::Makie.meshscatter{<:Tuple{LocalAnisotropy, LocalAnisotropies.SpatialData}})
-
-
-#P::Type{<:AbstractPlot}
-
-#
-# function Makie.convert_arguments(P::Type{<:Makie.AbstractPlot},
-# 	lpars::LocalAnisotropy, geom::LocalAnisotropies.SpatialData)
-# 	x, y, z, s, q = pre_ellipsoid(lpars, geom, 0.5)
-# 	return Makie.convert_arguments(P, x, y, z, markersize=s, rotations=q)
-# end
-
-# https://github.com/MakieOrg/Makie.jl/issues/837
-#
 end
