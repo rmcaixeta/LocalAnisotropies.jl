@@ -79,7 +79,7 @@ function deformspace(D::LocalGeoData, metric::Type{<:LocalMetric}=GraphDistance;
 		tcoords[:,iothers] .= otcoords
 	else
 		M = fit(MDS, ADM, maxoutdim=maxoutdim, distances=true)
-    	tcoords = transform(M)
+    	tcoords = predict(M)
 		#println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[λ .> 0]))")
 	end
 
