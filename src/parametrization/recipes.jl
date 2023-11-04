@@ -2,6 +2,8 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
+# 2d arrows at Plots.jl 
+
 @recipe function f(lpars::LocalAnisotropy, D::SpatialData, axis=:Y)
   @assert ndims(lpars) == 2 "plot only available for 2D local anisotropies"
   quats = lpars.rotation
