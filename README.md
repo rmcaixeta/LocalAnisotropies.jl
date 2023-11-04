@@ -85,7 +85,7 @@ G = CartesianGrid(20,20)
 P = EstimationProblem(S, G, :P)
 
 # plot reference scenario and samples extracted for further estimations
-fig0 = Mke.Figure()
+fig0 = Mke.Figure(resolution=(700, 350))
 Mke.plot(fig0[1,1],D.geometry,color=D.P)
 Mke.plot(fig0[1,2],G,showfacets=true,color=:white)
 Mke.plot!(fig0[1,2],S.geometry,color=S.P)
@@ -100,7 +100,8 @@ Mke.current_figure()
 # get local anisotropies using gradients of a 8x8 radius window
 rawlpars = localanisotropies(Gradients, D, :P, 8)
 Mke.plot(D.geometry, color=D.P, alpha=0.6)
-## Mke.plot!(rawlpars,D) ## need to migrate to Makie - soon 
+Mke.plot!(rawlpars,D.geometry)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -120,7 +121,8 @@ lparsx = reference_magnitude(lpars, :X)
 lparsy = reference_magnitude(lpars, :Y)
 
 Mke.plot(D.geometry, color=D.P, alpha=0.6)
-## Mke.plot!(lpars,D) ## need to migrate to Makie - soon 
+Mke.plot!(lpars,D.geometry)
+Mke.current_figure()
 ```
 
 <p align="center">
@@ -128,7 +130,7 @@ Mke.plot(D.geometry, color=D.P, alpha=0.6)
 </p>
 
 ```julia
-# for 3D or custom visualizations, it's possible to export it to VTK
+# for custom visualizations, it's possible to export it to VTK
 to_vtk("ellipses", D, lpars)
 # below the file "ellipses.vtu" loaded in Paraview using TensorGlyph (disable extract eigenvalues)
 ```
@@ -184,7 +186,7 @@ Pd1 = EstimationProblem(Sd1, Dd1, :P)
 s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ1,)))
 
 # plot
-fig3 = Mke.Figure()
+fig3 = Mke.Figure(resolution=(700, 350))
 Mke.plot(fig3[1,1],to_3d(s3).geometry,color=s3.P)
 Mke.plot(fig3[1,2],G,color=s3.P)
 Mke.current_figure()
@@ -206,7 +208,7 @@ Pd2 = EstimationProblem(Sd2, Dd2, :P)
 s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ2,)))
 
 # plot
-fig4 = Mke.Figure()
+fig4 = Mke.Figure(resolution=(700, 350))
 Mke.plot(fig4[1,1],to_3d(s4).geometry,color=s4.P)
 Mke.plot(fig4[1,2],G,color=s4.P)
 Mke.current_figure()
@@ -228,7 +230,7 @@ Pd3 = EstimationProblem(Sd3, Dd3, :P)
 s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ3,)))
 
 # plot
-fig5 = Mke.Figure()
+fig5 = Mke.Figure(resolution=(700, 350))
 Mke.plot(fig5[1,1],to_3d(s5).geometry,color=s5.P)
 Mke.plot(fig5[1,2],G,color=s5.P)
 Mke.current_figure()

@@ -7,10 +7,12 @@ module LocalAnisotropiesMakieExt
 using LocalAnisotropies
 import Makie
 
-
 Makie.@recipe(LA, lpars, geom) do scene
     return Makie.Attributes(;
-        alpha=0.6,
+        alpha = 0.6,
+		size  = 0.5,
+		color = :black,
+		colormap = :RdYlBu,
     )
 end
 
@@ -29,20 +31,22 @@ function pre_ellipsoid(lpars, geom, f)
   x, y, z, s, q
 end
 
-# https://github.com/MakieOrg/Makie.jl/issues/837
-#Makie.used_attributes(::Makie.PlotFunc, ::LocalAnisotropy, ::LocalAnisotropies.SpatialData; kw...) = (:markersize, :rotations)
-#Makie.used_attributes(::Type{<: GraphPlot}, graph::Graph) = (:algorithm,)
-
 function Makie.convert_arguments(P::Type{<:LA}, lpars::LocalAnisotropy, geom::LocalAnisotropies.SpatialData)
 	lpars, geom
 end
 
+"""
+    Makie.plot(localaniso, geometry; alpha=0.6, size=0.5, color=:black)
+    Makie.plot!(localaniso, geometry; alpha=0.6, size=0.5, color=:black)
 
+Plot local anisotropies as ellipsoid in Makie.jl environment. Example in the
+README file. If `color` is a vector, `colormap` can be defined (default=`:RdYlBu`)
+"""
 function Makie.plot!(plot::LA)
   # input pars
   lpars = plot[1]
   geom  = plot[2]
-  size  = 0.5
+  size  = plot[:size]
 
   out = Makie.@lift pre_ellipsoid($lpars, $geom, $size)
   x = Makie.@lift $out[1]
@@ -51,7 +55,8 @@ function Makie.plot!(plot::LA)
   s = Makie.@lift $out[4]
   q = Makie.@lift $out[5]
 
-  Makie.meshscatter!(plot, x, y, z, markersize=s, rotations=q, alpha=0.6)
+  Makie.meshscatter!(plot, x, y, z, markersize=s, rotations=q,
+     alpha=plot[:alpha], color=plot[:color], colormap=plot[:colormap])
 end
 
 end
