@@ -27,8 +27,8 @@ import LocalAnisotropies: rotmat
 	data  = rmat[1] * vcat(reshape(1:200,(2,100))/10,zeros(1,100))
 	pset  = PointSet(data)
 	nhood = KNearestSearch(pset, 10)
-    gpars = localanisotropies(Geometric, nhood, simplify=true)
-    gpars = localanisotropies(Geometric, nhood, simplify=false)
+    gpars = localanisotropies(Geometrical, nhood, simplify=true)
+    gpars = localanisotropies(Geometrical, nhood, simplify=false)
 
     grid2d = (10,10)
     grid3d = (10,10,5)

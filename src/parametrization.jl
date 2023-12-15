@@ -135,7 +135,7 @@ function Base.show(io::IO, ::MIME"text/plain", ld::LocalGeoData)
 end
 
 abstract type LocalParMethods end
-struct Geometric <: LocalParMethods end
+struct Geometrical <: LocalParMethods end
 struct Gradients <: LocalParMethods end
 
 

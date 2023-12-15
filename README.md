@@ -85,10 +85,10 @@ G = CartesianGrid(20,20)
 P = EstimationProblem(S, G, :P)
 
 # plot reference scenario and samples extracted for further estimations
-fig0 = Mke.Figure(resolution=(700, 350))
+fig0 = Mke.Figure(size=(700, 350))
 Mke.plot(fig0[1,1],D.geometry,color=D.P)
 Mke.plot(fig0[1,2],G,showfacets=true,color=:white)
-Mke.plot!(fig0[1,2],S.geometry,color=S.P)
+Mke.plot!(fig0[1,2],S.geometry,color=S.P,pointsize=10)
 Mke.current_figure()
 ```
 
@@ -186,7 +186,7 @@ Pd1 = EstimationProblem(Sd1, Dd1, :P)
 s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ1,)))
 
 # plot
-fig3 = Mke.Figure(resolution=(700, 350))
+fig3 = Mke.Figure(size=(700, 350))
 Mke.plot(fig3[1,1],to_3d(s3).geometry,color=s3.P)
 Mke.plot(fig3[1,2],G,color=s3.P)
 Mke.current_figure()
@@ -208,7 +208,7 @@ Pd2 = EstimationProblem(Sd2, Dd2, :P)
 s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ2,)))
 
 # plot
-fig4 = Mke.Figure(resolution=(700, 350))
+fig4 = Mke.Figure(size=(700, 350))
 Mke.plot(fig4[1,1],to_3d(s4).geometry,color=s4.P)
 Mke.plot(fig4[1,2],G,color=s4.P)
 Mke.current_figure()
@@ -230,7 +230,7 @@ Pd3 = EstimationProblem(Sd3, Dd3, :P)
 s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ3,)))
 
 # plot
-fig5 = Mke.Figure(resolution=(700, 350))
+fig5 = Mke.Figure(size=(700, 350))
 Mke.plot(fig5[1,1],to_3d(s5).geometry,color=s5.P)
 Mke.plot(fig5[1,2],G,color=s5.P)
 Mke.current_figure()

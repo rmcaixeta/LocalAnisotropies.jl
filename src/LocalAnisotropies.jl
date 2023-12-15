@@ -63,7 +63,7 @@ export
     to_3d,
     to_vtk,
     AnisoDistance,
-    Geometric,
+    Geometrical,
     Gradients,
     GraphDistance,
     LocalAnisotropy,
