@@ -1,158 +1,237 @@
 # ------------------------------------------------------------------
 # Licensed under the MIT License. See LICENSE in the project root.
-# Adapted from GeoStatsModels.jl and GeoStatsSolvers.jl
+# Adapted from GeoStatsModels.jl and GeoStatsTransforms.jl
 # ------------------------------------------------------------------
 
-# https://github.com/JuliaEarth/GeoStatsModels.jl/blob/main/src/krig.jl
-# https://github.com/JuliaEarth/GeoStatsModels.jl/blob/main/src/utils.jl
-# https://github.com/JuliaEarth/GeoStatsTransforms.jl/blob/main/src/interpneighbors.jl
+struct LocalInterpolate{D<:Domain,N,M} <: TableTransform
+  domain::D
+  selectors::Vector{ColumnSelector}
+  models::Vector{LocalKrigingModel}
+  minneighbors::Int
+  maxneighbors::Int
+  neighborhood::N
+  distance::M
+  point::Bool
+  prob::Bool
+end
 
-function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
-  # retrieve problem info
-  pdata   = data(problem)
-  dtable  = values(pdata)
-  ddomain = domain(pdata)
-  pdomain = domain(problem)
+LocalInterpolate(
+  domain::Domain,
+  selectors,
+  models;
+  minneighbors=1,
+  maxneighbors=10,
+  neighborhood=nothing,
+  distance=Euclidean(),
+  point=true,
+  prob=false
+) = LocalInterpolate(
+  domain,
+  collect(ColumnSelector, selectors),
+  collect(LocalKrigingModel, models),
+  minneighbors,
+  maxneighbors,
+  neighborhood,
+  distance,
+  point,
+  prob
+)
 
-  # result of preprocessing
-  preproc = Dict{Symbol,NamedTuple}()
+LocalInterpolate(domain, pairs::Pair{<:Any,<:LocalKrigingModel}...; kwargs...) =
+  LocalInterpolate(domain, selector.(first.(pairs)), last.(pairs); kwargs...)
 
-  for covars in covariables(problem, solver)
-    for var in covars.names
-      # get user parameters
-      varparams = covars.params[Set([var])]
+isrevertible(::Type{<:LocalInterpolate}) = false
 
-      # find non-missing samples for variable
-      cols = Tables.columns(dtable)
-      vals = Tables.getcolumn(cols, var)
-      inds = findall(!ismissing, vals)
+function apply(transform::LocalInterpolate, geotable::AbstractGeoTable)
+  tab = values(geotable)
+  cols = Tables.columns(tab)
+  vars = Tables.columnnames(cols)
 
-      # assert at least one sample is non-missing
-      if isempty(inds)
-        throw(AssertionError("all samples of $var are missing, aborting..."))
-      end
+  domain = transform.domain
+  selectors = transform.selectors
+  models = transform.models
+  minneighbors = transform.minneighbors
+  maxneighbors = transform.maxneighbors
+  neighborhood = transform.neighborhood
+  distance = transform.distance
+  point = transform.point
+  prob = transform.prob
+  path = LinearPath()
 
-      # subset of non-missing samples
-      vtable  = (;var => collect(skipmissing(vals)))
-      vdomain = view(ddomain, inds)
-      samples = georef(vtable, vdomain)
+  interps = map(selectors, models) do selector, model
+    svars = selector(vars)
+    data = geotable[:, svars]
+    localfitpredict(model, data, domain, point, prob, minneighbors, maxneighbors, neighborhood, distance, path)
+  end
 
-      # determine which Kriging variant to use
-      if varparams.mean ≠ nothing
-        estimator = GeoStatsModels.SimpleKriging(varparams.variogram, varparams.mean)
+  newgeotable = reduce(hcat, interps)
+
+  newgeotable, nothing
+end
+
+# only differences to original: local fit with point to estimate; check pars; add KC info
+function localfitpredict(model::LocalKrigingModel, geotable::AbstractGeoTable, pdomain::Domain,
+  point=true,  prob=false,  minneighbors=1,  maxneighbors=10,  neighborhood=nothing, distance=Euclidean(), path=LinearPath())
+
+  table = values(geotable)
+  ddomain = domain(geotable)
+  vars = Tables.schema(table).names
+
+  # adjust data
+  data = if point
+    pset = PointSet(centroid(ddomain, i) for i in 1:nelements(ddomain))
+    GeoStatsModels._adjustunits(georef(values(geotable), pset))
+  else
+    GeoStatsModels._adjustunits(geotable)
+  end
+
+  # fix neighbors limits
+  nobs = nrow(data)
+  if maxneighbors > nobs || maxneighbors < 1
+    maxneighbors = nobs
+  end
+  if minneighbors > maxneighbors || minneighbors < 1
+    minneighbors = 1
+  end
+
+  # determine bounded search method
+  searcher = if isnothing(neighborhood)
+    # nearest neighbor search with a metric
+    KNearestSearch(ddomain, maxneighbors; metric=distance)
+  else
+    # neighbor search with ball neighborhood
+    KBallSearch(ddomain, maxneighbors, neighborhood)
+  end
+
+  # pre-allocate memory for neighbors
+  neighbors = Vector{Int}(undef, maxneighbors)
+
+  # prediction order
+  inds = traverse(pdomain, path)
+
+  # predict function
+  predfun = prob ? predictprob : predict
+
+  # check pars
+  okmeth = model.method in [:MovingWindows, :KernelConvolution]
+  @assert okmeth "method must be :MovingWindows or :KernelConvolution"
+  localaniso = model.localaniso
+  oklocal1 = length(localaniso.rotation) == nvals(pdomain)
+  oklocal2 = typeof(localaniso) <: LocalAnisotropy
+  @assert oklocal1 "number of local anisotropies must match domain points"
+  @assert oklocal2 "wrong format of local anisotropies"
+
+  # add KC info
+  if model.method == :KernelConvolution
+    if model.hdlocalaniso != nothing
+      hdlocalaniso = toqmat(model.hdlocalaniso)
+    else
+      hdlocalaniso = grid2hd_qmat(geotable,pdomain,model.localaniso)
+    end
+    model = LocalKrigingModel(model.method, model.localaniso, model.γ, model.skmean, hdlocalaniso)
+  end
+
+  # predict variable values
+  function pred(var)
+    map(inds) do ind
+      # centroid of estimation
+      center = centroid(pdomain, ind)
+
+      # find neighbors with data
+      nneigh = search!(neighbors, center, searcher)
+
+      # predict if enough neighbors
+      if nneigh ≥ minneighbors
+        # final set of neighbors
+        ninds = view(neighbors, 1:nneigh)
+
+        # view neighborhood with data
+        samples = view(data, ninds)
+
+        # fit model to samples
+        fmodel = local_fit(model, samples, i=ind, m=ninds)
+
+        # save prediction
+        geom = point ? center : pdomain[ind]
+        predfun(fmodel, var, geom)
       else
-        estimator = GeoStatsModels.OrdinaryKriging(varparams.variogram)
+        # missing prediction
+        missing
       end
-
-      # determine minimum/maximum number of neighbors
-      minneighbors = varparams.minneighbors
-      maxneighbors = varparams.maxneighbors
-
-      # determine neighborhood search method
-      bsearcher = searcher_ui(vdomain,
-                              maxneighbors,
-                              varparams.distance,
-                              varparams.neighborhood)
-
-      # local inputs
-      method = varparams.method
-      KC = method == :KernelConvolution ? true : false
-      localaniso, localanisohd = (varparams.localaniso, varparams.localanisohd)
-      (localanisohd != nothing && KC) && (localanisohd = toqmat(localanisohd))
-
-      # check pars
-      okmeth = method in [:MovingWindows, :KernelConvolution]
-      @assert okmeth "method must be :MovingWindows or :KernelConvolution"
-
-      oklocal1 = length(localaniso.rotation) == nvals(pdomain)
-      oklocal2 = typeof(localaniso) <: LocalAnisotropy
-      @assert oklocal1 "number of local anisotropies must match domain points"
-      @assert oklocal2 "wrong format of local anisotropies"
-
-      # save preprocessed input
-      preproc[var] = (estimator=estimator,
-                      minneighbors=minneighbors,
-                      maxneighbors=maxneighbors,
-                      bsearcher=bsearcher,
-                      method=method,
-                      localaniso=localaniso,
-                      localanisohd=localanisohd)
     end
   end
 
-  preproc
+  pairs = (var => pred(var) for var in vars)
+  newtab = (; pairs...) |> Tables.materializer(table)
+  georef(newtab, pdomain)
 end
 
+function local_fit(model_::LocalKrigingModel, data; i, m)
+  MW = (model_.method == :MovingWindows)
+  localaniso = model_.localaniso
+  localpar = (rotation(localaniso,i),magnitude(localaniso,i))
+  if MW
+    model = mwvario(model_, localpar)
+  else
+    model = model_.skmean == nothing ? GeoStatsModels.OrdinaryKriging(model_.γ) : GeoStatsModels.SimpleKriging(model_.γ, model_.skmean)
+    hdlocalaniso = view(model_.hdlocalaniso, m)
+    Qx₀ = qmat(localpar...)
+  end
 
-function local_solve_approx(problem::EstimationProblem, var::Symbol, preproc)
-    # retrieve problem info
-    pdata = data(problem)
-    pdomain = domain(problem)
+  γ = model.γ
+  D = domain(data)
 
-    # unpack preprocessed parameters
-    estimator, minneighbors, maxneighbors, bsearcher, method, localaniso, hdlocalaniso = preproc[var]
-    KC = method == :KernelConvolution ? true : false
+  # build Kriging system
+  LHS = MW ? lhs(model, D) : local_lhs(model, D, hdlocalaniso)
+  RHS = Vector{eltype(LHS)}(undef, size(LHS, 1))
 
-    # if KC, pass localaniso to hard data
-    (KC && hdlocalaniso==nothing) && (hdlocalaniso = grid2hd_qmat(pdata,pdomain,localaniso))
+  # factorize LHS
+  FLHS = GeoStatsModels.factorize(model, LHS)
 
-    # pre-allocate memory for result
-    varμ = Vector(undef, nvals(pdomain))
-    varσ = Vector(undef, nvals(pdomain))
+  # variance type
+  VARTYPE = Variography.result_type(γ, first(D), first(D))
 
-    # estimation loop
-    Threads.@threads for location in traverse(pdomain, LinearPath())
-      # pre-allocate memory
-      neighbors = Vector{Int}(undef, maxneighbors)
+  # record Kriging state
+  state = KrigingState(data, FLHS, RHS, VARTYPE)
 
-      # centroid of neighborhood center
-      pₒ = centroid(pdomain, location)
-
-      # find neighbors with previously estimated values
-      nneigh = search!(neighbors, pₒ, bsearcher)
-
-      localpar = (rotation(localaniso,location),magnitude(localaniso,location))
-      localestimator = KC ? nothing : mwvario(estimator, localpar)
-
-      # skip location in there are too few neighbors
-      if nneigh < minneighbors
-        varμ[location] = missing
-        varσ[location] = missing
-      else
-        # final set of neighbors
-        nview = view(neighbors, 1:nneigh)
-
-        # get neighbors centroid and values
-        X = view(pdata, nview)
-
-        # not using block kriging yet, need more tests
-        # uₒ = pdomain[location]
-
-        # fit estimator to data and predict mean and variance
-        if !KC
-          krig = local_fit(localestimator, X)
-          μ, σ² = local_predict(krig, var, pₒ)
-        else
-          ∑neighs = view(hdlocalaniso, nview)
-          krig = local_fit(estimator, X, ∑neighs)
-          Qx₀ = qmat(localpar...)
-          μ, σ² = local_predict(krig, var, pₒ, (Qx₀,∑neighs))
-        end
-
-        varμ[location] = μ
-        varσ[location] = σ²
-      end
-    end
-
-    varμ, varσ
+  # return fitted model
+  FK = MW ? FittedKriging(model, state) : LocalFittedKriging(model, state, Qx₀, hdlocalaniso)
+  FK
 end
 
+struct LocalFittedKriging#{M<:LocalKrigingModel,S<:KrigingState}
+  model::KrigingModel
+  state::KrigingState
+  Qx₀
+  hdlocalaniso
+end
 
-function local_lhs(estimator, domain,  localaniso::AbstractVector)
+FKC(m::LocalFittedKriging) = FittedKriging(m.model, m.state)
 
-  γ = estimator.γ
+status(fitted::LocalFittedKriging) = issuccess(fitted.state.LHS)
+
+predict(fitted::LocalFittedKriging, var, uₒ) = predictmean(FKC(fitted), weights(fitted, uₒ), var)
+
+function predictprob(fitted::LocalFittedKriging, var, uₒ)
+  w = local_weights(fitted, uₒ)
+  μ = predictmean(fitted, w, var)
+  σ² = predictvar(fitted, w)
+  Normal(μ, √σ²)
+end
+
+predictvar(fitted::LocalFittedKriging, weights::KrigingWeights) =
+  GeoStatsModel.predictvar(FKC(fitted), weights::KrigingWeights)
+
+predictmean(fitted::LocalFittedKriging, weights::KrigingWeights, var) =
+  GeoStatsModel.predictmean(FKC(fitted), weights::KrigingWeights, var)
+
+set_constraints_rhs!(fitted::LocalFittedKriging, pₒ) =
+  GeoStatsModel.set_constraints_rhs!(FKC(fitted), pₒ)
+
+function local_lhs(model::KrigingModel, domain, localaniso)
+  γ = model.γ
   nobs = nvals(domain)
-  ncons = nconstraints(estimator)
+  ncons = nconstraints(model)
 
   # pre-allocate memory for LHS
   u = first(domain)
@@ -161,110 +240,41 @@ function local_lhs(estimator, domain,  localaniso::AbstractVector)
   LHS = Matrix{T}(undef, m, m)
 
   # set variogram/covariance block
-  KC = (localaniso[1] == nothing) ? false : true
-
-  if !KC
-    Variography.pairwise!(LHS, γ, domain)
-    if isstationary(γ)
-      for j=1:nobs, i=1:nobs
-        @inbounds LHS[i,j] = sill(γ) - LHS[i,j]
-      end
-    end
-  else
-    kcfill!(LHS, γ, domain, localaniso)
-  end
+  kcfill!(LHS, γ, domain, localaniso)
 
   # set blocks of constraints
-  set_constraints_lhs!(estimator, LHS, domain)
+  GeoStatsModels.set_constraints_lhs!(model, LHS, domain)
 
   LHS
 end
 
-
-function set_local_rhs!(estimator::FittedKriging, pₒ,
-  localaniso::Tuple)
-
-  γ = estimator.model.γ
-  X = domain(estimator.state.data)
-  RHS = estimator.state.RHS
-
-  KC = localaniso[1]==nothing ? false : true
+function set_local_rhs!(fitted::LocalFittedKriging, pₒ)
+  localaniso = (fitted.Qx₀, fitted.hdlocalaniso)
+  γ = fitted.model.γ
+  X = domain(fitted.state.data)
+  RHS = fitted.state.RHS
 
   # RHS variogram/covariance
-  if !KC
-    @inbounds for j in 1:nvals(X)
-      xj = centroid(X, j)
-      RHS[j] = isstationary(γ) ? sill(γ) - γ(xj, pₒ) : γ(xj, pₒ)
-    end
-  else
-    @inbounds for j in 1:nvals(X)
-      xj = centroid(X, j)
-      RHS[j] = kccov(γ, pₒ, xj, localaniso[1], localaniso[2][j])
-    end
+  @inbounds for j in 1:nvals(X)
+    xj = centroid(X, j)
+    RHS[j] = kccov(γ, pₒ, xj, localaniso[1], localaniso[2][j])
   end
 
-  set_constraints_rhs!(estimator, pₒ)
+  set_constraints_rhs!(fitted, pₒ)
 end
 
 
-function local_fit(estimator, data, localaniso::AbstractVector=[nothing])
+function weights(fitted::LocalFittedKriging, pₒ)
+  localaniso = (fitted.Qx₀, fitted.hdlocalaniso)
+  nobs = nvals(fitted.state.data)
 
-  D = domain(data)
-
-  # build Kriging system
-  LHS = local_lhs(estimator, D, localaniso)
-  RHS = Vector{eltype(LHS)}(undef, size(LHS,1))
-
-  # factorize LHS
-  FLHS = factorize(estimator, LHS)
-
-  # record Kriging state
-  VARTYPE = Variography.result_type(estimator.γ, first(D), first(D))
-  state = KrigingState(data, FLHS, RHS, VARTYPE)
-
-  # return fitted estimator
-  FittedKriging(estimator, state)
-end
-
-
-function local_weights(estimator::FittedKriging, pₒ,
-  localaniso::Tuple)
-
-  nobs = nvals(estimator.state.data)
-
-  set_local_rhs!(estimator, pₒ, localaniso)
+  set_local_rhs!(fitted, pₒ)
 
   # solve Kriging system
-  x = estimator.state.LHS \ estimator.state.RHS
+  x = fitted.state.LHS \ fitted.state.RHS
 
   λ = view(x,1:nobs)
   ν = view(x,nobs+1:length(x))
 
   KrigingWeights(λ, ν)
-end
-
-
-function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(nothing,))
-  wgts = local_weights(estimator, pₒ, localaniso)
-  data = getproperty(estimator.state.data, var)
-  combine(estimator, wgts, data)
-end
-
-function combine(fitted::FittedKriging, weights::KrigingWeights, z::AbstractVector)
-  γ = fitted.model.γ
-  b = fitted.state.RHS
-  λ = weights.λ
-  ν = weights.ν
-
-  # compute b⋅[λ;ν]
-  nobs  = length(λ)
-  c₁ = view(b, 1:nobs) ⋅ λ
-  c₂ = view(b, nobs+1:length(b)) ⋅ ν
-  c = c₁ + c₂
-
-  if isstationary(γ)
-    z⋅λ, sill(γ) - c
-  else
-    z⋅λ, c
-  end
 end

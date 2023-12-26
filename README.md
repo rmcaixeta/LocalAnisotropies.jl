@@ -155,8 +155,8 @@ Mke.current_figure()
 
 ```julia
 # kriging using moving windows method
-MW = LocalKriging(variogram=γx, localaniso=lparsx, method=:MovingWindows)
-s1 = S |> InterpolateNeighbors(G, :P=>MW, maxneighbors=20)
+MW = LocalKriging(:MovingWindows, lpars, γ)
+s1 = S |> LocalInterpolate(G, :P=>MW, maxneighbors=20)
 Mke.plot(s1.geometry,color=s1.P)
 ```
 
@@ -166,8 +166,8 @@ Mke.plot(s1.geometry,color=s1.P)
 
 ```julia
 # kriging using kernel convolution method (smaller search; unstable with many local variations)
-KC = LocalKriging(variogram=γy, localaniso=lparsy, method=:KernelConvolution)
-s2 = S |> InterpolateNeighbors(G, :P=>KC, maxneighbors=6)
+KC = LocalKriging(:KernelConvolution, lpars, γ)
+s2 = S |> LocalInterpolate(G, :P=>KC, maxneighbors=6)
 Mke.plot(s2.geometry,color=s2.P)
 ```
 

@@ -72,14 +72,17 @@ import LocalAnisotropies: rotmat
         γ = NuggetEffect(0.1) + 0.9*ExponentialVariogram(range=60.0)
 
         # LocalKriging (MW)
-        MW = LocalKriging(variogram=γ, localaniso=lpars, method=:MovingWindows)
-		s1 = S |> InterpolateNeighbors(G, :P=>MW, maxneighbors=20)
+		println("MW")
+        MW = LocalKriging(:MovingWindows, lpars, γ)
+		s1 = S |> LocalInterpolate(G, :P=>MW, maxneighbors=20)
 
         # LocalKriging (KC)
-        KC = LocalKriging(variogram=γ, localaniso=lpars, method=:KernelConvolution)
-        s1 = S |> InterpolateNeighbors(G, :P=>KC, maxneighbors=20)
+		println("KC")
+        KC = LocalKriging(:KernelConvolution, lpars, γ)
+        s1 = S |> LocalInterpolate(G, :P=>KC, maxneighbors=6)
 
         # Spatial deformation: anisotropic distances
+		println("SD")
         Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors=250)
         s3 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ))
 		x3 = to_3d(s3)

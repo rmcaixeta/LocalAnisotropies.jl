@@ -20,14 +20,19 @@ and `param` is a `NamedTuple` containing the parameters below:
   `localaniso` if not informed.
 """
 
-struct LocalKriging <: KrigingModel
+struct LocalKrigingModel <: GeoStatsModel
   method::Symbol
-	localaniso::LocalAnisotropy
-  variogram::Variogram
+  localaniso::LocalAnisotropy
+  γ::Variogram
   skmean::Union{Number,Nothing}  # for later: local mean array
+  hdlocalaniso::Union{AbstractVector,Nothing}
 end
 
-LocalKriging(method::Symbol, localaniso::LocalAnisotropy, γ::Variogram; skmean=nothing) =
-  LocalKriging(method, localaniso, γ, skmean)
+LocalKriging(method::Symbol, localaniso::LocalAnisotropy, γ::Variogram; skmean=nothing, hdlocalaniso=nothing) =
+  LocalKrigingModel(method, localaniso, γ, skmean, hdlocalaniso)
 
-abstract type LocalKriging <: GeoStatsModel end
+
+function nconstraints(::LocalKrigingModel)
+  n = skmean == nothing ? 1 : 0 # OK otherwise SK
+  n
+end

@@ -25,11 +25,11 @@ using Tables
 using Variography
 using WriteVTK
 
-import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights,
- predictmean, predictvar, factorize, nconstraints, set_constraints_rhs!, set_constraints_lhs!, GeoStatsModel
+import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights, KrigingModel, GeoStatsModel, lhs, predict, nconstraints
+import GeoStatsTransforms: ColumnSelector, TableTransform, selector, apply
 
-include("estimators.jl")
 include("parametrization.jl")
+include("estimators.jl")
 include("estimators/idw.jl")
 include("estimators/kriging.jl")
 include("estimators/variograms.jl")
@@ -65,6 +65,7 @@ export
     Geometrical,
     Gradients,
     GraphDistance,
+    LocalInterpolate,
     LocalAnisotropy,
     LocalGeoData,
     LocalKriging,
