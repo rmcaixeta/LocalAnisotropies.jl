@@ -81,9 +81,6 @@ S = sample(D, UniformSampling(80, replace=false))
 S = georef(values(S), PointSet(centroid.(domain(S))))
 G = CartesianGrid(20,20)
 
-# create an estimation problem
-P = EstimationProblem(S, G, :P)
-
 # plot reference scenario and samples extracted for further estimations
 fig0 = Mke.Figure(size=(700, 350))
 Mke.plot(fig0[1,1],D.geometry,color=D.P)
@@ -158,8 +155,8 @@ Mke.current_figure()
 
 ```julia
 # kriging using moving windows method
-MW = LocalKriging(:P => (variogram=γx, localaniso=lparsx, method=:MovingWindows))
-s1 = solve(P, MW)
+MW = LocalKriging(variogram=γx, localaniso=lparsx, method=:MovingWindows)
+s1 = S |> InterpolateNeighbors(G, :P=>MW, maxneighbors=20)
 Mke.plot(s1.geometry,color=s1.P)
 ```
 
@@ -169,8 +166,8 @@ Mke.plot(s1.geometry,color=s1.P)
 
 ```julia
 # kriging using kernel convolution method (smaller search; unstable with many local variations)
-KC = LocalKriging(:P => (variogram=γy, localaniso=lparsy, method=:KernelConvolution, maxneighbors=6))
-s2 = solve(P, KC)
+KC = LocalKriging(variogram=γy, localaniso=lparsy, method=:KernelConvolution)
+s2 = S |> InterpolateNeighbors(G, :P=>KC, maxneighbors=6)
 Mke.plot(s2.geometry,color=s2.P)
 ```
 
@@ -181,9 +178,8 @@ Mke.plot(s2.geometry,color=s2.P)
 ```julia
 # deform space using kernel variogram as dissimilarity input
 Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
-Pd1 = EstimationProblem(Sd1, Dd1, :P)
 γ1 = GaussianVariogram(sill=21.3, range=22.5)
-s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ1,)))
+s3 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ1))
 
 # plot
 fig3 = Mke.Figure(size=(700, 350))
@@ -204,8 +200,7 @@ Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
 γ2 = GaussianVariogram(sill=22., range=22.)
 
 # traditional kriging in the new multidimensional space
-Pd2 = EstimationProblem(Sd2, Dd2, :P)
-s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ2,)))
+s4 = Sd2 |> Interpolate(Dd2, :P=>Kriging(γ2))
 
 # plot
 fig4 = Mke.Figure(size=(700, 350))
@@ -226,8 +221,7 @@ Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
 γ3 = NuggetEffect(1.0) + GaussianVariogram(sill=21., range=22.)
 
 # traditional kriging in the new multidimensional space
-Pd3 = EstimationProblem(Sd3, Dd3, :P)
-s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ3,)))
+s5 = Sd3 |> Interpolate(Dd3, :P=>Kriging(γ3))
 
 # plot
 fig5 = Mke.Figure(size=(700, 350))
@@ -242,8 +236,8 @@ Mke.current_figure()
 
 ```julia
 γomni = GaussianVariogram(sill=32., range=11.)
-OK = KrigingSolver(:P => (variogram=γomni, maxneighbors=20))
-s0 = solve(P, OK)
+OK = Kriging(γomni)
+s0 = S |> InterpolateNeighbors(G, :P=>OK, maxneighbors=20)
 Mke.plot(s0.geometry,color=s0.P)
 ```
 

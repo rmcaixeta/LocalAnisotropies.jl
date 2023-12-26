@@ -68,42 +68,37 @@ import LocalAnisotropies: rotmat
 		end
         lpars_ = idwpars(lpars, searcher, G_)
 
-        # Estimation problem
-        P = EstimationProblem(S, G, :P)
+        # Variogram
         γ = NuggetEffect(0.1) + 0.9*ExponentialVariogram(range=60.0)
 
         # LocalKriging (MW)
-        MW = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:MovingWindows))
-        s1 = solve(P, MW)
+        MW = LocalKriging(variogram=γ, localaniso=lpars, method=:MovingWindows)
+		s1 = S |> InterpolateNeighbors(G, :P=>MW, maxneighbors=20)
 
         # LocalKriging (KC)
-        KC = LocalKriging(:P => (variogram=γ, localaniso=lpars, method=:KernelConvolution))
-        s2 = solve(P, KC)
+        KC = LocalKriging(variogram=γ, localaniso=lpars, method=:KernelConvolution)
+        s1 = S |> InterpolateNeighbors(G, :P=>KC, maxneighbors=20)
 
         # Spatial deformation: anisotropic distances
         Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors=250)
-        Pd1 = EstimationProblem(Sd1, Dd1, :P)
-        s3 = solve(Pd1, KrigingSolver(:P => (variogram=γ,)))
+        s3 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ))
 		x3 = to_3d(s3)
 
         # Spatial deformation: anisotropic variogram distances
         Sd2, Dd2 = deformspace(S, G, lpars, KernelVariogram, γ, anchors=250)
-        Pd2 = EstimationProblem(Sd2, Dd2, :P)
-        s4 = solve(Pd2, KrigingSolver(:P => (variogram=γ,)))
+        s4 = Sd2 |> Interpolate(Dd2, :P=>Kriging(γ))
 		x4 = to_3d(s4)
 
         # Spatial deformation: geodesic anisotropic distances
         LDa = graph(S, G, lpars, AnisoDistance, searcher)
         Sd3, Dd3 = deformspace(LDa, GraphDistance, anchors=250)
-        Pd3 = EstimationProblem(Sd3, Dd3, :P)
-        s5 = solve(Pd3, KrigingSolver(:P => (variogram=γ,)))
+        s5 = Sd3 |> Interpolate(Dd3, :P=>Kriging(γ))
 		x5 = to_3d(s5)
 
         # Spatial deformation: geodesic anisotropic variogram distances
         LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
         Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors=250)
-        Pd4 = EstimationProblem(Sd4, Dd4, :P)
-        s6 = solve(Pd4, KrigingSolver(:P => (variogram=γ,)))
+		s6 = Sd4 |> Interpolate(Dd4, :P=>Kriging(γ))
 		x6 = to_3d(s6)
     end
 end

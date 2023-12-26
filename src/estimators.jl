@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    LocalKriging(var₁=>param₁, var₂=>param₂, ...)
+    LocalKriging(params ...)
 
 LocalKriging estimation solver, where `var::Symbol` is the variable name
 and `param` is a `NamedTuple` containing the parameters below:
@@ -18,19 +18,16 @@ and `param` is a `NamedTuple` containing the parameters below:
 * `localanisohd`  - Local parameters of the samples. Only necessary for
   :KernelConvolution method. They are automatically passed via NN from
   `localaniso` if not informed.
-* `minneighbors` - Minimum number of neighbors (default to 1)
-* `maxneighbors` - Maximum number of neighbors (default to 20)
-* `neighborhood` - Search neighborhood (default to `nothing`)
-* `distance`     - Distance used to find nearest neighbors (default to `Euclidean()`)
 """
-@estimsolver LocalKriging begin
-  @param variogram = ExponentialVariogram()
-  @param mean = nothing #0.0 or [1.0,0.8,....]
-  @param method = :MovingWindows
-  @param localaniso = nothing
-  @param localanisohd = nothing
-  @param minneighbors = 1
-  @param maxneighbors = 20
-  @param neighborhood = nothing
-  @param distance = Euclidean()
+
+struct LocalKriging <: KrigingModel
+  method::Symbol
+	localaniso::LocalAnisotropy
+  variogram::Variogram
+  skmean::Union{Number,Nothing}  # for later: local mean array
 end
+
+LocalKriging(method::Symbol, localaniso::LocalAnisotropy, γ::Variogram; skmean=nothing) =
+  LocalKriging(method, localaniso, γ, skmean)
+
+abstract type LocalKriging <: GeoStatsModel end

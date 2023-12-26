@@ -3,21 +3,9 @@
 # Adapted from GeoStatsModels.jl and GeoStatsSolvers.jl
 # ------------------------------------------------------------------
 
-function solve(problem::EstimationProblem, solver::LocalKriging)
-  # preprocess user input
-  preproc = local_preprocess(problem, solver)
-
-  # results for each variable
-  μs = []; σs = []
-  for var in keys(variables(problem))
-    varμ, varσ = local_solve_approx(problem, var, preproc)
-    push!(μs, var => varμ)
-    push!(σs, Symbol(var,"-variance") => varσ)
-  end
-
-  georef((; μs..., σs...), domain(problem))
-end
-
+# https://github.com/JuliaEarth/GeoStatsModels.jl/blob/main/src/krig.jl
+# https://github.com/JuliaEarth/GeoStatsModels.jl/blob/main/src/utils.jl
+# https://github.com/JuliaEarth/GeoStatsTransforms.jl/blob/main/src/interpneighbors.jl
 
 function local_preprocess(problem::EstimationProblem, solver::LocalKriging)
   # retrieve problem info
@@ -260,30 +248,6 @@ function local_predict(estimator::FittedKriging, var, pₒ, localaniso::Tuple=(n
   wgts = local_weights(estimator, pₒ, localaniso)
   data = getproperty(estimator.state.data, var)
   combine(estimator, wgts, data)
-end
-
-
-function searcher_ui(domain, maxneighbors, metric, neighborhood)
-  # number of domain elements
-  nelem = nelements(domain)
-
-  # number of neighbors
-  nmax = if isnothing(maxneighbors)
-    nelem
-  elseif maxneighbors < 1 || maxneighbors > nelem
-    @warn "Invalid maximum number of neighbors. Adjusting to $nelem..."
-    nelem
-  else
-    maxneighbors
-  end
-
-  if isnothing(neighborhood)
-    # nearest neighbor search with a metric
-    KNearestSearch(domain, nmax; metric)
-  else
-    # neighbor search with ball neighborhood
-    KBallSearch(domain, nmax, neighborhood)
-  end
 end
 
 function combine(fitted::FittedKriging, weights::KrigingWeights, z::AbstractVector)

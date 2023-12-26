@@ -25,9 +25,8 @@ using Tables
 using Variography
 using WriteVTK
 
-import GeoStatsBase: solve
 import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights,
- predictmean, predictvar, factorize, nconstraints, set_constraints_rhs!, set_constraints_lhs!
+ predictmean, predictvar, factorize, nconstraints, set_constraints_rhs!, set_constraints_lhs!, GeoStatsModel
 
 include("estimators.jl")
 include("parametrization.jl")
