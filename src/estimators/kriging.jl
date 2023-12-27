@@ -220,13 +220,13 @@ function predictprob(fitted::LocalFittedKriging, var, uₒ)
 end
 
 predictvar(fitted::LocalFittedKriging, weights::KrigingWeights) =
-  GeoStatsModel.predictvar(FKC(fitted), weights::KrigingWeights)
+  GeoStatsModels.predictvar(FKC(fitted), weights::KrigingWeights)
 
 predictmean(fitted::LocalFittedKriging, weights::KrigingWeights, var) =
-  GeoStatsModel.predictmean(FKC(fitted), weights::KrigingWeights, var)
+  GeoStatsModels.predictmean(FKC(fitted), weights::KrigingWeights, var)
 
 set_constraints_rhs!(fitted::LocalFittedKriging, pₒ) =
-  GeoStatsModel.set_constraints_rhs!(FKC(fitted), pₒ)
+  GeoStatsModels.set_constraints_rhs!(FKC(fitted), pₒ)
 
 function local_lhs(model::KrigingModel, domain, localaniso)
   γ = model.γ
