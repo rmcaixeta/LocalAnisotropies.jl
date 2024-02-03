@@ -22,7 +22,7 @@ using SimpleWeightedGraphs
 using StaticArrays
 using StatsBase:Weights,quantile,mean!
 using Tables
-using Variography
+using GeoStatsFunctions
 using WriteVTK
 
 import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights, KrigingModel, GeoStatsModel,
