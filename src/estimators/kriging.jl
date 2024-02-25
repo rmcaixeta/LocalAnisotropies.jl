@@ -189,7 +189,7 @@ function local_fit(model_::LocalKrigingModel, data; i, m)
   FLHS = GeoStatsModels.factorize(model, LHS)
 
   # variance type
-  VARTYPE = GeoStatsFunctions.result_type(γ, first(D), first(D))
+  VARTYPE = GeoStatsFunctions.returntype(γ, first(D), first(D))
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, VARTYPE)
@@ -235,7 +235,7 @@ function local_lhs(model::KrigingModel, domain, localaniso)
 
   # pre-allocate memory for LHS
   u = first(domain)
-  T = GeoStatsFunctions.result_type(γ, u, u)
+  T = GeoStatsFunctions.returntype(γ, u, u)
   m = nobs + ncons
   LHS = Matrix{T}(undef, m, m)
 
