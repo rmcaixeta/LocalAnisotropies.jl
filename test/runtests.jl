@@ -20,6 +20,13 @@ import LocalAnisotropies: rotmat
     angs_ = convertangles.(pars.rotation, :GSLIB)
 	@test all([x[1] for x in angs_] .≈ 1:10)
 
+	# convert data to 3D LocalAnisotropy
+	dummy = georef((a1=1:10, a2=1:10, a3=1:10, r1=1:10, r2=1:10, r3=1:10), PointSet(rand(3,10)))
+	pars  = localanisotropies(dummy, [:a1,:a2,:a3], [:r1,:r2,:r3], :Datamine)
+	pars_  = adjust_rake(pars,[45+i for i in 1:10])
+	@test all(round.(rotmat(pars,1)[3,:],digits=4) .≈ round.(rotmat(pars_,1)[3,:],digits=4))
+	@test !all(round.(rotmat(pars,1)[1,:],digits=4) .≈ round.(rotmat(pars_,1)[1,:],digits=4))
+
     # pars_ = convertpars(pars, convention=:Datamine)
     # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
 

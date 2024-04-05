@@ -48,6 +48,7 @@ include("spacetransforms/graph.jl")
 include("spacetransforms/metrics.jl")
 
 export
+    adjust_rake, adjust_rake!,
     convertangles,
     deformspace,
     exportpars,

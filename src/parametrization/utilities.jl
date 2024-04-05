@@ -86,6 +86,48 @@ function reference_magnitude(lpar::LocalAnisotropy, ax::Symbol)
 end
 
 """
+    adjust_rake(localaniso, azimuths)
+    adjust_rake!(localaniso, azimuths)
+
+Adjust the main direction :X along the azimuth informed.
+This will change the directions of :X and :Y, and keep the :Z unchanged
+Useful when the ellipsoid has the correct :Z (e.g. along body thickness), but the
+main direction should align with an specific azimuth onto the main plane.
+
+## Example
+
+Considering three ellipsoids in the `localaniso` variable
+
+```julia
+azimuths = [25.0, 30.0, 40.0]
+newpars = adjust_rake(localaniso, azimuths)
+```
+"""
+function adjust_rake!(lpar::LocalAnisotropy, az::AbstractVector)
+
+	rot = map(1:nvals(lpar)) do i
+		dcm = quat_to_dcm(lpar.rotation[i])
+		p1 = Plane(Point(0,0,0),Vec(dcm[1,:]),Vec(dcm[2,:]))
+		n2 = Vec(sind(az[i]+90),cosd(az[i]+90),0)
+		p2 = Plane(Point(0,0,0),n2)
+
+		dcm = collect(dcm)
+		icross = coordinates(intersection(p1,p2).geom.b)
+		dcm[1,:] .= icross
+		dcm[2,:] .= cross(dcm[1,:],dcm[3,:])
+		det(dcm) < 0 && (dcm = Diagonal([-1,1,1]) * dcm)
+		dcm_to_quat(DCM(dcm))
+	end
+	lpar.rotation .= rot
+	lpar
+end
+
+function adjust_rake(lpar::LocalAnisotropy, az::AbstractVector)
+  lp = deepcopy(lpar)
+  adjust_rake!(lp, az)
+end
+
+"""
     to_vtk(vtkfile, coords, localaniso; dir=:ellips, magnitude=:ranges)
 
 Export local anisotropies `localaniso` at `coords` to VTK format. It export local
