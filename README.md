@@ -84,7 +84,7 @@ G = CartesianGrid(20,20)
 # plot reference scenario and samples extracted for further estimations
 fig0 = Mke.Figure(size=(700, 350))
 Mke.plot(fig0[1,1],D.geometry,color=D.P)
-Mke.plot(fig0[1,2],G,showfacets=true,color=:white)
+Mke.plot(fig0[1,2],G,showsegments=true,color=:white)
 Mke.plot!(fig0[1,2],S.geometry,color=S.P,pointsize=10)
 Mke.current_figure()
 ```

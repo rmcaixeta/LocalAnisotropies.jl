@@ -28,7 +28,8 @@ function localanisotropies(data::SpatialData, angles::AbstractVector,
     @assert string.(angles) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
     dim = length(ranges)
-    rules[convention].main == :y && (ranges = ranges[reverse(1:dim,1,2)])
+    rule = convention isa Symbol ? rules[convention] : convention
+    rule.main == :y && (ranges = ranges[reverse(1:dim,1,2)])
 
     q = Array{Quaternion}(undef,len)
     m = Array{Vector}(undef,len)
@@ -37,7 +38,7 @@ function localanisotropies(data::SpatialData, angles::AbstractVector,
         xranges = [Tables.getcolumn(tab,x)[i] for x in ranges] ./ Tables.getcolumn(tab,ranges[1])[i]
         xangles = [Tables.getcolumn(tab,x)[i] for x in angles]
 
-        P, Λ = rotmat(xranges, xangles, convention; rev=false)
+        P, Λ = rotmat(xranges, xangles, rule; rev=false)
         size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
         q[i] = dcm_to_quat(P)
         m[i] = xranges
