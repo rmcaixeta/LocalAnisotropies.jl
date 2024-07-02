@@ -21,7 +21,7 @@ function mwvario(model, localpar)
   # get reference pars. and apply local anisotropy to given structures
   p = structures(model.γ)
   γs = map(p[3]) do γ
-    Qs = Q ./ radii(γ.ball)' .^ 2
+    Qs = ustrip(Q ./ collect(radii(γ.ball))' .^ 2)
     γ = @set γ.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
   end
   γl = NuggetEffect(p[1]) + sum(c*γ for (c, γ) in zip(p[2], γs))
@@ -58,7 +58,7 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
   ## modify variogram with average anisotropy matrix
   p = structures(γ)
   γs = map(p[3]) do γx
-    Qs = Qij ./ radii(γx.ball)' .^ 2
+    Qs = ustrip(Qij ./ collect(radii(γx.ball))' .^ 2)
     γx = @set γx.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
   end
   γl = NuggetEffect(p[1]) + sum(c*γx for (c, γx) in zip(p[2], γs))

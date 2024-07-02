@@ -30,13 +30,13 @@ function pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)
   for i in 1:n
     maxratio1 != Inf && ratio1(lpars,i) > maxratio1 && continue
     maxratio2 != Inf && ratio2(lpars,i) > maxratio2 && continue
-    x = coordinates(centro(obj, i))
+    x = to(centro(obj, i))
     v = rotmat(lpars, i)[iaxis(axis),1:dims]
     p = DirectionPartition(Tuple(v), tol=tol)
     s = Int[i]
     for j in 1:n
       i == j && continue
-      y = coordinates(centro(obj, j))
+      y = to(centro(obj, j))
       p(x, y) && push!(s, j)
     end
     push!(subs, s)

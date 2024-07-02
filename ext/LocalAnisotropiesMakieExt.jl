@@ -20,7 +20,7 @@ Makie.plottype(::LocalAnisotropy, ::LocalAnisotropies.SpatialData) = LA{<:Tuple{
 
 function pre_ellipsoid(lpars, geom, f)
   # pre process
-  coords = LocalAnisotropies.coords(geom)
+  coords = LocalAnisotropies.coords_(geom)
   D3 = size(coords,1) >= 3
   x = coords[1,:]
   y = coords[2,:]
@@ -55,7 +55,7 @@ function Makie.plot!(plot::LA)
   s = Makie.@lift $out[4]
   q = Makie.@lift $out[5]
 
-  Makie.meshscatter!(plot, x, y, z, markersize=s, rotations=q,
+  Makie.meshscatter!(plot, x, y, z, markersize=s, rotation=q,
      alpha=plot[:alpha], color=plot[:color], colormap=plot[:colormap])
 end
 

@@ -112,7 +112,7 @@ function adjust_rake!(lpar::LocalAnisotropy, az::AbstractVector)
 		p2 = Plane(Point(0,0,0),n2)
 
 		dcm = collect(dcm)
-		icross = coordinates(intersection(p1,p2).geom.b)
+		icross = ustrip(to(intersection(p1,p2).geom.b))
 		dcm[1,:] .= icross
 		dcm[2,:] .= cross(dcm[1,:],dcm[3,:])
 		det(dcm) < 0 && (dcm = Diagonal([-1,1,1]) * dcm)
@@ -195,7 +195,7 @@ function to_vtk(vtkfile, coords::AbstractArray, lpars::LocalAnisotropy;
 end
 
 function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
-	coords = reduce(hcat, [coordinates(centro(D,x)) for x in 1:nvals(D)])
+	coords = reduce(hcat, [ustrip(to(centro(D,x))) for x in 1:nvals(D)])
 	to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 

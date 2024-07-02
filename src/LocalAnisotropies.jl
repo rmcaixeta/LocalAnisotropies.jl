@@ -22,6 +22,7 @@ using SimpleWeightedGraphs
 using StaticArrays
 using StatsBase:Weights,quantile,mean!
 using Tables
+using Unitful:ustrip
 using GeoStatsFunctions
 using WriteVTK
 

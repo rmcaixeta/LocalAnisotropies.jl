@@ -26,7 +26,7 @@ lpars = idwpars(prelpars, searcher, grid) # interpolate local pars to a grid
 function localanisotropies(::Type{Geometrical}, searcher::NeighborSearchMethod;
 	simplify::Bool=true)
 	D = searcher.domain
-	X = coords(D)
+	X = coords_(D)
 	N, len = size(X)
 
     quat = Array{Quaternion}(undef,len)
@@ -60,7 +60,7 @@ end
 
 function pca(X, simplify)
 	N = size(X,1)
-	M = MultivariateStats.fit(PCA, X, maxoutdim=N, pratio=1)
+	M = MultivariateStats.fit(PCA, ustrip(X), maxoutdim=N, pratio=1)
 	λ = principalvars(M) ./ principalvars(M)[1]
 	nv = length(λ)
 	v = N == 3 ? projection(M) : vcat(projection(M),[0 0 1][1:nv])

@@ -13,8 +13,8 @@ end
 
 # nearest grid data id to some other sample data
 function grid2hd_ids(pdata,pdomain)
-  hd   = [coordinates(centro(pdata, i)) for i in 1:nvals(pdata)]
-  grid = [coordinates(centro(pdomain, i)) for i in 1:nvals(pdomain)]
+  hd   = [ustrip(to(centro(pdata, i))) for i in 1:nvals(pdata)]
+  grid = [ustrip(to(centro(pdomain, i))) for i in 1:nvals(pdomain)]
 
   tree = KDTree(grid)
   idxs, dists = nn(tree, hd)
