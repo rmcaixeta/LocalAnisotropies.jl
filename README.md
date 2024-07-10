@@ -261,7 +261,7 @@ Some extra tools to work with local anisotropies:
 
 ```julia
 # import external local anisotropies in GSLIB convention
-dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(rand(2,10)))
+dummy = georef((az=1:10, r1=1:10, r2=1:10))
 pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 
 # interpolate local anisotropies into a coarser grid

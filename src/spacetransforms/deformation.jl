@@ -138,11 +138,12 @@ function outobj(D, coord)
 	out = if sdata(D)
 		n, hn = nvals(D), nall(D)
 		h1 = n+1
-		dc   = view(coord,:,1:n)
-		dobj = dom isa Domain ? PointSet(dc) : georef(dom, dc)
-		georef(values(sobj(D)), view(coord,:,h1:hn)), dobj
+		dc = view(coord,:,1:n)
+		dd = view(coord,:,h1:hn)
+		dobj = dom isa Domain ? PointSet([tuple(dc[:,x]...) for x in 1:size(dc,2)]) : georef(dom, dc)
+		georef(values(sobj(D)), PointSet([tuple(dd[:,x]...) for x in 1:size(dd,2)])), dobj
 	else
-		dobj = dom isa Domain ? PointSet(coord) : georef(dom, coord)
+		dobj = dom isa Domain ? PointSet([tuple(coord[:,x]...) for x in 1:size(coord,2)]) : georef(dom, coord)
 		dobj
 	end
 	out
@@ -157,6 +158,6 @@ first three dimensions in order to help plotting of the data.
 """
 function to_3d(s)
 	dom = domain(s)
-	c = reduce(hcat,[to(centro(dom,x))[1:3] for x in 1:nvals(dom)])
+	c = [Point(to(centro(dom,x))[1:3]...) for x in 1:nvals(dom)]
 	georef(values(s),PointSet(c))
 end

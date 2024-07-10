@@ -72,7 +72,7 @@ function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
 
     Threads.@threads for i in 1:len
         ic  = domain==nothing ? centro(D,i) : centro(domain,i)
-		icoords  = ustrip(to(ic))
+		icoords  = ustrip.(to(ic))
 		neighids = search(ic, searcher)
 
 		if length(neighids) == 0

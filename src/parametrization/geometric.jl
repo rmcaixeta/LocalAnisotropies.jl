@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    localanisotropies(Geometrical, searcher; simplify=true)
+    localanisotropies(Geometric, searcher; simplify=true)
 
 Extract `LocalAnisotropy` from a searcher object. Based on the spatial data and
 the parameters from the searcher object, a group of neighbor points is collected
@@ -19,11 +19,11 @@ intermediate axis will be orthogonal to the others). This is default for 3-D.
 
 ```julia
 searcher = KNearestSearch(pts3dsurface, 10)
-prelpars = localanisotropies(Geometrical, searcher) # extract local pars at surface
+prelpars = localanisotropies(Geometric, searcher) # extract local pars at surface
 lpars = idwpars(prelpars, searcher, grid) # interpolate local pars to a grid
 ```
 """
-function localanisotropies(::Type{Geometrical}, searcher::NeighborSearchMethod;
+function localanisotropies(::Type{Geometric}, searcher::NeighborSearchMethod;
 	simplify::Bool=true)
 	D = searcher.domain
 	X = coords_(D)
@@ -60,7 +60,7 @@ end
 
 function pca(X, simplify)
 	N = size(X,1)
-	M = MultivariateStats.fit(PCA, ustrip(X), maxoutdim=N, pratio=1)
+	M = MultivariateStats.fit(PCA, ustrip.(X), maxoutdim=N, pratio=1)
 	λ = principalvars(M) ./ principalvars(M)[1]
 	nv = length(λ)
 	v = N == 3 ? projection(M) : vcat(projection(M),[0 0 1][1:nv])

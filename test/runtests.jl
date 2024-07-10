@@ -7,7 +7,7 @@ import LocalAnisotropies: rotmat
 @testset "LocalAnisotropies.jl" begin
 
     # convert data to LocalAnisotropy
-    dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet(reshape(1:20,(2,10))/10))
+    dummy = georef((az=1:10, r1=1:10, r2=1:10), PointSet([(i/2, (i+1)/2) for i in 1:2:19]))
     pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 	@test round(pars.rotation[1][4],digits=4) ≈ 0.0087
 
@@ -21,7 +21,8 @@ import LocalAnisotropies: rotmat
 	@test all([x[1] for x in angs_] .≈ 1:10)
 
 	# convert data to 3D LocalAnisotropy
-	dummy = georef((a1=1:10, a2=1:10, a3=1:10, r1=1:10, r2=1:10, r3=1:10), PointSet(rand(3,10)))
+	pts3d = rand(3,10)
+	dummy = georef((a1=1:10, a2=1:10, a3=1:10, r1=1:10, r2=1:10, r3=1:10), PointSet([tuple(pts3d[:,x]...) for x in 1:10]))
 	pars  = localanisotropies(dummy, [:a1,:a2,:a3], [:r1,:r2,:r3], :Datamine)
 	pars_  = adjust_rake(pars,[45+i for i in 1:10])
 	@test all(round.(rotmat(pars,1)[3,:],digits=4) .≈ round.(rotmat(pars_,1)[3,:],digits=4))
@@ -32,10 +33,10 @@ import LocalAnisotropies: rotmat
 
 	# local anisotropies from pointset coordinates
 	data  = rmat[1] * vcat(reshape(1:200,(2,100))/10,zeros(1,100))
-	pset  = PointSet(data)
+	pset  = PointSet([tuple(data[:,x]...) for x in 1:100])
 	nhood = KNearestSearch(pset, 10)
-    gpars = localanisotropies(Geometrical, nhood, simplify=true)
-    gpars = localanisotropies(Geometrical, nhood, simplify=false)
+    gpars = localanisotropies(Geometric, nhood, simplify=true)
+    gpars = localanisotropies(Geometric, nhood, simplify=false)
 
     grid2d = (10,10)
     grid3d = (10,10,5)

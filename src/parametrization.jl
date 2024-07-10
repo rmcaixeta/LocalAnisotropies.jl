@@ -115,9 +115,9 @@ spars(D::LocalGeoData, i::Int) = spars(D)[i-nvals(D)]
 spars(D::LocalGeoData, i::AbstractVector{Int}) = view(spars(D), i .- nvals(D))
 nall(D::LocalGeoData) = sdata(D) ? nvals(D)+snvals(D) : nvals(D)
 centro(D::LocalGeoData, i::Int) = i<=nvals(D) ? centro(obj(D),i) : centro(sobj(D),i-nvals(D))
-coords_(D::LocalGeoData, i::Int) = ustrip(to(centro(D,i)))
-coords_(D::SpatialData) = reduce(hcat, [ustrip(to(centro(D,x))) for x in 1:nvals(D)])
-coords_(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [ustrip(to(centro(D,x))) for x in i])
+coords_(D::LocalGeoData, i::Int) = ustrip.(to(centro(D,i)))
+coords_(D::SpatialData) = reduce(hcat, [ustrip.(to(centro(D,x))) for x in 1:nvals(D)])
+coords_(D::SpatialData, i::AbstractVector{Int}) = reduce(hcat, [ustrip.(to(centro(D,x))) for x in i])
 
 rotation(D::LocalGeoData) = D.localaniso.rotation
 srotation(D::LocalGeoData) = view(rotation(D),spars(D))
@@ -135,7 +135,7 @@ function Base.show(io::IO, ::MIME"text/plain", ld::LocalGeoData)
 end
 
 abstract type LocalParMethods end
-struct Geometrical <: LocalParMethods end
+struct Geometric <: LocalParMethods end
 struct Gradients <: LocalParMethods end
 
 
