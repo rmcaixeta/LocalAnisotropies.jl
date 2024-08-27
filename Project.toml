@@ -1,7 +1,7 @@
 name = "LocalAnisotropies"
 uuid = "cb698b3a-2f1d-48b4-a1e9-ddc0b8f648e2"
 authors = ["Rafael Caixeta and contributors"]
-version = "0.5.6"
+version = "0.5.7"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
