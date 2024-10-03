@@ -200,3 +200,12 @@ function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
 end
 
 toqmat(lp) = [qmat(rotation(lp,i),magnitude(lp,i)) for i in 1:nvals(lp)]
+
+Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
+
+function Base.vcat(lpar1::LocalAnisotropy, lpar2::LocalAnisotropy; kind=:union)
+	kind != :union && error("vcat of LocalAnisotropy is restricted to kind=:union ")
+	rot = vcat(lpar1.rotation,lpar2.rotation)
+	mag = hcat(lpar1.magnitude,lpar2.magnitude)
+	LocalAnisotropy(rot, mag)
+end
