@@ -3,51 +3,72 @@
 # ------------------------------------------------------------------
 
 """
-    localanisotropies(data, angles, ranges, convention=:GSLIB)
+    localanisotropies(data, rotation, ranges, convention=nothing)
+    localanisotropies(data, ranges, convention) # assumes angles [:ang1,:ang2,:ang3]
+    localanisotropies(data, ranges) # assumes quaternions [:q0,:q1,:q2,:q3]
 
-Import a `LocalAnisotropy` object from an outer source. The `data` is a
-georeferenced object. It must have the rotation angles and ranges as
-properties. These property names are informed as vectors in `angles` and
+Import a `LocalAnisotropy` object from tabular data. The `data` must follow
+`Tables.jl` structure. It must have the rotation info and ranges as
+properties. These property names are informed as vectors in `rotation` and
 `ranges`for the conversion. Check out the available rotation conventions at
 [`RotationRule`](@ref) docstring.
 
 ## Example
 
 ```julia
-localanisotropies(data, [:rot1], [:range1, :range2], convention=:EulerIntr) # 2D
-localanisotropies(data, [:rot1, :rot2, :rot3], [:range1, :range2, :range3]) # 3D
+localanisotropies(data, [:rot1], [:range1, :range2], :EulerIntr) # 2D
+localanisotropies(data, [:rot1, :rot2, :rot3], [:range1, :range2, :range3], :GSLIB) # 3D
+localanisotropies(data, [:q0,:q1,:q2,:q3], [:range1, :range2, :range3]) # quaternion
 ```
 """
-function localanisotropies(data::SpatialData, angles::AbstractVector,
-                           ranges::AbstractVector, convention=:GSLIB)
+localanisotropies(data, ranges::AbstractVector) =
+    localanisotropies(data, [:q0,:q1,:q2,:q3], ranges, nothing)
+
+localanisotropies(data, ranges::AbstractVector, convention::RotConvention) =
+    localanisotropies(data, [:ang1,:ang2,:ang3], ranges, convention)
+
+function localanisotropies(data, rotation::AbstractVector,
+                           ranges::AbstractVector, convention::Union{RotConvention,Nothing}=nothing)
     ranges = Symbol.(ranges)
-    angles = Symbol.(angles)
+    rotation = Symbol.(rotation)
     tab  = Tables.columns(values(data))
     cols = string.(Tables.columnnames(tab))
-    len  = nvals(data)
-    @assert string.(angles) ⊆ cols "angle column name do not exist"
+    len  = nrow(data)
+
+    @assert string.(rotation) ⊆ cols "angle column name do not exist"
     @assert string.(ranges) ⊆ cols "range column name do not exist"
     dim = length(ranges)
-    rule = convention isa Symbol ? rules[convention] : convention
-    rule.main == :y && (ranges = ranges[reverse(1:dim,1,2)])
+    transf = !isnothing(convention)
+    isquat = length(rotation) == 4
 
     q = Array{Quaternion}(undef,len)
     m = Array{Vector}(undef,len)
 
+    if transf
+        rule = convention isa Symbol ? rules[convention] : convention
+        rule.main == :y && (ranges = ranges[reverse(1:dim,1,2)])
+    end
+
     for i in 1:len
         xranges = [Tables.getcolumn(tab,x)[i] for x in ranges] ./ Tables.getcolumn(tab,ranges[1])[i]
-        xangles = [Tables.getcolumn(tab,x)[i] for x in angles]
+        xrot = [Tables.getcolumn(tab,x)[i] for x in rotation]
 
-        P, Λ = rotmat(xranges, xangles, rule; rev=false)
-        size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
-        q[i] = dcm_to_quat(P)
+        quat = if isquat
+            Quaternion(xrot)
+        else
+            P, Λ = rotmat(xranges, xrot, rule; rev=false)
+            size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
+            dcm_to_quat(P)
+        end
+
+        q[i] = quat
         m[i] = xranges
     end
 
     LocalAnisotropy(q, reduce(hcat,m))
 end
 
-#
+
 """
     convertangles(angles, convention1, convention2)
 
@@ -62,9 +83,9 @@ Converting 3D rotation [30, 30 30] from GSLIB convention to Datamine convention
 new_angs = convertangles([30,30,30], :GSLIB, :Datamine)
 ```
 """
-function convertangles(angles::AbstractVector, convention1, convention2)
-    P, _  = rotmat([1,1,1], angles, convention1)
-    rotmat2angles(P, convention2)
+function convertangles(angles::AbstractVector, c1::RotConvention, c2::RotConvention)
+    P, _  = rotmat([1,1,1], angles, c1)
+    rotmat2angles(P, c2)
 end
 
 """
@@ -73,46 +94,90 @@ end
 Convert a `ReferenceFrameRotations.Quaternion` to angles in a given convention.
 Check out the available rotation conventions at [`RotationRule`](@ref) docstring.
 """
-function convertangles(quat::Quaternion, convention)
+function convertangles(quat::Quaternion, convention::RotConvention)
     dcm    = quat_to_dcm(quat)
     rotmat2angles(dcm, convention)
 end
 
 """
-    exportpars(filename, localaniso, convention)
+    to_table(localaniso)
+    to_table(domain, localaniso)
+    to_table(localaniso, convention)
+    to_table(domain, localaniso, convention)
 
-Export local anisotropies to a CSV table. The angles are exported in the form of
-the given convention. Check out the available rotation conventions at
-[`RotationRule`](@ref) docstring.
+Transform local anisotropies to a Table file. The angles are written in the form of
+the given convention (or as quaternions if not informed). Check out the available
+rotation conventions at [`RotationRule`](@ref) docstring. Can be materialized as
+DataFrame, form example, or kept as NamedTuple format.
 
 ## Example
 
 ```julia
-exportpars("path/localaniso.csv", localaniso, :GSLIB)
+using DataFrames, CSV
+to_table(localaniso, :GSLIB) |> DataFrame
+
+CSV.write("out.csv",to_table(localaniso))
 ```
 """
-function exportpars(out, lpars::LocalAnisotropy, convention=:GSLIB)
-    table = convertpars(lpars, convention)
-    CSV.write(out, table)
+# convert LocalGeoData into quaternions + ranges
+to_table(obj::SpatialData, lpars::LocalAnisotropy) = to_table(LocalGeoData(obj, lpars))
+
+function to_table(lpars::LocalGeoData)
+    qs = [Symbol("q$(i-1)")=>[x[i] for x in rotation(lpars)] for i in 1:4]
+    mag = [Symbol("r$i")=>magnitude(lpars)[i,:] for i in 1:ndims(lpars)]
+    cnames = [:x,:y,:z]
+    cvals = coords_(obj(lpars))
+    cvals = [cnames[i]=>cvals[i,:] for i in 1:ndims(lpars)]
+    (; cvals..., qs..., mag...)
+end
+
+# convert LocalAnisotropy into quaternions + ranges
+function to_table(lpars::LocalAnisotropy)
+    qs = [Symbol("q$(i-1)")=>[x[i] for x in rotation(lpars)] for i in 1:4]
+    mag = [Symbol("r$i")=>magnitude(lpars)[i,:] for i in 1:ndims(lpars)]
+    (;qs..., mag...)
 end
 
 # convert LocalAnisotropy into angles + ranges
-function convertpars(lpars::LocalAnisotropy, convention=:GSLIB)
-    pars = []
-    len  = nvals(lpars)
-    for i in 1:len
+function to_table(lpars::LocalAnisotropy, convention::RotConvention)
+    pars = mapreduce(hcat, 1:nvals(lpars)) do i
         dcm    = rotmat(lpars, i)
         angles = rotmat2angles(dcm, convention)
         ranges = magnitude(lpars, i)
-        push!(pars, append!(angles,ranges))
+        vcat(angles,ranges)
     end
-    pars = reduce(hcat, pars)
-    r3   = size(pars,1) == 6 ? pars[6,:] : [0 for i in 1:len]
-    ((ang1=pars[1,x],ang2=pars[2,x],ang3=pars[3,x],r1=pars[4,x],r2=pars[5,x],r3=r3[x]) for x in 1:len)
+    cols = [:ang1,:ang2,:ang3,:r1,:r2,:r3]
+    pairs = [cols[i] => pars[i,:] for i in 1:size(pars,1)]
+    (;pairs...)
+end
+
+function to_table(lgeo::LocalGeoData, convention::RotConvention)
+    lpars = lgeo.localaniso
+    pars = mapreduce(hcat, 1:nvals(lpars)) do i
+        dcm    = rotmat(lpars, i)
+        angles = rotmat2angles(dcm, convention)
+        ranges = magnitude(lpars, i)
+        vcat(angles,ranges)
+    end
+    cols = [:ang1,:ang2,:ang3,:r1,:r2,:r3]
+    pairs = [cols[i] => pars[i,:] for i in 1:size(pars,1)]
+
+    cnames = [:x,:y,:z]
+    cvals = coords_(obj(lgeo))
+    cvals = [cnames[i]=>cvals[i,:] for i in 1:ndims(lgeo)]
+    (; cvals..., pairs...)
+end
+
+to_table(obj::SpatialData, lpars::LocalAnisotropy, convention::RotConvention) = to_table(LocalGeoData(obj, lpars), convention)
+
+# deprecated
+function convertpars(args...)
+    @warn "convertpars deprecated; prefer using to_table function"
+    to_table(args...)
 end
 
 # reverse transformation of rotation matrix to angles
-function rotmat2angles(dcm::AbstractMatrix, convention)
+function rotmat2angles(dcm::AbstractMatrix, convention::RotConvention)
   N = size(dcm, 1)
   P = N == 2 ? DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]) : dcm
 

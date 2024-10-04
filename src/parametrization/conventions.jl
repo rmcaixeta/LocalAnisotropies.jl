@@ -63,6 +63,8 @@ rules = Dict(
   :Datamine323   => RotationRule(:ZYZ,[:CW,:CW,:CW],false,:x,false)
 )
 
+RotConvention = Union{Symbol,RotationRule}
+
 function rotmat(semiaxes::AbstractVector, angles::AbstractVector,
                 convention=:TaitBryanExtr; rev=false)
   N = length(semiaxes)

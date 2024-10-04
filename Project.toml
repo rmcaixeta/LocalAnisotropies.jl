@@ -1,10 +1,9 @@
 name = "LocalAnisotropies"
 uuid = "cb698b3a-2f1d-48b4-a1e9-ddc0b8f648e2"
 authors = ["Rafael Caixeta and contributors"]
-version = "0.5.8"
+version = "0.6.0"
 
 [deps]
-CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 GeoStatsBase = "323cb8eb-fbf6-51c0-afd0-f8fba70507b2"
 GeoStatsFunctions = "6771c435-bc22-4842-b0c3-41852a255103"
@@ -34,13 +33,12 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 LocalAnisotropiesMakieExt = "Makie"
 
 [compat]
-CSV = "0.10"
 Distances = "0.10"
 GeoStatsBase = "0.45"
 GeoStatsFunctions = "0.4"
 GeoStatsModels = "0.4, 0.5"
 GeoStatsTransforms = "0.7, 0.8"
-GeoTables = "1.20"
+GeoTables = "1.20,1.21,1.22,1.23,1.24"
 Graphs = "1.4"
 ImageFiltering = "0.7"
 LinearAlgebra = "<0.0.1, 1"

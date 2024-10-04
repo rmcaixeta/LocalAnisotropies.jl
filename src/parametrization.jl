@@ -106,7 +106,7 @@ end
 
 obj(D::LocalGeoData) = D.domain
 sobj(D::LocalGeoData) = D.data
-ndims(D::LocalGeoData) = embeddim(D.domain)
+ndims(D::LocalGeoData) = ndims(D.localaniso)
 sdata(D::LocalGeoData) = sobj(D) != nothing
 nvals(D::LocalGeoData) = nvals(D.domain)
 snvals(D::LocalGeoData) = nvals(D.data)
