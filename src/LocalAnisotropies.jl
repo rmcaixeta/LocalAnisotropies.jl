@@ -4,7 +4,6 @@
 
 module LocalAnisotropies
 
-using CSV
 using Distances
 using GeoStatsBase
 using GeoTables

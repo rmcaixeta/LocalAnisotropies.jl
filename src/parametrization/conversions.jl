@@ -31,7 +31,8 @@ function localanisotropies(data, rotation::AbstractVector,
                            ranges::AbstractVector, convention::Union{RotConvention,Nothing}=nothing)
     ranges = Symbol.(ranges)
     rotation = Symbol.(rotation)
-    tab  = Tables.columns(values(data))
+    vals = data isa NamedTuple ? data : values(data)
+    tab  = Tables.columns(vals)
     cols = string.(Tables.columnnames(tab))
     len  = nrow(data)
 

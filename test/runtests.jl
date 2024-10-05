@@ -11,6 +11,19 @@ import LocalAnisotropies: rotmat
     pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 	@test round(pars.rotation[1][4],digits=4) ≈ 0.0087
 
+	tabpars_quat = to_table(pars)
+	tabpars_angs = to_table(pars, :GSLIB)
+	tabpars_quat_xyz = to_table(domain(dummy),pars)
+	tabpars_angs_xyz = to_table(domain(dummy),pars, :GSLIB)
+
+	@test length(keys(tabpars_quat)) == 6
+	@test length(keys(tabpars_angs)) == 5
+	@test length(keys(tabpars_quat_xyz)) == 8
+	@test length(keys(tabpars_angs_xyz)) == 7
+
+	repars  = localanisotropies(tabpars_quat, [:r1,:r2])
+	repars  = localanisotropies(tabpars_angs, [:r1,:r2], :GSLIB)
+
     # convert between different rotation conventions
     angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
     angs2 = convertangles(angs1, :Datamine, :GSLIB)
@@ -28,8 +41,18 @@ import LocalAnisotropies: rotmat
 	@test all(round.(rotmat(pars,1)[3,:],digits=4) .≈ round.(rotmat(pars_,1)[3,:],digits=4))
 	@test !all(round.(rotmat(pars,1)[1,:],digits=4) .≈ round.(rotmat(pars_,1)[1,:],digits=4))
 
-    # pars_ = convertpars(pars, convention=:Datamine)
-    # exportpars("C:\\Users\\test.csv", pars, :GSLIB)
+	tabpars_quat = to_table(pars)
+	tabpars_angs = to_table(pars, :Datamine)
+	tabpars_quat_xyz = to_table(domain(dummy),pars)
+	tabpars_angs_xyz = to_table(domain(dummy),pars, :Datamine)
+
+	@test length(keys(tabpars_quat)) == 7
+	@test length(keys(tabpars_angs)) == 6
+	@test length(keys(tabpars_quat_xyz)) == 10
+	@test length(keys(tabpars_angs_xyz)) == 9
+
+	repars  = localanisotropies(tabpars_quat, [:r1,:r2,:r3])
+	repars  = localanisotropies(tabpars_angs, [:r1,:r2,:r3], :Datamine)
 
 	# local anisotropies from pointset coordinates
 	data  = rmat[1] * vcat(reshape(1:200,(2,100))/10,zeros(1,100))
