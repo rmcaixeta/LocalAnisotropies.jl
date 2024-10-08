@@ -143,3 +143,7 @@ abstract type LocalMetric end
 struct AnisoDistance  <: LocalMetric end
 struct KernelVariogram <: LocalMetric end
 struct GraphDistance  <: LocalMetric end
+
+
+Base.view(la::LocalAnisotropy, inds::AbstractVector{Int}) = slice(la, inds)
+Base.getindex(la::LocalAnisotropy, inds::AbstractVector{Int}) = slice(la, inds)

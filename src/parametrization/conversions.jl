@@ -71,7 +71,8 @@ end
 
 
 """
-    convertangles(angles, convention1, convention2)
+    convertangles(angles, convention1, convention2) # angles to new angles
+    convertangles(angles, convention1) # angles to quaternion
 
 Convert angles between different convention. Check out the available rotation
 conventions at [`RotationRule`](@ref) docstring.
@@ -87,6 +88,12 @@ new_angs = convertangles([30,30,30], :GSLIB, :Datamine)
 function convertangles(angles::AbstractVector, c1::RotConvention, c2::RotConvention)
     P, _  = rotmat([1,1,1], angles, c1)
     rotmat2angles(P, c2)
+end
+
+function convertangles(angles::AbstractVector, c1::RotConvention)
+    P, _  = rotmat([1,1,1], angles, c1)
+    size(P,1) == 2 && (P=DCM([P[1,1] P[1,2] 0; P[2,1] P[2,2] 0; 0 0 1]))
+    dcm_to_quat(P)
 end
 
 """
