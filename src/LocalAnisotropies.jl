@@ -9,7 +9,7 @@ using GeoStatsBase
 using GeoTables
 using ImageFiltering
 using GeoStatsModels
-using Graphs:dijkstra_shortest_paths,connected_components
+using Graphs: dijkstra_shortest_paths, connected_components
 using LinearAlgebra
 using Meshes
 using MultivariateStats
@@ -19,14 +19,24 @@ using ReferenceFrameRotations
 using Setfield
 using SimpleWeightedGraphs
 using StaticArrays
-using StatsBase:Weights,quantile,mean!
+using StatsBase: Weights, quantile, mean!
 using Tables
-using Unitful:ustrip
+using Unitful: ustrip
 using GeoStatsFunctions
 using WriteVTK
 
-import GeoStatsModels: FittedKriging, KrigingState, KrigingWeights, KrigingModel, GeoStatsModel,
-  lhs, predict, nconstraints, predictmean, predictvar, set_constraints_rhs!
+import GeoStatsModels:
+    FittedKriging,
+    KrigingState,
+    KrigingWeights,
+    KrigingModel,
+    GeoStatsModel,
+    lhs,
+    predict,
+    nconstraints,
+    predictmean,
+    predictvar,
+    set_constraints_rhs!
 import GeoStatsTransforms: ColumnSelector, TableTransform, selector, apply
 
 include("parametrization.jl")
@@ -47,8 +57,8 @@ include("spacetransforms/deformation.jl")
 include("spacetransforms/graph.jl")
 include("spacetransforms/metrics.jl")
 
-export
-    adjust_rake, adjust_rake!,
+export adjust_rake,
+    adjust_rake!,
     convertangles,
     deformspace,
     graph,
@@ -57,8 +67,10 @@ export
     localvariography,
     magnitude,
     nnpars,
-    reference_magnitude, reference_magnitude!,
-    rescale_magnitude, rescale_magnitude!,
+    reference_magnitude,
+    reference_magnitude!,
+    rescale_magnitude,
+    rescale_magnitude!,
     smoothpars,
     to_3d,
     to_table,

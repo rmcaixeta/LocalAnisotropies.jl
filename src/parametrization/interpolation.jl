@@ -18,8 +18,8 @@ local neighbors returned from the `searcher`. The interpolation can be inverse
 distance weighted by given `power` and `metric` or a simply averaged if
 `power=0`. The ellipses/ellipsoids rotations are interpolated using
 (weighted) average of quaternions as described by Markley et al (2007). The
-interpolated magnitude is the weighted median of the neighbors magnitude. 
-One `missingpars` can be assigned where no neighbors are found; must be 
+interpolated magnitude is the weighted median of the neighbors magnitude.
+One `bkgpars` can be assigned where no neighbors are found; must be
 informed as (Quaternion, AbstractVector)
 
 
@@ -34,19 +34,18 @@ idw3_into_grid = idwpars(localaniso, searcher, grid, power=3)
 
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
-idwpars(lpars, searcher::NeighborSearchMethod, domain; power=2.0, metric=Euclidean(), missingpars=nothing) =
-	interpolate(lpars, searcher, domain, power=power, missingpars=missingpars)
+idwpars(lpars, searcher::NeighborSearchMethod, domain; kwargs...) =
+    interpolate(lpars, searcher, domain; kwargs...)
 
 """
-    smoothpars(localaniso, searcher; power=0, metric=Euclidean(), missingpars=nothing)
+    smoothpars(localaniso, searcher; bkgpars=nothing)
 
 Smooth `LocalAnisotropy`, using the local neighbors returned from the `searcher`.
-The interpolation can be inverse distance weighted by given `power` and `metric`
-or a simply averaged if `power=0`. The ellipses/ellipsoids rotations are
-interpolated using (weighted) average of quaternions as described by Markley
-et al. (2007). The interpolated magnitude is the weighted median of the
-neighbors magnitude. One `missingpars` can be assigned where no neighbors are
-found; must be informed as (Quaternion, AbstractVector)
+Simple local averages. The smoothed ellipses/ellipsoids rotations are based on
+average of quaternions as described by Markley et al. (2007). The interpolated
+magnitude is the weighted median of the neighbors magnitude. One `bkgpars`
+can be assigned where no neighbors are found; must be informed
+as (Quaternion, AbstractVector)
 
 ## Example
 
@@ -59,73 +58,106 @@ averaged_inplace = smoothpars(localaniso, searcher)
 
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
-smoothpars(lpars, searcher::NeighborSearchMethod; power=0.0, metric=Euclidean(), missingpars=nothing) =
-	interpolate(lpars, searcher, power=power, missingpars=missingpars)
+smoothpars(lpars, searcher::NeighborSearchMethod; bkgpars = nothing, bkgwgt = 0.0) =
+    interpolate(lpars, searcher; power = 0.0, bkgpars, bkgwgt)
 
 
-function interpolate(lpars, searcher::NeighborSearchMethod, domain=nothing;
-  power::Real=0, metric=Euclidean(), missingpars=nothing)
-  D = searcher.domain
-  N = embeddim(D)
-  len = domain==nothing ? nvals(D) : nvals(domain)
-  @assert nvals(D)==nvals(lpars) "searcher domain must match number of local anisotropies"
-  
-  quat = Array{Quaternion}(undef,len)
-  mag  = lpars.magnitude
-  m    = domain==nothing && power==0 ? mag : Array{Float64}(undef,N,len)
+function interpolate(
+    lpars,
+    searcher::NeighborSearchMethod,
+    domain = nothing;
+    power::Real = 0,
+    metric = Euclidean(),
+    bkgpars = nothing,
+    bkgwgt = 0.0,
+)
+    D = searcher.domain
+    N = embeddim(D)
+    smooth = isnothing(domain)
+    len = smooth ? nvals(D) : nvals(domain)
+    @assert nvals(D) == nvals(lpars) "searcher domain must match number of local anisotropies"
 
-  Threads.@threads for i in 1:len
-    ic  = domain==nothing ? centro(D,i) : centro(domain,i)
-    icoords  = ustrip.(to(ic))
-    neighids = search(ic, searcher)
+    quat = Array{Quaternion}(undef, len)
+    mag = lpars.magnitude
+    m = smooth && power == 0 ? mag : Array{Float64}(undef, N, len)
 
-    if length(neighids) == 0
-      if isnothing(missingpars)
-        throw(ErrorException("zero neighbors at some location; adjust searcher or set missingpars"))
-      else
-        quat[i] = missingpars[1]
-        m[:,i] .= missingpars[2]
-      end
-    elseif power==0.0
-      quat[i] = quatavg(rotation(lpars,neighids))
-      if domain!=nothing
-        mi      = magnitude(lpars,neighids)
-        m[:,i] .= mapreduce(x->quantile(view(mi,x,:),0.5), vcat, 1:N)
-      end
-    else
-      xcoords = coords_(D, neighids)
-      prewgts = 1 ./ (eps() .+ Distances.colwise(metric, icoords, xcoords)) .^ power
-      weights = prewgts ./ sum(prewgts)
-      quat[i] = quatavg(rotation(lpars,neighids), weights)
-      mi      = magnitude(lpars,neighids)
-      wgts    = Weights(weights)
-      m[:,i] .= mapreduce(x->quantile(view(mi,x,:),wgts,0.5), vcat, 1:N)
-      # mean instead median for magnitude?
+    Threads.@threads for i = 1:len
+        ic = smooth ? centro(D, i) : centro(domain, i)
+        icoords = ustrip.(to(ic))
+        neighids = search(ic, searcher)
+
+        if length(neighids) == 0
+            if isnothing(bkgpars)
+                throw(
+                    ErrorException(
+                        "zero neighbors at some location; adjust searcher or set bkgpars",
+                    ),
+                )
+            else
+                quat[i] = bkgpars[1]
+                m[:, i] .= bkgpars[2]
+            end
+        elseif smooth
+            quat[i] = quatavg(rotation(lpars, neighids))
+            #if domain!=nothing
+            #  mi      = magnitude(lpars,neighids)
+            #  m[:,i] .= mapreduce(x->quantile(view(mi,x,:),0.5), vcat, 1:N)
+            #end
+        else
+            twgt = 1.0 - bkgwgt
+
+            prewgts = if power != 0
+                xcoords = coords_(D, neighids)
+                1 ./ (eps() .+ Distances.colwise(metric, icoords, xcoords)) .^ power
+            else
+                [1.0 for i in neighids]
+            end
+            weights = twgt .* prewgts ./ sum(prewgts)
+
+            rot = rotation(lpars, neighids)
+            mi = magnitude(lpars, neighids)
+            if bkgwgt > 0
+                rot = vcat(bkgpars[1], rot)
+                mi = hcat(bkgpars[2], mi)
+                weights = vcat(bkgwgt, weights)
+            end
+
+            quat[i] = quatavg(rot, weights)
+            wgts = Weights(weights)
+            m[:, i] .= mapreduce(x -> quantile(view(mi, x, :), wgts, 0.5), vcat, 1:N)
+            # mean instead median for magnitude?
+        end
     end
-  end
 
-  LocalAnisotropy(quat, m)
+    LocalAnisotropy(quat, m)
 end
 
 quat2vector(q) = [q.q0; q.q1; q.q2; q.q3]
 tensor(q) = q' .* q
 wtensor(q) = q[1] .* (q[2]' .* q[2])
 
-function quatavg(qarr, warr=[])
-  length(qarr) == 1 && (return qarr[1])
-  #@assert in(length(warr),[n,0])
-  Q = mapreduce(quat2vector, hcat, qarr)
-    n = size(Q,2)
-    W = length(warr) > 0
+function quatavg(
+    qarr::AbstractVector{Quaternion},
+    warr::AbstractVector{Float64} = Float64[],
+)
+    if length(qarr) == 1
+        qarr[1]
+    else
+        Q = mapreduce(quat2vector, hcat, qarr)
+        n = size(Q, 2)
+        W = length(warr) > 0
 
-    A = W ? mapreduce(wtensor, +, zip(warr, eachcol(Q))) : mapreduce(tensor, +, eachcol(Q))
+        A =
+            W ? mapreduce(wtensor, +, zip(warr, eachcol(Q))) :
+            mapreduce(tensor, +, eachcol(Q))
 
-    # scale
-    Nw = W ? sum(warr) : n
-    A ./= Nw
+        # scale
+        Nw = W ? sum(warr) : n
+        A ./= Nw
 
-    # compute eigenvalues and -vectors
-    T = eigen(Symmetric(SMatrix{4,4}(A)))
-    V = view(T.vectors[:, sortperm(T.values,rev=true)],:,1)
-    Quaternion(V...)
+        # compute eigenvalues and -vectors
+        T = eigen(Symmetric(SMatrix{4,4}(A)))
+        V = view(T.vectors[:, sortperm(T.values, rev = true)], :, 1)
+        Quaternion(V...)
+    end
 end
