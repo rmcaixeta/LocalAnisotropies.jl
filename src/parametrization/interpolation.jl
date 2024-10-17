@@ -14,13 +14,9 @@ nnpars(lpars, data, target) = slice(lpars, grid2hd_ids(target, data))
     idwpars(localaniso, searcher, domain; power=2, metric=Euclidean())
 
 Interpolate `LocalAnisotropy` data into a `domain`, using the
-local neighbors returned from the `searcher`. The interpolation can be inverse
-distance weighted by given `power` and `metric` or a simply averaged if
-`power=0`. The ellipses/ellipsoids rotations are interpolated using
-(weighted) average of quaternions as described by Markley et al (2007). The
-interpolated magnitude is the weighted median of the neighbors magnitude.
-One `bkgpars` can be assigned where no neighbors are found; must be
-informed as (Quaternion, AbstractVector)
+local neighbors returned from the `searcher`. Weights calculated via inverse
+distance weighted by given `power` and `metric`. Custom kwargs explained in
+`interpolate`
 
 
 ## Example
@@ -29,47 +25,84 @@ informed as (Quaternion, AbstractVector)
 searcher = KNearestSearch(data, 10)
 idw3_into_grid = idwpars(localaniso, searcher, grid, power=3)
 ```
-
-## Reference
-
-Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
 idwpars(lpars, searcher::NeighborSearchMethod, domain; kwargs...) =
-    interpolate(lpars, searcher, domain; kwargs...)
+    interpolate(lpars, searcher, domain; wgtmethod = :idw, kwargs...)
 
 """
-    smoothpars(localaniso, searcher; bkgpars=nothing)
+    smoothpars(localaniso, searcher; b=0.0, kwargs)
+    smoothpars(localaniso, searcher, domain; b=0.0, kwargs)
 
 Smooth `LocalAnisotropy`, using the local neighbors returned from the `searcher`.
-Simple local averages. The smoothed ellipses/ellipsoids rotations are based on
-average of quaternions as described by Markley et al. (2007). The interpolated
-magnitude is the weighted median of the neighbors magnitude. One `bkgpars`
-can be assigned where no neighbors are found; must be informed
-as (Quaternion, AbstractVector)
+Simple local averages if `b` = 0 otherwise gaussian kernel smoothing with given
+bandwidth. Custom kwargs explained in `interpolate`
 
 ## Example
 
 ```julia
 searcher = KNearestSearch(data, 10)
 averaged_inplace = smoothpars(localaniso, searcher)
+averaged_grid = smoothpars(localaniso, searcher, grid, b=0.6)
 ```
+"""
+smoothpars(lpars, searcher::NeighborSearchMethod, domain = nothing; b = 0.0, kwargs...) =
+    interpolate(lpars, searcher, domain; wgtmethod = :kernel, power = b, kwargs...)
+
+
+
+"""
+    interpolate(localaniso, searcher, domain=nothing;
+        wgtmethod = :idw, power=0, metric=Euclidean(),
+        bkgpars=nothing, bkgwgt=0.0, fillna=:bkg, method=:qavg)
+
+General function to return the (weighted) average of `localaniso` using `searcher`.
+
+## Keyword Parameters
+
+* `wgtmethod` - :idw for inverse distance weighting or :kernel for gaussian kernel smoothing
+* `power`     - power for :idw or the bandwidth for :kernel
+* `metric`    - metric for distances calculation
+* `bkgpars`   - default rotation and magnitude informed as (Quaternion, AbstractVector)
+* `bkgwgt`    - weight between [0,1] assigned to default background parameters
+* `fillna`    - :bkg will assign the `bkgpars` if searcher returns nothing and :nn
+  will run a nearest neighbor with what was estimated successfully - also used
+  if `bkgpars` is not informed
+* `method`    - how the average of rotation and magnitude is done; options below:
+
+  - :qavg, :qavg_mn, :qavg_md, :qavg_full, :qavg_mn_full, :qavg_md_full
+
+  The ellipses/ellipsoids rotations are interpolated using (weighted) average of
+  quaternions as described by Markley et al (2007). Magnitude is kept equal if
+  :qavg and the data is not interpolated to a domain. The sufix "_mn" refers to
+  weighted mean of the neighbors magnitude and "_md" to the median. The sufix "_full"
+  will add an isotropic component in the magnitude interpolation, the more the wights to it
+  the more the rotations lack similiarity.
+
+  - :ellipavg, :ellipavg_full
+
+  The ellipses/ellipsoids are converted to rotation matrix scaled by the magnitude
+  and a Log-Euclidean (Weighted) Mean is applied followed by extracting eigen-
+  values and vectors. Eigenvectors will represent the new rotation and eigenvalues the
+  magnitude. The only difference between :ellipavg and :ellipavg_full is that :ellipavg
+  will return simplified magnitude for 3-D cases, making `r1`=`r2`
 
 ## Reference
 
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
-smoothpars(lpars, searcher::NeighborSearchMethod; bkgpars = nothing, bkgwgt = 0.0) =
-    interpolate(lpars, searcher; power = 0.0, bkgpars, bkgwgt)
 
 
 function interpolate(
     lpars,
     searcher::NeighborSearchMethod,
     domain = nothing;
+    wgtmethod::Symbol = :idw,
     power::Real = 0,
+    method::Symbol = :qavg,
     metric = Euclidean(),
     bkgpars = nothing,
     bkgwgt = 0.0,
+    fillna = :bkg,
 )
     D = searcher.domain
     N = embeddim(D)
@@ -78,9 +111,9 @@ function interpolate(
     targetD = smooth ? D : domain
     #@assert nvals(D) == nvals(lpars) "searcher domain must match number of local anisotropies"
 
-    quat = Array{Quaternion}(undef, len)
-    mag = lpars.magnitude
+    quat = Vector{Quaternion}(undef, len)
     m = Array{Float64}(undef, N, len)
+    missids = zeros(Bool, len)
 
     Threads.@threads for i = 1:len
         ic = centro(targetD, i)
@@ -88,23 +121,14 @@ function interpolate(
         neighids = search(ic, searcher)
 
         if length(neighids) == 0
-            if isnothing(bkgpars)
-                throw(
-                    ErrorException(
-                        "zero neighbors at some location; adjust searcher or set bkgpars",
-                    ),
-                )
-            else
-                quat[i] = bkgpars[1]
-                m[:, i] .= bkgpars[2]
-            end
+            missids[i] = 1
         else
             twgt = 1.0 - bkgwgt
 
-            # function to return weights according to method
             prewgts = if power != 0
                 xcoords = coords_(D, neighids)
-                1 ./ (eps() .+ Distances.colwise(metric, icoords, xcoords)) .^ power
+                distances = Distances.colwise(metric, icoords, xcoords)
+                get_weights(wgtmethod, distances, power)
             else
                 [1.0 for i in neighids]
             end
@@ -118,15 +142,49 @@ function interpolate(
                 weights = vcat(bkgwgt, weights)
             end
 
-            #quat[i], mx = ellipsavg(mi, rot, weights)
-            #m[:,i] .= mx
-            #m[2,i] = m[1,i] # if simplify ....
+            if method in (:ellipavg, :ellipavg_full)
+                quat[i], mx = ellipsavg(mi, rot, weights)
+                m[:, i] .= mx
+                if method == :ellipavg && N == 3
+                    newm = mean(m[1:2, i])
+                    m[1, i] = 1
+                    m[2, i] = 1
+                    m[3, i] = m[3, i] / newm
+                end
+            else
+                quat[i], f = quatavg(rot, weights)
+                if smooth && method == :qavg
+                    m[:, i] .= magnitude(lpars, i)
+                else
+                    wgts = Weights(weights)
+                    mx =
+                        occursin("_mn", "$method") ?
+                        (mapreduce(x -> mean(view(mi, x, :), wgts), vcat, 1:N)) :
+                        (mapreduce(x -> quantile(view(mi, x, :), wgts, 0.5), vcat, 1:N))
+                    mx =
+                        occursin("_full", "$method") ?
+                        (f .* mx .+ (1 - f) .* [1.0 for i = 1:N]) : mx
+                    m[:, i] .= mx
+                end
+            end
+        end
+    end
 
-            quat[i], f = quatavg(rot, weights)
-            wgts = Weights(weights)
-            mx = mapreduce(x -> quantile(view(mi, x, :), wgts, 0.5), vcat, 1:N)
-            mx = f .* mx .+ (1 - f) .* [1.0 for i in 1:N]
-            m[:, i] .= mx
+    # deal with missing
+    ismiss = findall(missids)
+    if length(ismiss) > 0
+        if fillna == :nn || isnothing(bkgpars)
+            notmiss = findall(.!missids)
+            Dfrom = view(targetD, notmiss)
+            Dto = view(targetD, ismiss)
+            outids = notmiss[grid2hd_ids(Dto,Dfrom)]
+            quat[ismiss] .= quat[outids]
+            m[:, ismiss] .= m[:, outids]
+        else
+            for i in ismiss
+                quat[i] = bkgpars[1]
+                m[:, i] .= bkgpars[2]
+            end
         end
     end
 
@@ -200,4 +258,10 @@ function ellipsavg(
         q = dcm_to_quat(DCM(eigv))
         q, λ
     end
+end
+
+
+function get_weights(method, distances, par)
+    method == :kernel ? exp.(-distances .^ 2 ./ (2 * par^2)) :
+    method == :idw ? 1 ./ (eps() .+ distances) .^ par : 1 ./ (eps() .+ distances) .^ par
 end
