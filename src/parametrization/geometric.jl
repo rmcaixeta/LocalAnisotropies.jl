@@ -61,6 +61,29 @@ function localanisotropies(
     LocalAnisotropy(quat, m)
 end
 
+function localanisotropies(
+    ::Type{Geometric},
+    trs::GeometrySet,
+    magnitude::AbstractVector,
+)
+    q = mapreduce(vcat, trs) do tr
+        v = vertices(tr)
+        c = centroid(tr)
+        n = [ustrip(i) for i in normal(tr)]
+        p = minpt(tr)
+        v1 = [ustrip(i) for i in (p - c)]
+        v1 ./= sum(v1)
+        v2 = cross(v1, n)
+
+        m = SMatrix{3,3}(v1..., v2..., n...)
+        det(m) < 0 && (m = Diagonal(SVector{3}([-1, 1, 1])) * m)
+
+        dcm_to_quat(DCM(m))
+    end
+    mag = repeat(magnitude, 1, length(q))
+    LocalAnisotropy(q, mag)
+end
+
 function pca(X, simplify)
     N = size(X, 1)
     M = MultivariateStats.fit(PCA, ustrip.(X), maxoutdim = N, pratio = 1)
@@ -92,4 +115,13 @@ function pca(X, simplify)
     end
 
     λ[1:N], SMatrix{3,3}(v')
+end
+
+
+function minpt(tr)
+    minz = to(boundingbox(tr).min)[3]
+    vc = vertices(tr)
+    m = [to(p)[3] == minz for p in vc]
+    out = vc[m]
+    out isa Point ? out : out[1]
 end
