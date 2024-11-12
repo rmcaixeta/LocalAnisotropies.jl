@@ -4,7 +4,7 @@
 
 # grid neighborhood for gradients
 function gridneighbors(img, i::CartesianIndex, window::Int)
-    dim = Size(img)
+    dim = isa(img, StaticArray) ? Size(img) : size(img)
     minid(d) = max(1, i[d] - window)
     maxid(d) = min(dim[d], i[d] + window)
     idx = Tuple([minid(d):maxid(d) for d = 1:length(dim)])
