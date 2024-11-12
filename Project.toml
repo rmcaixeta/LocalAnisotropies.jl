@@ -35,7 +35,7 @@ LocalAnisotropiesMakieExt = "Makie"
 [compat]
 Distances = "0.10"
 GeoStatsBase = "0.45, 0.46"
-GeoStatsFunctions = "0.4, 0.5"
+GeoStatsFunctions = "0.4, 0.5, 0.6"
 GeoStatsModels = "0.4, 0.5, 0.6"
 GeoStatsTransforms = "0.7, 0.8"
 GeoTables = "1.20,1.21,1.22,1.23,1.24"
