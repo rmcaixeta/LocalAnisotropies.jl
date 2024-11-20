@@ -14,6 +14,7 @@ using LinearAlgebra
 using Meshes
 using MultivariateStats
 using NearestNeighbors
+using OhMyThreads: tmap, @tasks
 using RecipesBase
 using ReferenceFrameRotations
 using Setfield

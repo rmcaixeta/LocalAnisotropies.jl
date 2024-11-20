@@ -104,7 +104,7 @@ function deformspace(
         atcoords, M1, M3 = anchors_mds(ADM, maxoutdim)
         dim = size(atcoords, 1)
         otcoords = Array{Float64}(undef, (dim, length(iothers)))
-        Threads.@threads for i = 1:length(iothers)
+        @tasks for i = 1:length(iothers)
             otcoords[:, i] .= triangulation(D, metric, iothers[i], ianchors, M1, M3)
         end
         tcoords = Array{Float64}(undef, (dim, n))

@@ -115,7 +115,7 @@ function interpolate(
     m = Array{Float64}(undef, N, len)
     missids = zeros(Bool, len)
 
-    Threads.@threads for i = 1:len
+    @tasks for i = 1:len
         ic = centro(targetD, i)
         icoords = ustrip.(to(ic))
         neighids = search(ic, searcher)
@@ -177,7 +177,7 @@ function interpolate(
             notmiss = findall(.!missids)
             Dfrom = view(targetD, notmiss)
             Dto = view(targetD, ismiss)
-            outids = notmiss[grid2hd_ids(Dto,Dfrom)]
+            outids = notmiss[grid2hd_ids(Dto, Dfrom)]
             quat[ismiss] .= quat[outids]
             m[:, ismiss] .= m[:, outids]
         else

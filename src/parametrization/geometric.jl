@@ -35,7 +35,7 @@ function localanisotropies(
     quat = Array{Quaternion}(undef, len)
     m = Array{Vector}(undef, len)
 
-    Threads.@threads for i = 1:len
+    @tasks for i = 1:len
         neighids = search(centro(D, i), searcher)
         λ, v = pca(view(X, :, neighids), simplify)
 
@@ -61,11 +61,7 @@ function localanisotropies(
     LocalAnisotropy(quat, m)
 end
 
-function localanisotropies(
-    ::Type{Geometric},
-    trs::GeometrySet,
-    magnitude::AbstractVector,
-)
+function localanisotropies(::Type{Geometric}, trs::GeometrySet, magnitude::AbstractVector)
     q = mapreduce(vcat, trs) do tr
         v = vertices(tr)
         c = centroid(tr)

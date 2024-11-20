@@ -160,7 +160,7 @@ function localfitpredict(
 
     # predict variable values
     function pred(var)
-        map(inds) do ind
+        tmap(inds) do ind
             # centroid of estimation
             center = centroid(pdomain, ind)
 
