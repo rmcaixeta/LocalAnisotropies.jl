@@ -124,9 +124,6 @@ function localfitpredict(
         KBallSearch(ddomain, maxneighbors, neighborhood)
     end
 
-    # pre-allocate memory for neighbors
-    neighbors = Vector{Int}(undef, maxneighbors)
-
     # prediction order
     inds = traverse(pdomain, path)
 
@@ -165,13 +162,11 @@ function localfitpredict(
             center = centroid(pdomain, ind)
 
             # find neighbors with data
-            nneigh = search!(neighbors, center, searcher)
+            ninds = search(center, searcher)
+            nneigh = length(ninds)
 
             # predict if enough neighbors
             if nneigh ≥ minneighbors
-                # final set of neighbors
-                ninds = view(neighbors, 1:nneigh)
-
                 # view neighborhood with data
                 samples = view(data, ninds)
 
