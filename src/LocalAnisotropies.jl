@@ -28,6 +28,7 @@ using WriteVTK
 
 import GeoStatsModels:
     FittedKriging,
+    IDWState,
     KrigingState,
     KrigingWeights,
     KrigingModel,
@@ -41,9 +42,9 @@ import GeoStatsModels:
 import GeoStatsTransforms: ColumnSelector, TableTransform, selector, apply
 
 include("parametrization.jl")
-include("estimators.jl")
 include("estimators/idw.jl")
 include("estimators/kriging.jl")
+include("estimators.jl")
 include("estimators/variograms.jl")
 include("parametrization/conventions.jl")
 include("parametrization/conversions.jl")
