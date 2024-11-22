@@ -4,66 +4,30 @@
 # ------------------------------------------------------------------
 
 # Local IDW estimator using local anisotropies
-
-struct LocalIDWModel <: GeoStatsModel
-    exponent::Float64
-    localaniso::LocalAnisotropy
-    hdlocalaniso::Union{AbstractVector,Nothing}
+struct LocalIDWModel{E,L} <: GeoStatsModel
+    exponent::E
+    localaniso::L
 end
 
 """
-    LocalIDW(params ...)
+    LocalIDW(exponent, localaniso)
+
+The inverse distance weighting model using local anisotropies.
+The local parameters of the point to be estimated is used to
+calculate the anisotropic distances. If exponent is not passed, 1.0 is
+used by default
 """
-LocalIDW(exponent::Float64, localaniso::LocalAnisotropy, ; hdlocalaniso = nothing) =
-    LocalIDWModel(exponent, localaniso, hdlocalaniso)
+LocalIDW(exponent, localaniso::LocalAnisotropy) = LocalIDWModel(exponent, localaniso)
 
-struct LocalFittedIDW{M<:LocalIDWModel,S<:IDWState}
-    model::M
-    state::S
-end
+LocalIDW(localaniso::LocalAnisotropy) = LocalIDWModel(1, localaniso)
 
-function local_fit(model::LocalIDWModel, data)
-    # record state
+function local_fit(model::LocalIDWModel, data; i, m)
+    LA = model.localaniso
     state = IDWState(data)
 
-    # return fitted model
-    LocalFittedIDW(model, state)
-end
+    # get local anisotropy at estimation point
+    Qi = qmat(rotation(LA, i), magnitude(LA, i))
+    d = Mahalanobis(Symmetric(Qi))
 
-
-predict(fitted::LocalFittedIDW, var, uₒ) = idw(fitted, weights(fitted, uₒ), var)
-
-predictprob(fitted::LocalFittedIDW, var, uₒ) = Dirac(predict(fitted, var, uₒ))
-
-function idw(fitted::LocalFittedIDW, weights, var)
-    d = fitted.state.data
-    c = Tables.columns(values(d))
-    z = Tables.getcolumn(c, var)
-    w = weights
-    Σw = sum(w)
-
-    λ(i) = w[i] / Σw
-
-    if isinf(Σw) # some distance is zero?
-        z[findfirst(isinf, w)]
-    else
-        sum(i -> λ(i) * z[i], eachindex(z))
-    end
-end
-
-function weights(fitted::LocalFittedIDW, uₒ)
-    e = fitted.model.exponent
-    δ = fitted.model.distance
-    d = fitted.state.data
-    Ω = domain(d)
-
-    # adjust CRS of uₒ
-    uₒ′ = uₒ |> Proj(crs(Ω))
-
-    pₒ = centroid(uₒ′)
-    p(i) = centroid(Ω, i)
-
-    λ(i) = 1 / evaluate(δ, pₒ, p(i))^e
-
-    map(λ, 1:nelements(Ω))
+    FittedIDW(IDW(model.exponent, d), state)
 end

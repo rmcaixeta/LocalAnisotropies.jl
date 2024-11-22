@@ -28,7 +28,9 @@ using WriteVTK
 
 import GeoStatsModels:
     FittedKriging,
+    IDW,
     IDWState,
+    FittedIDW,
     KrigingState,
     KrigingWeights,
     KrigingModel,
@@ -85,6 +87,7 @@ export adjust_rake,
     LocalAnisotropy,
     LocalGeoData,
     LocalKriging,
+    LocalIDW,
     KernelVariogram,
     RotationRule
 end
