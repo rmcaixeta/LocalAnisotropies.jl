@@ -115,37 +115,42 @@ import LocalAnisotropies: rotmat
         # Variogram
         γ = NuggetEffect(0.1) + 0.9 * ExponentialVariogram(range = 60.0)
 
+        # LocalIDW (IDW)
+        println("IDW")
+        ID = LocalIDW(2.0, lpars)
+        S |> LocalInterpolate(G, :P => ID, maxneighbors = 20)
+
         # LocalKriging (MW)
         println("MW")
         MW = LocalKriging(:MovingWindows, lpars, γ)
-        s1 = S |> LocalInterpolate(G, :P => MW, maxneighbors = 20)
+        S |> LocalInterpolate(G, :P => MW, maxneighbors = 20)
 
         # LocalKriging (KC)
         println("KC")
         KC = LocalKriging(:KernelConvolution, lpars, γ)
-        s1 = S |> LocalInterpolate(G, :P => KC, maxneighbors = 6)
+        S |> LocalInterpolate(G, :P => KC, maxneighbors = 6)
 
         # Spatial deformation: anisotropic distances
         println("SD")
         Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors = 250)
         s3 = Sd1 |> Interpolate(Dd1, :P => Kriging(γ))
-        x3 = to_3d(s3)
+        to_3d(s3)
 
         # Spatial deformation: anisotropic variogram distances
         Sd2, Dd2 = deformspace(S, G, lpars, KernelVariogram, γ, anchors = 250)
         s4 = Sd2 |> Interpolate(Dd2, :P => Kriging(γ))
-        x4 = to_3d(s4)
+        to_3d(s4)
 
         # Spatial deformation: geodesic anisotropic distances
         LDa = graph(S, G, lpars, AnisoDistance, searcher)
         Sd3, Dd3 = deformspace(LDa, GraphDistance, anchors = 250)
         s5 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ))
-        x5 = to_3d(s5)
+        to_3d(s5)
 
         # Spatial deformation: geodesic anisotropic variogram distances
         LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
         Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors = 250)
         s6 = Sd4 |> Interpolate(Dd4, :P => Kriging(γ))
-        x6 = to_3d(s6)
+        to_3d(s6)
     end
 end
