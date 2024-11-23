@@ -72,8 +72,9 @@ Check below an usage example that illustrate the package applications.
 using LocalAnisotropies
 using GeoStats
 using Random
-import WGLMakie as Mke
+import CairoMakie as Mke
 Random.seed!(1234)
+Mke.set_theme!(size=(500, 500))
 
 # create a reference scenario for tests
 D = georef((P=[25-abs(0.2*i^2-j) for i in -10:9, j in 1:20],))
@@ -82,10 +83,10 @@ S = georef(values(S), PointSet(centroid.(domain(S))))
 G = CartesianGrid(20,20)
 
 # plot reference scenario and samples extracted for further estimations
-fig0 = Mke.Figure(size=(700, 350))
-Mke.plot(fig0[1,1],D.geometry,color=D.P)
-Mke.plot(fig0[1,2],G,showsegments=true,color=:white)
-Mke.plot!(fig0[1,2],S.geometry,color=S.P,pointsize=10)
+fig = Mke.Figure(size=(700, 350))
+Mke.plot(fig[1,1],D.geometry,color=D.P)
+Mke.plot(fig[1,2],G,showsegments=true,color=:white)
+Mke.plot!(fig[1,2],S.geometry,color=S.P,pointsize=10)
 Mke.current_figure()
 ```
 
@@ -154,42 +155,53 @@ Mke.current_figure()
 </p>
 
 ```julia
-# kriging using moving windows method
-MW = LocalKriging(:MovingWindows, lparsx, γx)
-s1 = S |> LocalInterpolate(G, :P=>MW, maxneighbors=20)
+# local inverse distance weighting using exponent 3
+ID = LocalIDW(3, lparsx)
+s1 = S |> LocalInterpolate(G, :P=>ID, maxneighbors=20)
 Mke.plot(s1.geometry,color=s1.P)
 ```
 
 <p align="center">
-  <img src="imgs/04_mw.png">
+  <img src="imgs/04_lidw.png">
+</p>
+
+```julia
+# kriging using moving windows method
+MW = LocalKriging(:MovingWindows, lparsx, γx)
+s2 = S |> LocalInterpolate(G, :P=>MW, maxneighbors=20)
+Mke.plot(s2.geometry,color=s2.P)
+```
+
+<p align="center">
+  <img src="imgs/05_mw.png">
 </p>
 
 ```julia
 # kriging using kernel convolution method (smaller search; unstable with many local variations)
 KC = LocalKriging(:KernelConvolution, lparsy, γy)
-s2 = S |> LocalInterpolate(G, :P=>KC, maxneighbors=6)
-Mke.plot(s2.geometry,color=s2.P)
+s3 = S |> LocalInterpolate(G, :P=>KC, maxneighbors=6)
+Mke.plot(s3.geometry,color=s3.P)
 ```
 
 <p align="center">
-  <img src="imgs/05_kc.png">
+  <img src="imgs/06_kc.png">
 </p>
 
 ```julia
 # deform space using kernel variogram as dissimilarity input
 Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
 γ1 = GaussianVariogram(sill=21.3, range=22.5)
-s3 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ1))
+s4 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ1))
 
 # plot
-fig3 = Mke.Figure(size=(700, 350))
-Mke.plot(fig3[1,1],to_3d(s3).geometry,color=s3.P)
-Mke.plot(fig3[1,2],G,color=s3.P)
+fig4 = Mke.Figure(size=(700, 350))
+Mke.plot(fig4[1,1],to_3d(s4).geometry,color=s4.P)
+Mke.plot(fig4[1,2],G,color=s4.P)
 Mke.current_figure()
 ```
 
 <p align="center">
-  <img src="imgs/06_sd_vd.png">
+  <img src="imgs/07_sd_vd.png">
 </p>
 
 ```julia
@@ -200,17 +212,17 @@ Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
 γ2 = GaussianVariogram(sill=22., range=22.)
 
 # traditional kriging in the new multidimensional space
-s4 = Sd2 |> Interpolate(Dd2, :P=>Kriging(γ2))
+s5 = Sd2 |> Interpolate(Dd2, :P=>Kriging(γ2))
 
 # plot
-fig4 = Mke.Figure(size=(700, 350))
-Mke.plot(fig4[1,1],to_3d(s4).geometry,color=s4.P)
-Mke.plot(fig4[1,2],G,color=s4.P)
+fig5 = Mke.Figure(size=(700, 350))
+Mke.plot(fig5[1,1],to_3d(s5).geometry,color=s5.P)
+Mke.plot(fig5[1,2],G,color=s5.P)
 Mke.current_figure()
 ```
 
 <p align="center">
-  <img src="imgs/07_sd_gad.png">
+  <img src="imgs/08_sd_gad.png">
 </p>
 
 ```julia
@@ -221,17 +233,17 @@ Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
 γ3 = NuggetEffect(1.0) + GaussianVariogram(sill=21., range=22.)
 
 # traditional kriging in the new multidimensional space
-s5 = Sd3 |> Interpolate(Dd3, :P=>Kriging(γ3))
+s6 = Sd3 |> Interpolate(Dd3, :P=>Kriging(γ3))
 
 # plot
-fig5 = Mke.Figure(size=(700, 350))
-Mke.plot(fig5[1,1],to_3d(s5).geometry,color=s5.P)
-Mke.plot(fig5[1,2],G,color=s5.P)
+fig6 = Mke.Figure(size=(700, 350))
+Mke.plot(fig6[1,1],to_3d(s6).geometry,color=s6.P)
+Mke.plot(fig6[1,2],G,color=s6.P)
 Mke.current_figure()
 ```
 
 <p align="center">
-  <img src="imgs/08_sd_gvd.png">
+  <img src="imgs/09_sd_gvd.png">
 </p>
 
 ```julia
@@ -242,19 +254,19 @@ Mke.plot(s0.geometry,color=s0.P)
 ```
 
 <p align="center">
-  <img src="imgs/09_ok.png">
+  <img src="imgs/10_ok.png">
 </p>
 
 ```julia
 # comparison of the different estimates
 mse(a,b) = sum((a .- b) .^ 2)/length(b)
-solvers = ["OK","MW","KC","SD1","SD2","SD3"]
-errors  = [mse(getproperty(x,:P),getproperty(D,:P)) for x in [s0,s1,s2,s3,s4,s5]]
-Mke.barplot(1:6,errors,axis=(xticks=(1:6,solvers),ylabel="Mean squared error",xlabel="Estimation method"))
+solvers = ["OK","LIDW","MW","KC","SD1","SD2","SD3"]
+errors  = [mse(getproperty(x,:P),getproperty(D,:P)) for x in [s0,s1,s2,s3,s4,s5,s6]]
+Mke.barplot(1:7,errors,axis=(xticks=(1:7,solvers),ylabel="Mean squared error",xlabel="Estimation method"))
 ```
 
 <p align="center">
-  <img src="imgs/10_comp.png">
+  <img src="imgs/11_comp.png">
 </p>
 
 Some extra tools to work with local anisotropies:
