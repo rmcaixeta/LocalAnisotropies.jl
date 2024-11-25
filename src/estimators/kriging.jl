@@ -48,11 +48,11 @@ function local_fit(model_::LocalKrigingModel, data; i, m)
     localaniso = model_.localaniso
     localpar = (rotation(localaniso, i), magnitude(localaniso, i))
     if MW
-        model = mwvario(model_, localpar)
+        model = mw_estimator(model_, localpar)
     else
         model =
-            model_.skmean == nothing ? GeoStatsModels.OrdinaryKriging(model_.γ) :
-            GeoStatsModels.SimpleKriging(model_.γ, model_.skmean)
+            model_.skmean == nothing ? OrdinaryKriging(model_.γ) :
+            SimpleKriging(model_.γ, model_.skmean)
         hdlocalaniso = view(model_.hdlocalaniso, m)
         Qx₀ = qmat(localpar...)
     end

@@ -285,6 +285,64 @@ angs1 = convertangles([30,30,30], :GSLIB, :Datamine)
 angs2 = convertangles.(pars.rotation, :GSLIB)
 ```
 
+#### Simulation example:
+
+```julia
+# normal score transformation
+ns = Quantile()
+S_ns, ref_S_ns = apply(ns, S)
+
+# normal scores unconventional variography along local X axis
+expvario_ns = localvariography(S_ns, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
+γx_ns = SphericalVariogram(sill=1.0, range=15.)
+
+# normal scores omni vario
+expomni_ns = EmpiricalVariogram(S_ns, :P, maxlag=20, nlags=20)
+γomni_ns = SphericalVariogram(sill=1.0, range=11.)
+
+figv = Mke.Figure(size=(700, 350))
+Mke.plot(figv[1,1],expvario_ns)
+Mke.plot!(figv[1,1],γx_ns)
+Mke.plot(figv[1,2],expomni_ns)
+Mke.plot!(figv[1,2],γomni_ns)
+Mke.current_figure()
+```
+
+<p align="center">
+  <img src="imgs/12_nsvario.png">
+</p>
+
+```julia
+# sequential gaussian simulation without local anisotropies
+sgs = SEQMethod(maxneighbors=10)
+sims1 = rand(GaussianProcess(γomni_ns), G, S_ns, 50, sgs)
+med1 = quantile(sims1, 0.5)
+sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1],med1)]
+fig6 = Mke.Figure(size=(700, 350))
+Mke.plot(fig6[1,1],G,color=sims1_bt[1].P)
+Mke.plot(fig6[1,2],G,color=sims1_bt[2].P)
+Mke.current_figure()
+```
+
+<p align="center">
+  <img src="imgs/13_sgs.png">
+</p>
+
+```julia
+# sequential gaussian simulation with local anisotropies
+local_sgs = LocalSGS(localaniso=lparsx,maxneighbors=10)
+sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 50, local_sgs)
+med2 = quantile(sims2, 0.5)
+sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1],med2)]
+fig7 = Mke.Figure(size=(700, 350))
+Mke.plot(fig7[1,1],G,color=sims2_bt[1].P)
+Mke.plot(fig7[1,2],G,color=sims2_bt[2].P)
+Mke.current_figure()
+```
+
+<p align="center">
+  <img src="imgs/14_lsgs.png">
+</p>
 
 [build-img]: https://img.shields.io/github/actions/workflow/status/rmcaixeta/LocalAnisotropies.jl/CI.yml?branch=master
 [build-url]: https://github.com/rmcaixeta/LocalAnisotropies.jl/actions

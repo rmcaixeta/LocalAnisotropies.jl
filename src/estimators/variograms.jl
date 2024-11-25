@@ -15,11 +15,11 @@ function qmat(q, m)
     # https://github.com/JuliaArrays/StaticArrays.jl/issues/955
 end
 
-function mwvario(model, localpar)
+function mw_estimator(skmean, γ, localpar)
     # get local Mahalanobis matrix
-    Q = qmat(localpar[1], localpar[2])
+    Q = qmat(localpar...)
     # get reference pars. and apply local anisotropy to given structures
-    p = structures(model.γ)
+    p = structures(γ)
     γs = map(p[3]) do γ
         Qs = ustrip.(Q ./ collect(radii(γ.ball))' .^ 2)
         γ = @set γ.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
@@ -27,12 +27,15 @@ function mwvario(model, localpar)
     γl = NuggetEffect(p[1]) + sum(c * γ for (c, γ) in zip(p[2], γs))
 
     # return local estimator
-    if model.skmean == nothing
-        return GeoStatsModels.OrdinaryKriging(γl)
-    else
-        return GeoStatsModels.SimpleKriging(γl, model.skmean)
-    end
+    isnothing(skmean) ? OrdinaryKriging(γl) : SimpleKriging(γl, skmean)
+end
 
+mw_estimator(model::LocalKrigingModel, localpar) =
+    mw_estimator(model.skmean, model.γ, localpar)
+
+function mw_estimator(model::KrigingModel, localpar)
+    skmean = model isa SimpleKriging ? model.μ : nothing
+    mw_estimator(skmean, model.γ, localpar)
 end
 
 function kcfill!(Γ, γ::Variogram, X, localaniso)
