@@ -34,10 +34,10 @@ This package deals with local anisotropies in geostatistics. It offers some solu
 
 First, it is necessary to install Julia. Installation instructions for Windows, Linux and macOS are available [here](https://julialang.org/downloads/platform/).
 
-To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl`, `Makie.jl` and `WGLMakie.jl` packages are installed together to run the usage example.
+To install the package: open the Julia REPL and then install the package with the following command. The `GeoStats.jl`, `Makie.jl` and `CairoMakie.jl` packages are installed together to run the usage example.
 
 ```julia
-using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","Makie","WGLMakie"])
+using Pkg; Pkg.add(["LocalAnisotropies","GeoStats","Makie","CairoMakie"])
 ```
 
 ## References
@@ -291,20 +291,25 @@ angs2 = convertangles.(pars.rotation, :GSLIB)
 # normal score transformation
 ns = Quantile()
 S_ns, ref_S_ns = apply(ns, S)
+Sd1_ns, ref_Sd1_ns = apply(ns, Sd1)
 
 # normal scores unconventional variography along local X axis
 expvario_ns = localvariography(S_ns, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
 γx_ns = SphericalVariogram(sill=1.0, range=15.)
 
-# normal scores omni vario
-expomni_ns = EmpiricalVariogram(S_ns, :P, maxlag=20, nlags=20)
-γomni_ns = SphericalVariogram(sill=1.0, range=11.)
+# normal scores omni varios
+expomni1_ns = EmpiricalVariogram(S_ns, :P, maxlag=20, nlags=20)
+γomni1_ns = SphericalVariogram(sill=1.0, range=11.)
+expomni2_ns = EmpiricalVariogram(Sd1_ns, :P, maxlag=20, nlags=20)
+γomni2_ns = ExponentialVariogram(sill=1.0, range=50.)
 
-figv = Mke.Figure(size=(700, 350))
+figv = Mke.Figure(size=(700, 235))
 Mke.plot(figv[1,1],expvario_ns)
-Mke.plot!(figv[1,1],γx_ns)
-Mke.plot(figv[1,2],expomni_ns)
-Mke.plot!(figv[1,2],γomni_ns)
+Mke.plot!(figv[1,1],γx_ns,color=:red)
+Mke.plot(figv[1,2],expomni1_ns)
+Mke.plot!(figv[1,2],γomni1_ns,color=:red)
+Mke.plot(figv[1,3],expomni2_ns)
+Mke.plot!(figv[1,3],γomni2_ns,maxlag=20,color=:red)
 Mke.current_figure()
 ```
 
@@ -313,14 +318,14 @@ Mke.current_figure()
 </p>
 
 ```julia
-# sequential gaussian simulation without local anisotropies
-sgs = SEQMethod(maxneighbors=10)
-sims1 = rand(GaussianProcess(γomni_ns), G, S_ns, 50, sgs)
+# standard sequential gaussian simulation with isotropic variogram
+sgs = SEQMethod(maxneighbors=25)
+sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
 med1 = quantile(sims1, 0.5)
 sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1],med1)]
-fig6 = Mke.Figure(size=(700, 350))
-Mke.plot(fig6[1,1],G,color=sims1_bt[1].P)
-Mke.plot(fig6[1,2],G,color=sims1_bt[2].P)
+fig7 = Mke.Figure(size=(700, 350))
+Mke.plot(fig7[1,1],G,color=sims1_bt[1].P,colormap=:jet)
+Mke.plot(fig7[1,2],G,color=sims1_bt[2].P,colormap=:jet)
 Mke.current_figure()
 ```
 
@@ -329,20 +334,51 @@ Mke.current_figure()
 </p>
 
 ```julia
-# sequential gaussian simulation with local anisotropies
-local_sgs = LocalSGS(localaniso=lparsx,maxneighbors=10)
-sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 50, local_sgs)
+# sequential gaussian simulation with local anisotropies (MW method)
+# not theoretically very correct, but can give good results
+local_sgs = LocalSGS(localaniso=lparsx,maxneighbors=25)
+sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 100, local_sgs)
 med2 = quantile(sims2, 0.5)
 sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1],med2)]
-fig7 = Mke.Figure(size=(700, 350))
-Mke.plot(fig7[1,1],G,color=sims2_bt[1].P)
-Mke.plot(fig7[1,2],G,color=sims2_bt[2].P)
+fig8 = Mke.Figure(size=(700, 350))
+Mke.plot(fig8[1,1],G,color=sims2_bt[1].P,colormap=:jet)
+Mke.plot(fig8[1,2],G,color=sims2_bt[2].P,colormap=:jet)
 Mke.current_figure()
 ```
 
 <p align="center">
-  <img src="imgs/14_lsgs.png">
+  <img src="imgs/14_sgs_mw.png">
 </p>
+
+```julia
+# sequential gaussian simulation after spatial deformation
+# standard simulation after local anisotropies is "removed"
+sims3 = rand(GaussianProcess(γomni2_ns), Dd1, Sd1_ns, 100, sgs)
+med3 = quantile(sims3, 0.5)
+sims3_bt = [revert(ns, x, ref_Sd1_ns) for x in (sims3[1],med3)]
+fig9 = Mke.Figure(size=(700, 350))
+Mke.plot(fig9[1,1],G,color=sims3_bt[1].P,colormap=:jet)
+Mke.plot(fig9[1,2],G,color=sims3_bt[2].P,colormap=:jet)
+Mke.current_figure()
+```
+
+<p align="center">
+  <img src="imgs/15_sgs_sd.png">
+</p>
+
+```julia
+# comparison of the different simulation methods
+sim_solvers = ["SGS","SGS_MW","SGS_SD1"]
+sim_errors  = [mse(getproperty(x,:P),getproperty(D,:P)) for x in [sims1_bt[2],sims2_bt[2],sims3_bt[2]]]
+fig10 = Mke.Figure(size=(700, 350))
+Mke.barplot(fig10[1,1],1:3,sim_errors,axis=(xticks=(1:3,sim_solvers),ylabel="Mean squared error",xlabel="Simulation method (median)"))
+Mke.current_figure()
+```
+
+<p align="center">
+  <img src="imgs/16_comp.png">
+</p>
+
 
 [build-img]: https://img.shields.io/github/actions/workflow/status/rmcaixeta/LocalAnisotropies.jl/CI.yml?branch=master
 [build-url]: https://github.com/rmcaixeta/LocalAnisotropies.jl/actions

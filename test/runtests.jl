@@ -152,5 +152,10 @@ import LocalAnisotropies: rotmat
         Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors = 250)
         s6 = Sd4 |> Interpolate(Dd4, :P => Kriging(γ))
         to_3d(s6)
+
+        # Local sequential gaussian simulation
+        println("SGS")
+        local_sgs = LocalSGS(localaniso=lpars, maxneighbors=10)
+        rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
     end
 end

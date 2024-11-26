@@ -135,30 +135,95 @@ begin
     Mke.current_figure()
 end
 
-# ╔═╡ 5f0f00c9-05cc-4185-aad9-4bb0eab2c1ce
-begin
-    # deform space based on a graph built with kernel variogram of the ten
-    # nearest data; do variography in multidimensional space
-    LDv = graph(S, G, lparsy, KernelVariogram, γy, searcher)
-    Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors = 1500)
-    γ3 = NuggetEffect(1.0) + GaussianVariogram(sill = 21.0, range = 22.0)
-
-    # traditional kriging in the new multidimensional space
-    s6 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ3))
-
-    # plot
-    fig6 = Mke.Figure(size = (700, 350))
-    Mke.plot(fig6[1, 1], to_3d(s6).geometry, color = s6.P)
-    Mke.plot(fig6[1, 2], G, color = s6.P)
-    Mke.current_figure()
-end
-
 # ╔═╡ e935064e-5e18-46ae-919d-83c8ac733f78
 begin
     γomni = GaussianVariogram(sill = 32.0, range = 11.0)
     OK = Kriging(γomni)
     s0 = S |> InterpolateNeighbors(G, :P => OK, maxneighbors = 20)
     Mke.plot(s0.geometry, color = s0.P)
+end
+
+# ╔═╡ 807f31dc-3e3f-4d2c-ab4a-4eb150f9599b
+begin
+    # import external local anisotropies in GSLIB convention
+    dummy = georef((az = 1:10, r1 = 1:10, r2 = 1:10))
+    pars = localanisotropies(dummy, [:az], [:r1, :r2], :GSLIB)
+
+    # interpolate local anisotropies into a coarser grid
+    G_ = CartesianGrid((10, 10), (0.5, 0.5), (2.0, 2.0))
+    lpars_ = idwpars(lpars, searcher, G_, power = 2.0)
+
+    # convert between different rotation conventions
+    angs1 = convertangles([30, 30, 30], :GSLIB, :Datamine)
+    angs2 = convertangles.(pars.rotation, :GSLIB)
+end
+
+# ╔═╡ 8bb14d5a-1096-4fa8-a505-23b031bb0611
+begin
+    # normal score transformation
+    ns = Quantile()
+    S_ns, ref_S_ns = apply(ns, S)
+    Sd1_ns, ref_Sd1_ns = apply(ns, Sd1)
+
+    # normal scores unconventional variography along local X axis
+    expvario_ns =
+        localvariography(S_ns, spars, :P, tol = 2, maxlag = 20, nlags = 20, axis = :X)
+    γx_ns = SphericalVariogram(sill = 1.0, range = 15.0)
+
+    # normal scores omni varios
+    expomni1_ns = EmpiricalVariogram(S_ns, :P, maxlag = 20, nlags = 20)
+    γomni1_ns = SphericalVariogram(sill = 1.0, range = 11.0)
+    expomni2_ns = EmpiricalVariogram(Sd1_ns, :P, maxlag = 20, nlags = 20)
+    γomni2_ns = ExponentialVariogram(sill = 1.0, range = 50.0)
+
+    figv = Mke.Figure(size = (700, 235))
+    Mke.plot(figv[1, 1], expvario_ns)
+    Mke.plot!(figv[1, 1], γx_ns, color = :red)
+    Mke.plot(figv[1, 2], expomni1_ns)
+    Mke.plot!(figv[1, 2], γomni1_ns, color = :red)
+    Mke.plot(figv[1, 3], expomni2_ns)
+    Mke.plot!(figv[1, 3], γomni2_ns, maxlag = 20, color = :red)
+    Mke.current_figure()
+end
+
+# ╔═╡ e922cb53-d0de-44b9-bb79-c20dfac4263d
+begin
+    # sequential gaussian simulation with local anisotropies (MW method)
+    # not theoretically very correct, but can give good results
+    local_sgs = LocalSGS(localaniso = lparsx, maxneighbors = 25)
+    sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 100, local_sgs)
+    med2 = quantile(sims2, 0.5)
+    sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1], med2)]
+    fig8 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig8[1, 1], G, color = sims2_bt[1].P, colormap = :jet)
+    Mke.plot(fig8[1, 2], G, color = sims2_bt[2].P, colormap = :jet)
+    Mke.current_figure()
+end
+
+# ╔═╡ 48d03eee-4972-443f-a0c9-9fdaafd73c73
+begin
+    # sequential gaussian simulation after spatial deformation
+    # standard simulation after local anisotropies is "removed"
+    sims3 = rand(GaussianProcess(γomni2_ns), Dd1, Sd1_ns, 100, sgs)
+    med3 = quantile(sims3, 0.5)
+    sims3_bt = [revert(ns, x, ref_Sd1_ns) for x in (sims3[1], med3)]
+    fig9 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig9[1, 1], G, color = sims3_bt[1].P, colormap = :jet)
+    Mke.plot(fig9[1, 2], G, color = sims3_bt[2].P, colormap = :jet)
+    Mke.current_figure()
+end
+
+# ╔═╡ a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be
+begin
+    # standard sequential gaussian simulation with isotropic variogram
+    sgs = SEQMethod(maxneighbors = 25)
+    sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
+    med1 = quantile(sims1, 0.5)
+    sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1], med1)]
+    fig7 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig7[1, 1], G, color = sims1_bt[1].P, colormap = :jet)
+    Mke.plot(fig7[1, 2], G, color = sims1_bt[2].P, colormap = :jet)
+    Mke.current_figure()
 end
 
 # ╔═╡ 915af65f-287a-4a11-9bb6-2755bc571a5a
@@ -179,19 +244,44 @@ begin
     )
 end
 
-# ╔═╡ 807f31dc-3e3f-4d2c-ab4a-4eb150f9599b
+# ╔═╡ 5f0f00c9-05cc-4185-aad9-4bb0eab2c1ce
 begin
-    # import external local anisotropies in GSLIB convention
-    dummy = georef((az = 1:10, r1 = 1:10, r2 = 1:10))
-    pars = localanisotropies(dummy, [:az], [:r1, :r2], :GSLIB)
+    # deform space based on a graph built with kernel variogram of the ten
+    # nearest data; do variography in multidimensional space
+    LDv = graph(S, G, lparsy, KernelVariogram, γy, searcher)
+    Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors = 1500)
+    γ3 = NuggetEffect(1.0) + GaussianVariogram(sill = 21.0, range = 22.0)
 
-    # interpolate local anisotropies into a coarser grid
-    G_ = CartesianGrid((10, 10), (0.5, 0.5), (2.0, 2.0))
-    lpars_ = idwpars(lpars, searcher, G_, power = 2.0)
+    # traditional kriging in the new multidimensional space
+    s6 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ3))
 
-    # convert between different rotation conventions
-    angs1 = convertangles([30, 30, 30], :GSLIB, :Datamine)
-    angs2 = convertangles.(pars.rotation, :GSLIB)
+    # plot
+    fig6 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig6[1, 1], to_3d(s6).geometry, color = s6.P)
+    Mke.plot(fig6[1, 2], G, color = s6.P)
+    Mke.current_figure()
+end
+
+# ╔═╡ 21ea6b12-e2cb-46df-aed9-0ec6cd2e0cf8
+begin
+    # comparison of the different simulation methods
+    sim_solvers = ["SGS", "SGS_MW", "SGS_SD1"]
+    sim_errors = [
+        mse(getproperty(x, :P), getproperty(D, :P)) for
+        x in [sims1_bt[2], sims2_bt[2], sims3_bt[2]]
+    ]
+    fig10 = Mke.Figure(size = (700, 350))
+    Mke.barplot(
+        fig10[1, 1],
+        1:3,
+        sim_errors,
+        axis = (
+            xticks = (1:3, sim_solvers),
+            ylabel = "Mean squared error",
+            xlabel = "Simulation method (median)",
+        ),
+    )
+    Mke.current_figure()
 end
 
 # ╔═╡ Cell order:
@@ -209,3 +299,8 @@ end
 # ╠═e935064e-5e18-46ae-919d-83c8ac733f78
 # ╠═915af65f-287a-4a11-9bb6-2755bc571a5a
 # ╠═807f31dc-3e3f-4d2c-ab4a-4eb150f9599b
+# ╠═8bb14d5a-1096-4fa8-a505-23b031bb0611
+# ╠═a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be
+# ╠═e922cb53-d0de-44b9-bb79-c20dfac4263d
+# ╠═48d03eee-4972-443f-a0c9-9fdaafd73c73
+# ╠═21ea6b12-e2cb-46df-aed9-0ec6cd2e0cf8

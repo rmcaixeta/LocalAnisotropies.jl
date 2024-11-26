@@ -135,3 +135,17 @@ function GeoStatsProcesses.randsingle(
 
     (; pairs...)
 end
+
+# temp solution; to fix in meshes
+function Meshes._pboxes(::Type{𝔼{N}}, points) where {N}
+    p = first(points)
+    ℒ = Meshes.lentype(p)
+    cmin = [typemax(ℒ) for i = 1:N]
+    cmax = [typemin(ℒ) for i = 1:N]
+    for p in points
+        c = getfield(coords(p), :coords)
+        cmin = [min(c[i], cmin[i]) for i = 1:N]
+        cmax = [max(c[i], cmax[i]) for i = 1:N]
+    end
+    Box(Meshes.withcrs(p, Tuple(cmin)), Meshes.withcrs(p, Tuple(cmax)))
+end
