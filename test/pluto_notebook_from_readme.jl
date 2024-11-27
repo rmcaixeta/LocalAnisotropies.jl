@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.0
+# v0.20.3
 
 using Markdown
 using InteractiveUtils
@@ -135,12 +135,48 @@ begin
     Mke.current_figure()
 end
 
+# ╔═╡ 5f0f00c9-05cc-4185-aad9-4bb0eab2c1ce
+begin
+    # deform space based on a graph built with kernel variogram of the ten
+    # nearest data; do variography in multidimensional space
+    LDv = graph(S, G, lparsy, KernelVariogram, γy, searcher)
+    Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors = 1500)
+    γ3 = NuggetEffect(1.0) + GaussianVariogram(sill = 21.0, range = 22.0)
+
+    # traditional kriging in the new multidimensional space
+    s6 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ3))
+
+    # plot
+    fig6 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig6[1, 1], to_3d(s6).geometry, color = s6.P)
+    Mke.plot(fig6[1, 2], G, color = s6.P)
+    Mke.current_figure()
+end
+
 # ╔═╡ e935064e-5e18-46ae-919d-83c8ac733f78
 begin
     γomni = GaussianVariogram(sill = 32.0, range = 11.0)
     OK = Kriging(γomni)
     s0 = S |> InterpolateNeighbors(G, :P => OK, maxneighbors = 20)
     Mke.plot(s0.geometry, color = s0.P)
+end
+
+# ╔═╡ 915af65f-287a-4a11-9bb6-2755bc571a5a
+begin
+    # comparison of the different estimates
+    mse(a, b) = sum((a .- b) .^ 2) / length(b)
+    solvers = ["OK", "LIDW", "MW", "KC", "SD1", "SD2", "SD3"]
+    errors =
+        [mse(getproperty(x, :P), getproperty(D, :P)) for x in [s0, s1, s2, s3, s4, s5, s6]]
+    Mke.barplot(
+        1:7,
+        errors,
+        axis = (
+            xticks = (1:7, solvers),
+            ylabel = "Mean squared error",
+            xlabel = "Estimation method",
+        ),
+    )
 end
 
 # ╔═╡ 807f31dc-3e3f-4d2c-ab4a-4eb150f9599b
@@ -186,6 +222,19 @@ begin
     Mke.current_figure()
 end
 
+# ╔═╡ a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be
+begin
+    # standard sequential gaussian simulation with isotropic variogram
+    sgs = SEQMethod(maxneighbors = 25)
+    sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
+    med1 = quantile(sims1, 0.5)
+    sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1], med1)]
+    fig7 = Mke.Figure(size = (700, 350))
+    Mke.plot(fig7[1, 1], G, color = sims1_bt[1].P, colormap = :jet)
+    Mke.plot(fig7[1, 2], G, color = sims1_bt[2].P, colormap = :jet)
+    Mke.current_figure()
+end
+
 # ╔═╡ e922cb53-d0de-44b9-bb79-c20dfac4263d
 begin
     # sequential gaussian simulation with local anisotropies (MW method)
@@ -210,55 +259,6 @@ begin
     fig9 = Mke.Figure(size = (700, 350))
     Mke.plot(fig9[1, 1], G, color = sims3_bt[1].P, colormap = :jet)
     Mke.plot(fig9[1, 2], G, color = sims3_bt[2].P, colormap = :jet)
-    Mke.current_figure()
-end
-
-# ╔═╡ a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be
-begin
-    # standard sequential gaussian simulation with isotropic variogram
-    sgs = SEQMethod(maxneighbors = 25)
-    sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
-    med1 = quantile(sims1, 0.5)
-    sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1], med1)]
-    fig7 = Mke.Figure(size = (700, 350))
-    Mke.plot(fig7[1, 1], G, color = sims1_bt[1].P, colormap = :jet)
-    Mke.plot(fig7[1, 2], G, color = sims1_bt[2].P, colormap = :jet)
-    Mke.current_figure()
-end
-
-# ╔═╡ 915af65f-287a-4a11-9bb6-2755bc571a5a
-begin
-    # comparison of the different estimates
-    mse(a, b) = sum((a .- b) .^ 2) / length(b)
-    solvers = ["OK", "LIDW", "MW", "KC", "SD1", "SD2", "SD3"]
-    errors =
-        [mse(getproperty(x, :P), getproperty(D, :P)) for x in [s0, s1, s2, s3, s4, s5, s6]]
-    Mke.barplot(
-        1:7,
-        errors,
-        axis = (
-            xticks = (1:7, solvers),
-            ylabel = "Mean squared error",
-            xlabel = "Estimation method",
-        ),
-    )
-end
-
-# ╔═╡ 5f0f00c9-05cc-4185-aad9-4bb0eab2c1ce
-begin
-    # deform space based on a graph built with kernel variogram of the ten
-    # nearest data; do variography in multidimensional space
-    LDv = graph(S, G, lparsy, KernelVariogram, γy, searcher)
-    Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors = 1500)
-    γ3 = NuggetEffect(1.0) + GaussianVariogram(sill = 21.0, range = 22.0)
-
-    # traditional kriging in the new multidimensional space
-    s6 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ3))
-
-    # plot
-    fig6 = Mke.Figure(size = (700, 350))
-    Mke.plot(fig6[1, 1], to_3d(s6).geometry, color = s6.P)
-    Mke.plot(fig6[1, 2], G, color = s6.P)
     Mke.current_figure()
 end
 

@@ -135,29 +135,13 @@ function localfitpredict(
 
     # check pars
     localaniso = model.localaniso
-    oklocal1 = length(localaniso.rotation) == nvals(pdomain)
+    oklocal1 = nvals(localaniso) == nvals(pdomain)
     oklocal2 = typeof(localaniso) <: LocalAnisotropy
     @assert oklocal1 "number of local anisotropies must match domain points"
     @assert oklocal2 "wrong format of local anisotropies"
 
-    if model isa LocalKrigingModel
-        okmeth = model.method in [:MovingWindows, :KernelConvolution]
-        @assert okmeth "method must be :MovingWindows or :KernelConvolution"
-        # add KC info
-        if model.method == :KernelConvolution
-            if isnothing(model.hdlocalaniso)
-                hdlocalaniso = grid2hd_qmat(geotable, pdomain, model.localaniso)
-            else
-                hdlocalaniso = toqmat(model.hdlocalaniso)
-            end
-            model = LocalKrigingModel(
-                model.method,
-                model.localaniso,
-                model.γ,
-                model.skmean,
-                hdlocalaniso,
-            )
-        end
+    if model isa KCModels && isnothing(model.hdlocalaniso)
+        model = initmodel(model, geotable, pdomain)
     end
 
     # predict variable values

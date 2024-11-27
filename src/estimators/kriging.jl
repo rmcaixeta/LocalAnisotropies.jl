@@ -4,12 +4,47 @@
 # ------------------------------------------------------------------
 
 
-struct LocalKrigingModel <: GeoStatsModel
-    method::Symbol
+abstract type LocalKrigingModel <: GeoStatsModel end
+
+struct MW_OKModel{G<:Variogram} <: LocalKrigingModel
     localaniso::LocalAnisotropy
-    γ::Variogram
-    skmean::Union{Number,Nothing}  # for later: local mean array
+    γ::G
+end
+
+struct MW_SKModel{G<:Variogram,V} <: LocalKrigingModel
+    localaniso::LocalAnisotropy
+    γ::G
+    μ::V
+end
+
+struct KC_OKModel{G<:Variogram} <: LocalKrigingModel
+    localaniso::LocalAnisotropy
+    γ::G
     hdlocalaniso::Union{AbstractVector,Nothing}
+end
+
+struct KC_SKModel{G<:Variogram,V} <: LocalKrigingModel
+    localaniso::LocalAnisotropy
+    γ::G
+    μ::V
+    hdlocalaniso::Union{AbstractVector,Nothing}
+end
+
+MWModels = Union{MW_OKModel,MW_SKModel}
+KCModels = Union{KC_OKModel,KC_SKModel}
+
+krig_estimator(model::MWModels, localpar) = mw_estimator(model, localpar)
+krig_estimator(model::KC_OKModel, localpar = nothing) = OrdinaryKriging(model.γ)
+krig_estimator(model::KC_SKModel, localpar = nothing) = SimpleKriging(model.γ, model.μ)
+
+neighs_localaniso(model::MWModels, m) = nothing
+neighs_localaniso(model::KCModels, m) = view(model.hdlocalaniso, m)
+
+function initmodel(model::KCModels, geotable, pdomain)
+    hd = grid2hd_qmat(geotable, pdomain, model.localaniso)
+    la = model.localaniso
+    γ = model.γ
+    model isa KC_OKModel ? KC_OKModel(la, γ, hd) : MW_SKModel(la, γ, model.μ, hd)
 end
 
 """
@@ -29,39 +64,39 @@ and `param` is a `NamedTuple` containing the parameters below:
   :KernelConvolution method. They are automatically passed via NN from
   `localaniso` if not informed.
 """
-LocalKriging(
+function LocalKriging(
     method::Symbol,
     localaniso::LocalAnisotropy,
     γ::Variogram;
-    skmean = nothing,
+    μ = nothing,
     hdlocalaniso = nothing,
-) = LocalKrigingModel(method, localaniso, γ, skmean, hdlocalaniso)
-
-
-function nconstraints(::LocalKrigingModel)
-    n = skmean == nothing ? 1 : 0 # OK otherwise SK
-    n
+)
+    if method == :MovingWindows
+        isnothing(μ) ? MW_OKModel(localaniso, γ) : MW_SKModel(localaniso, γ, μ)
+    elseif method == :KernelConvolution
+        hd = toqmat(hdlocalaniso)
+        isnothing(μ) ? KC_OKModel(localaniso, γ, hd) : MW_SKModel(localaniso, γ, μ, hd)
+    else
+        @assert false "method must be :MovingWindows or :KernelConvolution"
+    end
 end
 
+nconstraints(::LocalKrigingModel) = isnothing(μ) ? 1 : 0 # OK otherwise SK
+
+
 function local_fit(model_::LocalKrigingModel, data; i, m)
-    MW = (model_.method == :MovingWindows)
     localaniso = model_.localaniso
     localpar = (rotation(localaniso, i), magnitude(localaniso, i))
-    if MW
-        model = mw_estimator(model_, localpar)
-    else
-        model =
-            model_.skmean == nothing ? OrdinaryKriging(model_.γ) :
-            SimpleKriging(model_.γ, model_.skmean)
-        hdlocalaniso = view(model_.hdlocalaniso, m)
-        Qx₀ = qmat(localpar...)
-    end
+    model = krig_estimator(model_, localpar)
 
     γ = model.γ
     D = domain(data)
 
+    hdlocalaniso = neighs_localaniso(model_, m)
+    Qx₀ = model_ isa KCModels ? qmat(localpar...) : nothing
+
     # build Kriging system
-    LHS = MW ? lhs(model, D) : local_lhs(model, D, hdlocalaniso)
+    LHS = local_lhs(model, D, hdlocalaniso)
     RHS = Vector{eltype(LHS)}(undef, size(LHS, 1))
 
     # factorize LHS
@@ -74,14 +109,17 @@ function local_fit(model_::LocalKrigingModel, data; i, m)
     state = KrigingState(data, FLHS, RHS, VARTYPE)
 
     # return fitted model
-    MW ? FittedKriging(model, state) : LocalFittedKriging(model, state, Qx₀, hdlocalaniso)
+    localfitting(model, state, Qx₀, hdlocalaniso)
 end
 
-struct LocalFittedKriging#{M<:LocalKrigingModel,S<:KrigingState}
+localfitting(model, state, q, hd) =
+    isnothing(q) ? FittedKriging(model, state) : LocalFittedKriging(model, state, q, hd)
+
+struct LocalFittedKriging{Q,H}
     model::KrigingModel
     state::KrigingState
-    Qx₀::Any
-    hdlocalaniso::Any
+    Qx₀::Q
+    hdlocalaniso::H
 end
 
 FKC(m::LocalFittedKriging) = FittedKriging(m.model, m.state)
@@ -107,24 +145,29 @@ predictmean(fitted::LocalFittedKriging, weights::KrigingWeights, var) =
 set_constraints_rhs!(fitted::LocalFittedKriging, pₒ) =
     GeoStatsModels.set_constraints_rhs!(FKC(fitted), pₒ)
 
+
 function local_lhs(model::KrigingModel, domain, localaniso)
-    γ = model.γ
-    nobs = nvals(domain)
-    ncons = nconstraints(model)
+    if isnothing(localaniso)
+        lhs(model, domain)
+    else
+        γ = model.γ
+        nobs = nvals(domain)
+        ncons = nconstraints(model)
 
-    # pre-allocate memory for LHS
-    u = first(domain)
-    T = GeoStatsFunctions.returntype(γ, u, u)
-    m = nobs + ncons
-    LHS = Matrix{T}(undef, m, m)
+        # pre-allocate memory for LHS
+        u = first(domain)
+        T = GeoStatsFunctions.returntype(γ, u, u)
+        m = nobs + ncons
+        LHS = Matrix{T}(undef, m, m)
 
-    # set variogram/covariance block
-    kcfill!(LHS, γ, domain, localaniso)
+        # set variogram/covariance block
+        kcfill!(LHS, γ, domain, localaniso)
 
-    # set blocks of constraints
-    GeoStatsModels.set_constraints_lhs!(model, LHS, domain)
+        # set blocks of constraints
+        GeoStatsModels.set_constraints_lhs!(model, LHS, domain)
 
-    LHS
+        LHS
+    end
 end
 
 function set_local_rhs!(fitted::LocalFittedKriging, pₒ)
