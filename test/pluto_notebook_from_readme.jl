@@ -239,7 +239,7 @@ end
 begin
     # sequential gaussian simulation with local anisotropies (MW method)
     # not theoretically very correct, but can give good results
-    local_sgs = LocalSGS(localaniso = lparsx, maxneighbors = 25)
+    local_sgs = LocalSGS(lparsx, maxneighbors = 25)
     sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 100, local_sgs)
     med2 = quantile(sims2, 0.5)
     sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1], med2)]

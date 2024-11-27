@@ -232,7 +232,7 @@ function ellipsavg(
     if nv == 1
         qarr[1], mag
     else
-        Ms = [LocalAnisotropies.qmat(qarr[i], mag[:, i]) for i = 1:nv]
+        Ms = [qmat(qarr[i], mag[:, i]) for i = 1:nv]
         wgt = length(wgt) == 0 ? [1 / nv for i in Ms] : wgt
         log_Ms = [log(Matrix(M)) for M in Ms]
         log_mean = sum(wgt[i] * log_Ms[i] for i = 1:length(Ms))

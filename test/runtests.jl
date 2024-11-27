@@ -155,7 +155,7 @@ import LocalAnisotropies: rotmat
 
         # Local sequential gaussian simulation
         println("SGS")
-        local_sgs = LocalSGS(localaniso = lpars, maxneighbors = 10)
+        local_sgs = LocalSGS(lpars, maxneighbors = 10)
         rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
     end
 end

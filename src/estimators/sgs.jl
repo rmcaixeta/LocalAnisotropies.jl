@@ -5,6 +5,8 @@
 
 """
     LocalSGS(; [paramaters])
+    LocalSGS(localaniso; [paramaters])
+    LocalSGS(method, localaniso; [paramaters])
 
 The sequential process method introduced by Gomez-Hernandez 1993.
 It traverses all locations of the geospatial domain according to a path,
@@ -42,6 +44,7 @@ neighbors are used without additional constraints.
   are used in the underlying Kriging model.
 """
 @kwdef struct LocalSGS{P,N,D,I} <: RandMethod
+    method::Symbol = :MovingWindows
     localaniso::LocalAnisotropy
     path::P = LinearPath()
     minneighbors::Int = 1
@@ -51,13 +54,17 @@ neighbors are used without additional constraints.
     init::I = NearestInit()
 end
 
+LocalSGS(localaniso::LocalAnisotropy; kwargs...) = LocalSGS(; localaniso, kwargs...)
+LocalSGS(method::Symbol, localaniso::LocalAnisotropy; kwargs...) =
+    LocalSGS(; method, localaniso, kwargs...)
+
 function GeoStatsProcesses.randprep(
     rng,
     process::GaussianProcess,
-    method::LocalSGS,
+    meth::LocalSGS,
     setup::RandSetup,
 )
-    (; path, minneighbors, maxneighbors, neighborhood, distance, init) = method
+    (; path, minneighbors, maxneighbors, neighborhood, distance, init) = meth
     method_ = SEQMethod(path, minneighbors, maxneighbors, neighborhood, distance, init)
     GeoStatsProcesses.randprep(rng, process, method_, setup)
 end
@@ -65,12 +72,12 @@ end
 function GeoStatsProcesses.randsingle(
     rng,
     ::GaussianProcess,
-    method::LocalSGS,
+    meth::LocalSGS,
     setup::RandSetup,
     prep,
 )
     # retrieve parameters
-    (; localaniso, path, init) = method
+    (; method, localaniso, path, init) = meth
     (; varnames, vartypes) = setup
     (; dom, data, probmodel, marginal, minneighbors, maxneighbors, searcher) = prep
 
@@ -96,10 +103,6 @@ function GeoStatsProcesses.randsingle(
                 # search neighbors with simulated data
                 nneigh = search!(neighbors, center, searcher, mask = simulated)
 
-                # rebuild probmodel with local par
-                localpar = (rotation(localaniso, ind), magnitude(localaniso, ind))
-                local_probmodel = mw_estimator(probmodel, localpar)
-
                 if nneigh < minneighbors
                     # draw from marginal
                     realization[ind] = rand(rng, marginal)
@@ -112,6 +115,11 @@ function GeoStatsProcesses.randsingle(
                         tab = (; var => val)
                         georef(tab, dom)
                     end
+
+                    # rebuild probmodel with local par
+                    #model =
+                    localpar = localpair(localaniso, ind)
+                    local_probmodel = mw_estimator(probmodel, localpar)
 
                     # fit distribution probmodel
                     fitted = GeoStatsModels.fit(local_probmodel, neigh)

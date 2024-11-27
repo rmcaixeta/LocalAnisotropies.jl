@@ -26,7 +26,7 @@ function local_fit(model::LocalIDWModel, data; i, m)
     state = IDWState(data)
 
     # get local anisotropy at estimation point
-    Qi = qmat(rotation(LA, i), magnitude(LA, i))
+    Qi = qmat(LA, i)
     d = Mahalanobis(Symmetric(Qi))
 
     FittedIDW(IDW(model.exponent, d), state)

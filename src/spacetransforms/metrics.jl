@@ -3,10 +3,10 @@
 # ------------------------------------------------------------------
 
 function colwise(D::LocalGeoData, ::Type{AnisoDistance}, i::Int, xj::Vector{Int})
-    Qi, ix = qmat(rotation(D, i), magnitude(D, i)), coords_(D, i)
+    Qi, ix = qmat(D, i), coords_(D, i)
     d = Vector{Float64}()
     for j in xj
-        Qj = qmat(rotation(D, j), magnitude(D, j))
+        Qj = qmat(D, j)
         Qij = (Qi + Qj) / 2
         jx = coords_(D, j)
         push!(d, Distances.evaluate(Mahalanobis(Symmetric(Qij)), ix, jx))
@@ -15,10 +15,10 @@ function colwise(D::LocalGeoData, ::Type{AnisoDistance}, i::Int, xj::Vector{Int}
 end
 
 function colwise(D::LocalGeoData, ::Type{KernelVariogram}, i::Int, xj::Vector{Int})
-    Qi, ix = qmat(rotation(D, i), magnitude(D, i)), centro(D, i)
+    Qi, ix = qmat(D, i), centro(D, i)
     d = Vector{Float64}()
     for j in xj
-        Qj, jx = qmat(rotation(D, j), magnitude(D, j)), centro(D, j)
+        Qj, jx = qmat(D, j), centro(D, j)
         dγ = abs(sill(D.refvario) - kccov(D.refvario, ix, jx, Qi, Qj))
         push!(d, dγ)
     end
@@ -32,14 +32,14 @@ end
 
 
 function evaluate(D::LocalGeoData, ::Type{AnisoDistance}, i::Int, j::Int)
-    Qi, Qj = [qmat(rotation(D, x), magnitude(D, x)) for x in (i, j)]
+    Qi, Qj = [qmat(D, x) for x in (i, j)]
     ix, jx = [coords_(D, x) for x in (i, j)]
     Qij = (Qi + Qj) / 2
     Distances.evaluate(Mahalanobis(Symmetric(Qij)), ix, jx)
 end
 
 function evaluate(D::LocalGeoData, ::Type{KernelVariogram}, i::Int, j::Int)
-    Qi, Qj = [qmat(rotation(D, x), magnitude(D, x)) for x in (i, j)]
+    Qi, Qj = [qmat(D, x) for x in (i, j)]
     ix, jx = [centro(D, x) for x in (i, j)]
     abs(sill(D.refvario) - kccov(D.refvario, ix, jx, Qi, Qj))
 end

@@ -86,7 +86,7 @@ nconstraints(::LocalKrigingModel) = isnothing(μ) ? 1 : 0 # OK otherwise SK
 
 function local_fit(model_::LocalKrigingModel, data; i, m)
     localaniso = model_.localaniso
-    localpar = (rotation(localaniso, i), magnitude(localaniso, i))
+    localpar = localpair(localaniso, i)
     model = krig_estimator(model_, localpar)
 
     γ = model.γ

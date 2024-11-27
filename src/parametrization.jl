@@ -26,6 +26,7 @@ ratio1(L::LocalAnisotropy, i::Ints) = L.magnitude[2, i] / L.magnitude[1, i]
 ratio2(L::LocalAnisotropy) = L.magnitude[3, :] ./ L.magnitude[1, :]
 ratio2(L::LocalAnisotropy, i::Ints) = L.magnitude[3, i] / L.magnitude[1, i]
 slice(L::LocalAnisotropy, i::Ints) = LocalAnisotropy(rotation(L, i), magnitude(L, i))
+localpair(L::LocalAnisotropy, i::Int) = (rotation(L, i), magnitude(L, i))
 nvals(L::LocalAnisotropy) = length(L.rotation)
 ndims(L::LocalAnisotropy) = size(L.magnitude, 1)
 iaxis(ax) = (X = 1, Y = 2, Z = 3)[ax]
@@ -137,6 +138,8 @@ rotation(D::LocalGeoData, i::AbstractVector{Int}) =
     i <= nvals(D) ? view(rotation(D), i) : view(rotation(D), spars(D, i))
 magnitude(D::LocalGeoData, i::Ints) =
     i <= nvals(D) ? view(magnitude(D), :, i) : view(magnitude(D), :, spars(D, i))
+
+localpair(D::LocalGeoData, i::Int) = (rotation(D, i), magnitude(D, i))
 
 Base.show(io::IO, ld::LocalGeoData) = print(io, "LocalGeoData")
 

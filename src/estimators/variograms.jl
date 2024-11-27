@@ -3,8 +3,7 @@
 # ------------------------------------------------------------------
 
 # Variogram functions using local anisotropies
-
-function qmat(q, m)
+function qmat(q::Quaternion, m::AbstractVector)
     # Anisotropy matrix for Mahalanobis distance
     N = length(m)
     P = quat_to_dcm(q)[SOneTo(N), SOneTo(N)]
@@ -14,6 +13,9 @@ function qmat(q, m)
     # while not fixed, setting Symmetric only when calling Mahalanobis
     # https://github.com/JuliaArrays/StaticArrays.jl/issues/955
 end
+
+qmat(L::LocalAnisotropy, i::Int) = qmat(localpair(L, i)...)
+qmat(L::LocalGeoData, i::Int) = qmat(localpair(L, i)...)
 
 function mw_estimator(μ, γ, localpar)
     # get local Mahalanobis matrix
@@ -65,4 +67,11 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
 
     Cij = (sill(γl) - γl(xi, xj))
     (det(Qi)^0.25) * (det(Qj)^0.25) * (det(Qij)^-0.5) * Cij
+end
+
+function localball(radii, rot, convention)
+    P, Λ = rotmat(radii, rot, convention)
+    Q = P' * Λ * P
+    Qs = ustrip.(Q ./ collect(radii)' .^ 2)
+    MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
 end
