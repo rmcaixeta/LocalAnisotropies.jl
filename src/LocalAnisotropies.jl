@@ -27,6 +27,7 @@ using Tables
 using Unitful: ustrip
 using WriteVTK
 
+import Distributions: Normal
 import GeoStatsModels:
     FittedIDW,
     FittedKriging,
@@ -42,6 +43,7 @@ import GeoStatsModels:
     nconstraints,
     predict,
     predictmean,
+    predictprob,
     predictvar,
     set_constraints_rhs!
 import GeoStatsProcesses: RandMethod, RandSetup

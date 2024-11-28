@@ -40,6 +40,10 @@ krig_estimator(model::KC_SKModel, localpar = nothing) = SimpleKriging(model.γ, 
 neighs_localaniso(model::MWModels, m) = nothing
 neighs_localaniso(model::KCModels, m) = view(model.hdlocalaniso, m)
 
+function neighs_localaniso(localaniso::LocalAnisotropy, dom, neigh; method::Symbol=:KernelConvolution)
+    method != :KernelConvolution ? nothing : qmat(nnpars(localaniso, dom, neigh))
+end
+
 function initmodel(model::KCModels, geotable, pdomain)
     hd = grid2hd_qmat(geotable, pdomain, model.localaniso)
     la = model.localaniso
@@ -69,12 +73,12 @@ function LocalKriging(
     localaniso::LocalAnisotropy,
     γ::Variogram;
     μ = nothing,
-    hdlocalaniso = nothing,
+    hdlocalaniso::Union{LocalAnisotropy,Nothing} = nothing,
 )
     if method == :MovingWindows
         isnothing(μ) ? MW_OKModel(localaniso, γ) : MW_SKModel(localaniso, γ, μ)
     elseif method == :KernelConvolution
-        hd = toqmat(hdlocalaniso)
+        hd = qmat(hdlocalaniso)
         isnothing(μ) ? KC_OKModel(localaniso, γ, hd) : MW_SKModel(localaniso, γ, μ, hd)
     else
         @assert false "method must be :MovingWindows or :KernelConvolution"
@@ -124,13 +128,14 @@ end
 
 FKC(m::LocalFittedKriging) = FittedKriging(m.model, m.state)
 
-status(fitted::LocalFittedKriging) = issuccess(fitted.state.LHS)
+local_status(fitted::LocalFittedKriging) = issuccess(fitted.state.LHS)
+local_status(fitted::FittedKriging) = GeoStatsModels.status(fitted)
 
 predict(fitted::LocalFittedKriging, var, uₒ) =
     predictmean(FKC(fitted), weights(fitted, uₒ), var)
 
 function predictprob(fitted::LocalFittedKriging, var, uₒ)
-    w = local_weights(fitted, uₒ)
+    w = weights(fitted, uₒ)
     μ = predictmean(fitted, w, var)
     σ² = predictvar(fitted, w)
     Normal(μ, √σ²)

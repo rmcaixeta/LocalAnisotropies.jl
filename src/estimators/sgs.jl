@@ -116,17 +116,16 @@ function GeoStatsProcesses.randsingle(
                         georef(tab, dom)
                     end
 
-                    # rebuild probmodel with local par
-                    #model =
-                    localpar = localpair(localaniso, ind)
-                    local_probmodel = mw_estimator(probmodel, localpar)
+                    # rebuild probmodel as a local probmodel
+                    hdlocalaniso = neighs_localaniso(localaniso, dom, neigh; method)
+                    local_model = local_probmodel(probmodel, localaniso, hdlocalaniso)
 
                     # fit distribution probmodel
-                    fitted = GeoStatsModels.fit(local_probmodel, neigh)
+                    fitted = local_fit(local_model, neigh, i = ind, m = 1:nrow(neigh))
 
                     # draw from conditional or marginal
-                    distribution = if GeoStatsModels.status(fitted)
-                        GeoStatsModels.predictprob(fitted, var, center)
+                    distribution = if local_status(fitted)
+                        predictprob(fitted, var, center)
                     else
                         marginal
                     end
@@ -142,6 +141,11 @@ function GeoStatsProcesses.randsingle(
     end
 
     (; pairs...)
+end
+
+function local_probmodel(probmodel, localaniso, hdlocalaniso)
+    isnothing(hdlocalaniso) ? MW_SKModel(localaniso, probmodel.γ, probmodel.μ) :
+        KC_SKModel(localaniso, probmodel.γ, probmodel.μ, hdlocalaniso)
 end
 
 # temp solution; to fix in meshes

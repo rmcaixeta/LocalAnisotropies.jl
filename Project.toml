@@ -5,6 +5,7 @@ version = "0.6.2"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GeoStatsBase = "323cb8eb-fbf6-51c0-afd0-f8fba70507b2"
 GeoStatsFunctions = "6771c435-bc22-4842-b0c3-41852a255103"
 GeoStatsModels = "ad987403-13c5-47b5-afee-0a48f6ac4f12"
@@ -36,6 +37,7 @@ LocalAnisotropiesMakieExt = "Makie"
 
 [compat]
 Distances = "0.10"
+Distributions = "0.25"
 GeoStatsBase = "0.45, 0.46"
 GeoStatsFunctions = "0.4, 0.5, 0.6"
 GeoStatsModels = "0.4, 0.5, 0.6"

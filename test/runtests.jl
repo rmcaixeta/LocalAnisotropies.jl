@@ -157,5 +157,8 @@ import LocalAnisotropies: rotmat
         println("SGS")
         local_sgs = LocalSGS(lpars, maxneighbors = 10)
         rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
+
+        local_sgs = LocalSGS(:KernelConvolution, lpars, maxneighbors = 10)
+        rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
     end
 end

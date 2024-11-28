@@ -16,6 +16,7 @@ end
 
 qmat(L::LocalAnisotropy, i::Int) = qmat(localpair(L, i)...)
 qmat(L::LocalGeoData, i::Int) = qmat(localpair(L, i)...)
+qmat(L::Union{LocalAnisotropy,Nothing}) = isnothing(L) ? nothing : [qmat(L, i) for i = 1:nvals(L)]
 
 function mw_estimator(μ, γ, localpar)
     # get local Mahalanobis matrix

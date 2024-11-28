@@ -209,8 +209,6 @@ function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
     to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 
-toqmat(lp) = isnothing(lp) ? nothing : [qmat(lp, i) for i = 1:nvals(lp)]
-
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
 
 function Base.vcat(lpar1::LocalAnisotropy, lpar2::LocalAnisotropy; kind = :union)
