@@ -127,6 +127,7 @@ function GeoStatsProcesses.randsingle(
                     distribution = if local_status(fitted)
                         predictprob(fitted, var, center)
                     else
+                        @warn "Kriging error at point $ind; drawing random value"
                         marginal
                     end
                     realization[ind] = rand(rng, distribution)
@@ -148,16 +149,18 @@ function local_probmodel(probmodel, localaniso, hdlocalaniso)
         KC_SKModel(localaniso, probmodel.γ, probmodel.μ, hdlocalaniso)
 end
 
-# temp solution; to fix in meshes
 function Meshes._pboxes(::Type{𝔼{N}}, points) where {N}
     p = first(points)
-    ℒ = Meshes.lentype(p)
-    cmin = [typemax(ℒ) for i = 1:N]
-    cmax = [typemin(ℒ) for i = 1:N]
+    ℒ = lentype(p)
+    cmin = fill(typemax(ℒ), N)
+    cmax = fill(typemin(ℒ), N)
+  
     for p in points
-        c = getfield(coords(p), :coords)
-        cmin = [min(c[i], cmin[i]) for i = 1:N]
-        cmax = [max(c[i], cmax[i]) for i = 1:N]
+      c = getfield(coords(p), :coords)
+      for i in 1:N
+        cmin[i] = min(c[i], cmin[i])
+        cmax[i] = max(c[i], cmax[i])
+      end
     end
-    Box(Meshes.withcrs(p, Tuple(cmin)), Meshes.withcrs(p, Tuple(cmax)))
-end
+    Box(withcrs(p, Tuple(cmin)), withcrs(p, Tuple(cmax)))
+  end

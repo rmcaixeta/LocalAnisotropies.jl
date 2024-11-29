@@ -48,6 +48,7 @@ import GeoStatsModels:
     set_constraints_rhs!
 import GeoStatsProcesses: RandMethod, RandSetup
 import GeoStatsTransforms: ColumnSelector, TableTransform, selector, apply
+import Meshes: lentype, withcrs
 
 include("parametrization.jl")
 include("estimators/idw.jl")
