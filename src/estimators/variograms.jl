@@ -16,7 +16,8 @@ end
 
 qmat(L::LocalAnisotropy, i::Int) = qmat(localpair(L, i)...)
 qmat(L::LocalGeoData, i::Int) = qmat(localpair(L, i)...)
-qmat(L::Union{LocalAnisotropy,Nothing}) = isnothing(L) ? nothing : [qmat(L, i) for i = 1:nvals(L)]
+qmat(L::Union{LocalAnisotropy,Nothing}) =
+    isnothing(L) ? nothing : [qmat(L, i) for i = 1:nvals(L)]
 
 function mw_estimator(μ, γ, localpar)
     # get local Mahalanobis matrix
@@ -68,11 +69,4 @@ function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
 
     Cij = (sill(γl) - γl(xi, xj))
     (det(Qi)^0.25) * (det(Qj)^0.25) * (det(Qij)^-0.5) * Cij
-end
-
-function localball(radii, rot, convention)
-    P, Λ = rotmat(radii, rot, convention)
-    Q = P' * Λ * P
-    Qs = ustrip.(Q ./ collect(radii)' .^ 2)
-    MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
 end

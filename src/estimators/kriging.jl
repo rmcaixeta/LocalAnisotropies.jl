@@ -40,7 +40,12 @@ krig_estimator(model::KC_SKModel, localpar = nothing) = SimpleKriging(model.γ, 
 neighs_localaniso(model::MWModels, m) = nothing
 neighs_localaniso(model::KCModels, m) = view(model.hdlocalaniso, m)
 
-function neighs_localaniso(localaniso::LocalAnisotropy, dom, neigh; method::Symbol=:KernelConvolution)
+function neighs_localaniso(
+    localaniso::LocalAnisotropy,
+    dom,
+    neigh;
+    method::Symbol = :KernelConvolution,
+)
     method != :KernelConvolution ? nothing : qmat(nnpars(localaniso, dom, neigh))
 end
 

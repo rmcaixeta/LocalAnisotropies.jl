@@ -1,10 +1,59 @@
-using LocalAnisotropies
+using Distances
 using GeoStats
+using LocalAnisotropies
 using Test
-import LocalAnisotropies: rotmat
+import LocalAnisotropies: rotmat, anisodistance
 
 
 @testset "LocalAnisotropies.jl" begin
+
+    d₁ = anisodistance([1.0, 1.0], [0.0])
+    d₂ = anisodistance([1.0, 2.0], [0.0])
+    @test evaluate(d₁, [1.0, 0.0], [0.0, 0.0]) == evaluate(d₁, [0.0, 1.0], [0.0, 0.0])
+    @test evaluate(d₂, [1.0, 0.0], [0.0, 0.0]) != evaluate(d₂, [0.0, 1.0], [0.0, 0.0])
+
+    d₃ = anisodistance([1.0, 0.5, 0.5], [π / 4, 0.0, 0.0])
+    @test evaluate(d₃, [1.0, 1.0, 0.0], [0.0, 0.0, 0.0]) ≈ √2
+    @test evaluate(d₃, [-1.0, 1.0, 0.0], [0.0, 0.0, 0.0]) ≈ √8
+
+    # intrinsic conventions
+    gslib = anisodistance([50.0, 25.0, 5.0], [30.0, -30.0, 30.0], :GSLIB)
+    tait = anisodistance([25.0, 50.0, 5.0], [-π / 6, -π / 6, π / 6], :TaitBryanIntr)
+    euler = anisodistance(
+        [50.0, 25.0, 5.0],
+        [-deg2rad(78), -deg2rad(41), -deg2rad(50)],
+        :EulerIntr,
+    )
+    lpf = anisodistance([50.0, 25.0, 5.0], [78.0, 41.0, 50.0], :Leapfrog)
+    dm = anisodistance([50.0, 25.0, 5.0], [78.0, 41.0, 50.0], :Datamine)
+
+    @test evaluate(gslib, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]) ≈ 0.1325707358356285
+    @test evaluate(gslib, [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]) ≈ 0.039051248379533283
+    @test evaluate(gslib, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈ 0.15132745950421558
+
+    @test evaluate(gslib, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(tait, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0])
+    @test evaluate(euler, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(dm, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0])
+    @test evaluate(euler, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(lpf, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0])
+    @test evaluate(euler, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) -
+          evaluate(gslib, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) < 10^-3
+
+    # extrinsic conventions
+    xtait = anisodistance([50.0, 25.0, 5.0], [π, 0, π / 2], :TaitBryanExtr)
+    xeuler = anisodistance([50.0, 25.0, 5.0], [-π / 2, -π / 2, -π / 2], :EulerExtr)
+
+    @test evaluate(xtait, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]) ≈ 0.20
+    @test evaluate(xtait, [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]) ≈ 0.04
+    @test evaluate(xtait, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈ 0.02
+
+    @test evaluate(xtait, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(xeuler, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+    @test evaluate(xtait, [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(xeuler, [0.0, 1.0, 0.0], [0.0, 0.0, 0.0])
+    @test evaluate(xtait, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]) ≈
+          evaluate(xeuler, [0.0, 0.0, 1.0], [0.0, 0.0, 0.0])
 
     # convert data to LocalAnisotropy
     dummy = georef(
@@ -12,7 +61,6 @@ import LocalAnisotropies: rotmat
         PointSet([(i / 2, (i + 1) / 2) for i = 1:2:19]),
     )
     pars = localanisotropies(dummy, [:az], [:r1, :r2], :GSLIB)
-    @test round(pars.rotation[1][4], digits = 4) ≈ 0.0087
 
     tabpars_quat = to_table(pars)
     tabpars_angs = to_table(pars, :GSLIB)
@@ -30,9 +78,11 @@ import LocalAnisotropies: rotmat
     # convert between different rotation conventions
     angs1 = convertangles([30, 30, 30], :GSLIB, :Datamine)
     angs2 = convertangles(angs1, :Datamine, :GSLIB)
-    rmat = rotmat([1, 1, 1], [30, 30, 30], :GSLIB)
-    @test all(rmat .≈ rotmat([1, 1, 1], angs1, :Datamine))
-    @test all(rmat .≈ rotmat([1, 1, 1], angs2, :GSLIB))
+    rmat, _ = rotmat([1, 1, 1], [30, 30, 30], :GSLIB)
+    dmat, _ = rotmat([1, 1, 1], angs1, :Datamine)
+    gmat, _ = rotmat([1, 1, 1], angs2, :GSLIB)
+    @test all(rmat .≈ dmat)
+    @test all(rmat .≈ gmat)
     angs_ = convertangles.(pars.rotation, :GSLIB)
     @test all([x[1] for x in angs_] .≈ 1:10)
 

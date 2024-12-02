@@ -146,7 +146,7 @@ end
 
 function local_probmodel(probmodel, localaniso, hdlocalaniso)
     isnothing(hdlocalaniso) ? MW_SKModel(localaniso, probmodel.γ, probmodel.μ) :
-        KC_SKModel(localaniso, probmodel.γ, probmodel.μ, hdlocalaniso)
+    KC_SKModel(localaniso, probmodel.γ, probmodel.μ, hdlocalaniso)
 end
 
 function Meshes._pboxes(::Type{𝔼{N}}, points) where {N}
@@ -154,13 +154,13 @@ function Meshes._pboxes(::Type{𝔼{N}}, points) where {N}
     ℒ = lentype(p)
     cmin = fill(typemax(ℒ), N)
     cmax = fill(typemin(ℒ), N)
-  
+
     for p in points
-      c = getfield(coords(p), :coords)
-      for i in 1:N
-        cmin[i] = min(c[i], cmin[i])
-        cmax[i] = max(c[i], cmax[i])
-      end
+        c = getfield(coords(p), :coords)
+        for i = 1:N
+            cmin[i] = min(c[i], cmin[i])
+            cmax[i] = max(c[i], cmax[i])
+        end
     end
     Box(withcrs(p, Tuple(cmin)), withcrs(p, Tuple(cmax)))
-  end
+end

@@ -51,18 +51,21 @@ function localanisotropies(
 
     if transf
         rule = convention isa Symbol ? rules[convention] : convention
-        rule.main == :y && (ranges = ranges[reverse(1:dim, 1, 2)])
+        if rule.main == :y
+            ranges = ranges[reverse(1:dim, 1, 2)]
+            rule = RotationRule(rule.order, rule.motion, rule.radian, :x, rule.extrinsic)
+        end
     end
 
     for i = 1:len
-        xranges =
-            [Tables.getcolumn(tab, x)[i] for x in ranges] ./ Tables.getcolumn(tab, ranges[1])[i]
+        vranges = [Tables.getcolumn(tab, x)[i] for x in ranges]
+        xranges = vranges ./ maximum(vranges)
         xrot = [Tables.getcolumn(tab, x)[i] for x in rotation]
 
         quat = if isquat
             Quaternion(xrot)
         else
-            P, Λ = rotmat(xranges, xrot, rule; rev = false)
+            P, Λ = rotmat(xranges, xrot, rule)
             size(P, 1) == 2 && (P = DCM([P[1, 1] P[1, 2] 0; P[2, 1] P[2, 2] 0; 0 0 1]))
             dcm_to_quat(P)
         end
@@ -196,7 +199,7 @@ function rotmat2angles(dcm::AbstractMatrix, convention::RotConvention)
     P = N == 2 ? DCM([P[1, 1] P[1, 2] 0; P[2, 1] P[2, 2] 0; 0 0 1]) : dcm
 
     rule = convention isa Symbol ? rules[convention] : convention
-    !rule.extrinsic && (P = P')
+    rule.extrinsic && (P = P')
     preangs = dcm_to_angle(DCM(P), rule.order)
     angles = [preangs.a1, preangs.a2, preangs.a3]
 

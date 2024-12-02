@@ -17,13 +17,15 @@ Makie.plottype(::LocalAnisotropy, ::LocalAnisotropies.SpatialData) =
 function pre_ellipsoid(lpars, geom, f)
     # pre process
     coords = LocalAnisotropies.coords_(geom)
+    mag = lpars.magnitude
+    mx = maximum
     D3 = size(coords, 1) >= 3
     x = coords[1, :]
     y = coords[2, :]
     z = D3 ? coords[3, :] : map(i -> 0, x)
     s =
-        D3 ? [f * Makie.Vec3f(i[1], i[2], i[3]) for i in eachcol(lpars.magnitude)] :
-        [f * Makie.Vec3f(i[1], i[2], i[2]) for i in eachcol(lpars.magnitude)]
+        D3 ? [f * Makie.Vec3f(i[1]/mx(i), i[2]/mx(i), i[3]/mx(i)) for i in eachcol(mag)] :
+        [f * Makie.Vec3f(i[1]/mx(i), i[2]/mx(i), i[2]/mx(i)) for i in eachcol(mag)]
     q = map(q -> Makie.Quaternion(q.q1, q.q2, q.q3, q.q0), lpars.rotation)
 
     x, y, z, s, q

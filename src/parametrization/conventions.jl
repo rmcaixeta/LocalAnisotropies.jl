@@ -98,6 +98,22 @@ function rotmat(
 
     # rotation matrix
     P = angle_to_dcm(angles..., rule.order)[SOneTo(N), SOneTo(N)]
-    !rule.extrinsic && (P = P')
+    rule.extrinsic && (P = P')
     P, Λ
+end
+
+function anisodistance(
+    semiaxes::AbstractVector,
+    angles::AbstractVector,
+    convention = :TaitBryanExtr;
+    rev = false,
+)
+    P, Λ = rotmat(semiaxes, angles, convention; rev)
+    Q = P' * Λ * P
+    Mahalanobis(Symmetric(Q))
+end
+
+function localball(radii, rot, convention)
+    metric_ = anisodistance(radii, rot, convention)
+    MetricBall(1.0, metric_)
 end
