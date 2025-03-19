@@ -143,6 +143,7 @@ function predictprob(fitted::LocalFittedKriging, var, uₒ)
     w = weights(fitted, uₒ)
     μ = predictmean(fitted, w, var)
     σ² = predictvar(fitted, w)
+    σ² = fitted.model isa OrdinaryKriging  ? σ² + 2 * w.ν[1] : σ²
     Normal(μ, √σ²)
 end
 

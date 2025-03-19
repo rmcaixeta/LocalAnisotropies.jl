@@ -150,6 +150,15 @@ function localfitpredict(
             # centroid of estimation
             center = centroid(pdomain, ind)
 
+            # modify search with local anisotropy
+            # searcher_ = if isnothing(neighborhood)
+            #     Qi = qmat(model.localaniso, ind)
+            #     anisodistance = Mahalanobis(Symmetric(Qi))
+            #     KNearestSearch(ddomain, maxneighbors; metric = anisodistance)
+            # else
+            #     searcher
+            # end
+
             # find neighbors with data
             ninds = search(center, searcher)
             nneigh = length(ninds)
