@@ -34,29 +34,62 @@ function mw_estimator(μ, γ, localpar)
     isnothing(μ) ? OrdinaryKriging(γl) : SimpleKriging(γl, μ)
 end
 
-mw_estimator(model::MW_SKModel, localpar) = mw_estimator(model.μ, model.γ, localpar)
-mw_estimator(model::MW_OKModel, localpar) = mw_estimator(nothing, model.γ, localpar)
-mw_estimator(model::SimpleKriging, localpar) = mw_estimator(model.μ, model.γ, localpar)
-mw_estimator(model::OrdinaryKriging, localpar) = mw_estimator(nothing, model.γ, localpar)
+mw_estimator(model::MW_SKModel, localpar) = mw_estimator(model.mean, model.fun, localpar)
+mw_estimator(model::MW_OKModel, localpar) = mw_estimator(nothing, model.fun, localpar)
+mw_estimator(model::SimpleKriging, localpar) = mw_estimator(model.mean, model.fun, localpar)
+mw_estimator(model::OrdinaryKriging, localpar) = mw_estimator(nothing, model.fun, localpar)
 
-function kcfill!(Γ, γ::Variogram, X, localaniso)
-    n = length(X)
-    @inbounds for j = 1:n
-        xj = X[j]
+function kcfill!(Γ, γ::GeoStatsFunction, domain, localaniso)
+    _, (_, n, k) = GeoStatsFunctions.matrixparams(γ, domain, domain)
+    @inbounds for j in 1:n
+        gⱼ = domain[j]
         Qj = localaniso[j]
-        for i = j+1:n
-            xi = X[i]
-            Qi = localaniso[i]
-            Γ[i, j] = kccov(γ, xi, xj, Qi, Qj)
+        sⱼ = GeoStatsFunctions._sample(γ, gⱼ)
+        # lower triangular entries
+        for i in (j + 1):n
+        gᵢ = domain[i]
+        Qi = localaniso[i]
+        sᵢ = GeoStatsFunctions._sample(γ, gᵢ)
+        #Γ[i, j] = kccov(γ, gᵢ, gⱼ, Qi, Qj)
+        #Γᵢⱼ = ustrip.(mean(γ(pᵢ, pⱼ) for pᵢ in sᵢ, pⱼ in sⱼ))
+        Γᵢⱼ = ustrip.(mean(kccov(γ, pᵢ, pⱼ, Qi, Qj) for pᵢ in sᵢ, pⱼ in sⱼ))
+        Γ[((i - 1) * k + 1):(i * k), ((j - 1) * k + 1):(j * k)] .= Γᵢⱼ
         end
-        Γ[j, j] = sill(γ)
-        for i = 1:j-1
-            Γ[i, j] = Γ[j, i]
+        # diagonal entries
+        Γᵢⱼ = ustrip.(mean(γ(pⱼ, pⱼ) for pⱼ in sⱼ, pⱼ in sⱼ))
+        Γ[((j - 1) * k + 1):(j * k), ((j - 1) * k + 1):(j * k)] .= Γᵢⱼ
+    end
+    
+    # upper triangular entries
+    @inbounds for j in 1:(n * k)
+        for i in 1:(j - 1)
+        Γ[i, j] = Γ[j, i]
         end
     end
+    
+    Γ
 end
 
-function kccov(γ::Variogram, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
+function kcfill!(F, f::GeoStatsFunction, domain₁, domain₂, Qx₀, hdla)
+    _, (m, n, k) = GeoStatsFunctions.matrixparams(f, domain₁, domain₂)
+    @inbounds for j in 1:n
+        gⱼ = domain₂[j]
+        sⱼ = GeoStatsFunctions._sample(f, gⱼ)
+        for i in 1:m
+        gᵢ = domain₁[i]
+        sᵢ = GeoStatsFunctions._sample(f, gᵢ)
+        #RHS[j] = kccov(fun, pₒ, xj, localaniso[1], localaniso[2][j])
+        #Fᵢⱼ = ustrip.(mean(f(pᵢ, pⱼ) for pᵢ in sᵢ, pⱼ in sⱼ))
+        Fᵢⱼ = ustrip.(mean(kccov(f, pᵢ, pⱼ, Qx₀, hdla[j]) for pᵢ in sᵢ, pⱼ in sⱼ))
+        F[((i - 1) * k + 1):(i * k), ((j - 1) * k + 1):(j * k)] .= Fᵢⱼ
+        end
+    end
+    F
+end
+
+
+
+function kccov(γ::GeoStatsFunction, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
     Qij = (Qi + Qj) / 2
 
     ## modify variogram with average anisotropy matrix

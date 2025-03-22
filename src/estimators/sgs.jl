@@ -43,7 +43,7 @@ neighbors are used without additional constraints.
   Care must be taken to make sure that enough neighbors
   are used in the underlying Kriging model.
 """
-@kwdef struct LocalSGS{P,N,D,I} <: RandMethod
+@kwdef struct LocalSGS{P,N,D} <: FieldSimulationMethod
     method::Symbol = :MovingWindows
     localaniso::LocalAnisotropy
     path::P = LinearPath()
@@ -51,102 +51,119 @@ neighbors are used without additional constraints.
     maxneighbors::Int = 36 # 6x6 grid cells
     neighborhood::N = :range
     distance::D = Euclidean()
-    init::I = NearestInit()
 end
 
 LocalSGS(localaniso::LocalAnisotropy; kwargs...) = LocalSGS(; localaniso, kwargs...)
 LocalSGS(method::Symbol, localaniso::LocalAnisotropy; kwargs...) =
     LocalSGS(; method, localaniso, kwargs...)
 
-function GeoStatsProcesses.randprep(
+function GeoStatsProcesses.preprocess(
     rng,
-    process::GaussianProcess,
+    process,
     meth::LocalSGS,
-    setup::RandSetup,
+    init, domain, data,
 )
-    (; path, minneighbors, maxneighbors, neighborhood, distance, init) = meth
-    method_ = SEQMethod(path, minneighbors, maxneighbors, neighborhood, distance, init)
-    GeoStatsProcesses.randprep(rng, process, method_, setup)
+    (; path, minneighbors, maxneighbors, neighborhood, distance) = meth
+    method_ = SEQSIM(path, minneighbors, maxneighbors, neighborhood, distance)
+    GeoStatsProcesses.preprocess(rng, process, method_, init, domain, data)
 end
 
 function GeoStatsProcesses.randsingle(
     rng,
-    ::GaussianProcess,
+    process,
     meth::LocalSGS,
-    setup::RandSetup,
-    prep,
+    domain,
+    data,
+    preproc,
 )
-    # retrieve parameters
-    (; method, localaniso, path, init) = meth
-    (; varnames, vartypes) = setup
-    (; dom, data, probmodel, marginal, minneighbors, maxneighbors, searcher) = prep
+  # retrieve parameters
+  (; params, model, prior, sdom, sdat, cache, init) = preproc
+  (; path, searcher, nmin, nmax) = params
+  (; method, localaniso) = meth
+  
+  # initialize realization and mask
+  real, mask = GeoStatsProcesses.randinit(process, sdom, sdat, init)
 
-    # initialize buffers for realization and simulation mask
-    vars = Dict(zip(varnames, vartypes))
-    buff, mask = initbuff(dom, vars, init, data = data)
+  # realization in matrix form for efficient updates
+  realization = ustrip.(stack(Tables.rowtable(real)))
 
-    # consider point set with centroids for now
-    pointset = PointSet([centroid(dom, ind) for ind = 1:nelements(dom)])
+  # save units of columns to restore later
+  units = isnothing(sdat) ? GeoStatsProcesses._units(process) : GeoStatsProcesses._units(sdat)
 
-    pairs = map(varnames) do var
-        # pre-allocate memory for neighbors
-        neighbors = Vector{Int}(undef, maxneighbors)
+  # locations with all variables already simulated
+  simulated = map(all, Tables.rowtable(mask))
 
-        # retrieve realization and mask for variable
-        realization = buff[var]
-        simulated = mask[var]
+  # pre-allocate memory for neighbors
+  neighbors = Vector{Int}(undef, nmax)
 
-        # simulation loop
-        for ind in traverse(dom, path)
-            if !simulated[ind]
-                center = pointset[ind]
-                # search neighbors with simulated data
-                nneigh = search!(neighbors, center, searcher, mask = simulated)
+  # retrieve variable names
+  vars = keys(real)
 
-                if nneigh < minneighbors
-                    # draw from marginal
-                    realization[ind] = rand(rng, marginal)
-                else
-                    # neighborhood with data
-                    neigh = let
-                        ninds = view(neighbors, 1:nneigh)
-                        dom = view(pointset, ninds)
-                        val = view(realization, ninds)
-                        tab = (; var => val)
-                        georef(tab, dom)
-                    end
+  # variables passed to probability model
+  mvars = length(vars) == 1 ? first(vars) : vars
 
-                    # rebuild probmodel as a local probmodel
-                    hdlocalaniso = neighs_localaniso(localaniso, dom, neigh; method)
-                    local_model = local_probmodel(probmodel, localaniso, hdlocalaniso)
+  # simulation loop
+  @inbounds for ind in traverse(domain, path)
+    if !simulated[ind]
+      # center of target location
+      center = centroid(sdom, ind)
 
-                    # fit distribution probmodel
-                    fitted = local_fit(local_model, neigh, i = ind, m = 1:nrow(neigh))
+      # buffer at target location
+      buffer = view(realization, :, ind)
 
-                    # draw from conditional or marginal
-                    distribution = if local_status(fitted)
-                        predictprob(fitted, var, center)
-                    else
-                        @warn "Kriging error at point $ind; drawing random value"
-                        marginal
-                    end
-                    realization[ind] = rand(rng, distribution)
-                end
+      # search neighbors with simulated data
+      n = search!(neighbors, center, searcher, mask=simulated)
 
-                # mark location as simulated and continue
-                simulated[ind] = true
-            end
+      if n < nmin
+        # draw from prior
+        GeoStatsProcesses._draw!(rng, prior, buffer)
+      else
+        # neighborhood with data
+        neigh = let
+          inds = view(neighbors, 1:n)
+          ndom = view(sdom, inds)
+          nmat = view(realization, :, inds)
+          ntab = (; zip(vars, eachrow(nmat))...)
+          georef(ntab, ndom)
         end
 
-        var => realization
-    end
+        # fit probability model
+        hdlocalaniso = neighs_localaniso(localaniso, sdom, neigh; method)
+        local_model = local_probmodel(model, localaniso, hdlocalaniso)
 
-    (; pairs...)
+        # fit distribution probmodel
+        fitted = local_fit(local_model, neigh, i = ind, m = 1:nrow(neigh))
+
+        # draw from conditional
+        conditional = if local_status(fitted)
+          GeoStatsProcesses._conditional(process, fitted, mvars, center)
+        else
+          prior
+        end
+        GeoStatsProcesses._draw!(rng, conditional, buffer)
+      end
+
+      # mark location as simulated and continue
+      simulated[ind] = true
+    end
+  end
+
+  # convert back to table format
+  @inbounds for (i, var) in enumerate(vars)
+    real[var] .= realization[i,:] * units[i]
+  end
+
+  # undo data transformations
+  rdat = GeoStatsProcesses._bwdtransform(process, georef(real, sdom), cache)
+
+  # return realization values
+  values(rdat)
 end
 
+
 function local_probmodel(probmodel, localaniso, hdlocalaniso)
-    isnothing(hdlocalaniso) ? MW_SKModel(localaniso, probmodel.γ, probmodel.μ) :
-    KC_SKModel(localaniso, probmodel.γ, probmodel.μ, hdlocalaniso)
+    isnothing(hdlocalaniso) ? MW_SKModel(localaniso, probmodel.fun, probmodel.mean) :
+    KC_SKModel(localaniso, probmodel.fun, probmodel.mean, hdlocalaniso)
 end
 
 function Meshes._pboxes(::Type{𝔼{N}}, points) where {N}

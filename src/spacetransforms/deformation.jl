@@ -46,7 +46,7 @@ function deformspace(
     obj::SpatialData,
     lpar::LocalAnisotropy,
     metric::Type{<:LocalMetric},
-    refvario::Variogram;
+    refvario::GeoStatsFunction;
     anchors = 1500,
     maxoutdim = 10,
     weights = nothing,
@@ -73,7 +73,7 @@ function deformspace(
     obj::SpatialData,
     lpar::LocalAnisotropy,
     metric::Type{<:LocalMetric},
-    refvario::Variogram;
+    refvario::GeoStatsFunction;
     anchors = 1500,
     maxoutdim = 10,
     weights = nothing,

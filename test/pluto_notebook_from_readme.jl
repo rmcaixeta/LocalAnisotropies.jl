@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.3
+# v0.20.5
 
 using Markdown
 using InteractiveUtils
@@ -72,18 +72,18 @@ begin
 
     # do an unconventional variography along local X axis (same can be done for Y)
     expvario = localvariography(S, spars, :P, tol = 2, maxlag = 20, nlags = 20, axis = :X)
-    Mke.plot(expvario)
+    #Mke.plot(expvario)
     γx = ExponentialVariogram(sill = 32.0, range = 40.0)
     γy = GaussianVariogram(sill = 32.0, range = 8.0)
-    Mke.plot!(γx)
-    Mke.current_figure()
+    #Mke.plot!(γx)
+    #Mke.current_figure()
 end
 
 # ╔═╡ 5859126d-a870-49c1-b74f-7eb50e29f78b
 begin
     # local inverse distance weighting using exponent 3
     ID = LocalIDW(3, lparsx)
-    s1 = S |> LocalInterpolate(G, :P => ID, maxneighbors = 20)
+    s1 = S |> LocalInterpolate(G, model=ID, maxneighbors = 20)
     Mke.plot(s1.geometry, color = s1.P)
 end
 
@@ -91,7 +91,7 @@ end
 begin
     # kriging using moving windows method
     MW = LocalKriging(:MovingWindows, lparsx, γx)
-    s2 = S |> LocalInterpolate(G, :P => MW, maxneighbors = 20)
+    s2 = S |> LocalInterpolate(G, model=MW, maxneighbors = 20)
     Mke.plot(s2.geometry, color = s2.P)
 end
 
@@ -99,7 +99,7 @@ end
 begin
     # kriging using kernel convolution method (smaller search; unstable with many local variations)
     KC = LocalKriging(:KernelConvolution, lparsy, γy)
-    s3 = S |> LocalInterpolate(G, :P => KC, maxneighbors = 6)
+    s3 = S |> LocalInterpolate(G, model=KC, maxneighbors = 6)
     Mke.plot(s3.geometry, color = s3.P)
 end
 
@@ -108,7 +108,7 @@ begin
     # deform space using kernel variogram as dissimilarity input
     Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors = 1500)
     γ1 = GaussianVariogram(sill = 21.3, range = 22.5)
-    s4 = Sd1 |> Interpolate(Dd1, :P => Kriging(γ1))
+    s4 = Sd1 |> Interpolate(Dd1, model=Kriging(γ1))
 
     # plot
     fig4 = Mke.Figure(size = (700, 350))
@@ -126,7 +126,7 @@ begin
     γ2 = GaussianVariogram(sill = 22.0, range = 22.0)
 
     # traditional kriging in the new multidimensional space
-    s5 = Sd2 |> Interpolate(Dd2, :P => Kriging(γ2))
+    s5 = Sd2 |> Interpolate(Dd2, model=Kriging(γ2))
 
     # plot
     fig5 = Mke.Figure(size = (700, 350))
@@ -144,7 +144,7 @@ begin
     γ3 = NuggetEffect(1.0) + GaussianVariogram(sill = 21.0, range = 22.0)
 
     # traditional kriging in the new multidimensional space
-    s6 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ3))
+    s6 = Sd3 |> Interpolate(Dd3, model=Kriging(γ3))
 
     # plot
     fig6 = Mke.Figure(size = (700, 350))
@@ -157,7 +157,7 @@ end
 begin
     γomni = GaussianVariogram(sill = 32.0, range = 11.0)
     OK = Kriging(γomni)
-    s0 = S |> InterpolateNeighbors(G, :P => OK, maxneighbors = 20)
+    s0 = S |> InterpolateNeighbors(G, model=OK, maxneighbors = 20)
     Mke.plot(s0.geometry, color = s0.P)
 end
 
@@ -225,8 +225,8 @@ end
 # ╔═╡ a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be
 begin
     # standard sequential gaussian simulation with isotropic variogram
-    sgs = SEQMethod(maxneighbors = 25)
-    sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
+    sgs = SEQSIM(maxneighbors = 25)
+    sims1 = rand(GaussianProcess(γomni1_ns), G, 100, method=sgs, data=S_ns)
     med1 = quantile(sims1, 0.5)
     sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1], med1)]
     fig7 = Mke.Figure(size = (700, 350))
@@ -240,7 +240,7 @@ begin
     # sequential gaussian simulation with local anisotropies (MW method)
     # not theoretically very correct, but can give good results
     local_sgs = LocalSGS(lparsx, maxneighbors = 25)
-    sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 100, local_sgs)
+    sims2 = rand(GaussianProcess(γx_ns), G, 100, method=local_sgs, data=S_ns)
     med2 = quantile(sims2, 0.5)
     sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1], med2)]
     fig8 = Mke.Figure(size = (700, 350))
@@ -253,7 +253,7 @@ end
 begin
     # sequential gaussian simulation after spatial deformation
     # standard simulation after local anisotropies is "removed"
-    sims3 = rand(GaussianProcess(γomni2_ns), Dd1, Sd1_ns, 100, sgs)
+    sims3 = rand(GaussianProcess(γomni2_ns), Dd1, 100, method=sgs, data=Sd1_ns)
     med3 = quantile(sims3, 0.5)
     sims3_bt = [revert(ns, x, ref_Sd1_ns) for x in (sims3[1], med3)]
     fig9 = Mke.Figure(size = (700, 350))

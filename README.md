@@ -157,7 +157,7 @@ Mke.current_figure()
 ```julia
 # local inverse distance weighting using exponent 3
 ID = LocalIDW(3, lparsx)
-s1 = S |> LocalInterpolate(G, :P=>ID, maxneighbors=20)
+s1 = S |> LocalInterpolate(G, model=ID, maxneighbors = 20)
 Mke.plot(s1.geometry,color=s1.P)
 ```
 
@@ -168,7 +168,7 @@ Mke.plot(s1.geometry,color=s1.P)
 ```julia
 # kriging using moving windows method
 MW = LocalKriging(:MovingWindows, lparsx, γx)
-s2 = S |> LocalInterpolate(G, :P=>MW, maxneighbors=20)
+s2 = S |> LocalInterpolate(G, model=MW, maxneighbors=20)
 Mke.plot(s2.geometry,color=s2.P)
 ```
 
@@ -179,7 +179,7 @@ Mke.plot(s2.geometry,color=s2.P)
 ```julia
 # kriging using kernel convolution method (smaller search; unstable with many local variations)
 KC = LocalKriging(:KernelConvolution, lparsy, γy)
-s3 = S |> LocalInterpolate(G, :P=>KC, maxneighbors=6)
+s3 = S |> LocalInterpolate(G, model=KC, maxneighbors=6)
 Mke.plot(s3.geometry,color=s3.P)
 ```
 
@@ -191,7 +191,7 @@ Mke.plot(s3.geometry,color=s3.P)
 # deform space using kernel variogram as dissimilarity input
 Sd1, Dd1 = deformspace(S, G, lparsx, KernelVariogram, γx, anchors=1500)
 γ1 = GaussianVariogram(sill=21.3, range=22.5)
-s4 = Sd1 |> Interpolate(Dd1, :P=>Kriging(γ1))
+s4 = Sd1 |> Interpolate(Dd1, model=Kriging(γ1))
 
 # plot
 fig4 = Mke.Figure(size=(700, 350))
@@ -212,7 +212,7 @@ Sd2, Dd2 = deformspace(LDa, GraphDistance, anchors=1500)
 γ2 = GaussianVariogram(sill=22., range=22.)
 
 # traditional kriging in the new multidimensional space
-s5 = Sd2 |> Interpolate(Dd2, :P=>Kriging(γ2))
+s5 = Sd2 |> Interpolate(Dd2, model=Kriging(γ2))
 
 # plot
 fig5 = Mke.Figure(size=(700, 350))
@@ -233,7 +233,7 @@ Sd3, Dd3 = deformspace(LDv, GraphDistance, anchors=1500)
 γ3 = NuggetEffect(1.0) + GaussianVariogram(sill=21., range=22.)
 
 # traditional kriging in the new multidimensional space
-s6 = Sd3 |> Interpolate(Dd3, :P=>Kriging(γ3))
+s6 = Sd3 |> Interpolate(Dd3, model=Kriging(γ3))
 
 # plot
 fig6 = Mke.Figure(size=(700, 350))
@@ -249,7 +249,7 @@ Mke.current_figure()
 ```julia
 γomni = GaussianVariogram(sill=32., range=11.)
 OK = Kriging(γomni)
-s0 = S |> InterpolateNeighbors(G, :P=>OK, maxneighbors=20)
+s0 = S |> InterpolateNeighbors(G, model=OK, maxneighbors=20)
 Mke.plot(s0.geometry,color=s0.P)
 ```
 
@@ -319,8 +319,8 @@ Mke.current_figure()
 
 ```julia
 # standard sequential gaussian simulation with isotropic variogram
-sgs = SEQMethod(maxneighbors=25)
-sims1 = rand(GaussianProcess(γomni1_ns), G, S_ns, 100, sgs)
+sgs = SEQSIM(maxneighbors=25)
+sims1 = rand(GaussianProcess(γomni1_ns), G, 100, method=sgs, data=S_ns)
 med1 = quantile(sims1, 0.5)
 sims1_bt = [revert(ns, x, ref_S_ns) for x in (sims1[1],med1)]
 fig7 = Mke.Figure(size=(700, 350))
@@ -337,7 +337,7 @@ Mke.current_figure()
 # sequential gaussian simulation with local anisotropies (MW method)
 # not theoretically very correct, but can give good results
 local_sgs = LocalSGS(lparsx,maxneighbors=25)
-sims2 = rand(GaussianProcess(γx_ns), G, S_ns, 100, local_sgs)
+sims2 = rand(GaussianProcess(γx_ns), G, 100, method=local_sgs, data=S_ns)
 med2 = quantile(sims2, 0.5)
 sims2_bt = [revert(ns, x, ref_S_ns) for x in (sims2[1],med2)]
 fig8 = Mke.Figure(size=(700, 350))
@@ -353,7 +353,7 @@ Mke.current_figure()
 ```julia
 # sequential gaussian simulation after spatial deformation
 # standard simulation after local anisotropies is "removed"
-sims3 = rand(GaussianProcess(γomni2_ns), Dd1, Sd1_ns, 100, sgs)
+sims3 = rand(GaussianProcess(γomni2_ns), Dd1, 100, method=sgs, data=Sd1_ns)
 med3 = quantile(sims3, 0.5)
 sims3_bt = [revert(ns, x, ref_Sd1_ns) for x in (sims3[1],med3)]
 fig9 = Mke.Figure(size=(700, 350))

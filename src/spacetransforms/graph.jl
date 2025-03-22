@@ -33,7 +33,7 @@ function graph(
     obj::SpatialData,
     lpar::LocalAnisotropy,
     metric::Type{<:LocalMetric},
-    refvario::Variogram,
+    refvario::GeoStatsFunction,
     searcher::NeighborSearchMethod,
 )
 
@@ -58,7 +58,7 @@ function graph(
     obj::SpatialData,
     lpar::LocalAnisotropy,
     metric::Type{<:LocalMetric},
-    refvario::Variogram,
+    refvario::GeoStatsFunction,
     searcher::NeighborSearchMethod,
 )
 

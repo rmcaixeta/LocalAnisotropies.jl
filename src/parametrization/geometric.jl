@@ -35,7 +35,8 @@ function localanisotropies(
     quat = Array{Quaternion}(undef, len)
     m = Array{Vector}(undef, len)
 
-    @tasks for i = 1:len
+    #@tasks for i = 1:len
+    for i = 1:len
         neighids = search(centro(D, i), searcher)
         λ, v = pca(view(X, :, neighids), simplify)
 
@@ -76,6 +77,7 @@ function localanisotropies(::Type{Geometric}, trs::GeometrySet, magnitude::Abstr
 
         dcm_to_quat(DCM(m))
     end
+    q = q isa AbstractVector ? q : [q]
     mag = repeat(magnitude, 1, length(q))
     LocalAnisotropy(q, mag)
 end

@@ -59,7 +59,7 @@ struct LocalGeoData
     data::Union{SpatialData,Nothing}
     domain::SpatialData
     localaniso::LocalAnisotropy
-    refvario::Union{Variogram,Nothing}
+    refvario::Union{GeoStatsFunction,Nothing}
     datapars::Union{AbstractVector{Int},Nothing}
     graph::Union{SimpleWeightedGraph,Nothing}
 end
@@ -78,7 +78,7 @@ end
 
 Association of a spatial domain, its `LocalAnisotropy` and its reference variogram.
 """
-function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy, refvario::Variogram)
+function LocalGeoData(obj::SpatialData, lpars::LocalAnisotropy, refvario::GeoStatsFunction)
     LocalGeoData(nothing, obj, lpars, refvario, nothing, nothing)
 end
 
@@ -104,7 +104,7 @@ function LocalGeoData(
     hd::SpatialData,
     obj::SpatialData,
     lpars::LocalAnisotropy,
-    refvario::Variogram,
+    refvario::GeoStatsFunction,
 )
     hdids = grid2hd_ids(hd, obj)
     LocalGeoData(hd, obj, lpars, refvario, hdids, nothing)

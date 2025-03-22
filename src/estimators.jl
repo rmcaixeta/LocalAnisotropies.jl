@@ -7,110 +7,77 @@
 """
     LocalInterpolate(params ...)
 """
-struct LocalInterpolate{D<:Domain,N,M} <: TableTransform
+struct LocalInterpolate{D<:Domain,GM<:GeoStatsModel,P,N,M} <: TableTransform
     domain::D
-    selectors::Vector{ColumnSelector}
-    models::Vector{GeoStatsModel}
+    model::GM
+    path::P
+    point::Bool
+    prob::Bool
     minneighbors::Int
     maxneighbors::Int
     neighborhood::N
     distance::M
-    point::Bool
-    prob::Bool
 end
 
 LocalInterpolate(
-    domain::Domain,
-    selectors,
-    models;
-    minneighbors = 1,
-    maxneighbors = 10,
-    neighborhood = nothing,
-    distance = Euclidean(),
-    point = true,
-    prob = false,
-) = LocalInterpolate(
-    domain,
-    collect(ColumnSelector, selectors),
-    collect(GeoStatsModel, models),
-    minneighbors,
-    maxneighbors,
-    neighborhood,
-    distance,
-    point,
-    prob,
-)
+    domain::Domain;
+    model,
+    path=LinearPath(),
+    point=true,
+    prob=false,
+    minneighbors=1,
+    maxneighbors=10,
+    neighborhood=nothing,
+    distance=Euclidean()
+) = LocalInterpolate(domain, model, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
 
-LocalInterpolate(domain, pairs::Pair{<:Any,<:GeoStatsModel}...; kwargs...) =
-    LocalInterpolate(domain, selector.(first.(pairs)), last.(pairs); kwargs...)
+LocalInterpolate(geoms::AbstractVector{<:Geometry}; kwargs...) = LocalInterpolate(GeometrySet(geoms); kwargs...)
 
 isrevertible(::Type{<:LocalInterpolate}) = false
 
 function apply(transform::LocalInterpolate, geotable::AbstractGeoTable)
-    tab = values(geotable)
-    cols = Tables.columns(tab)
-    vars = Tables.columnnames(cols)
-
-    domain = transform.domain
-    selectors = transform.selectors
-    models = transform.models
-    minneighbors = transform.minneighbors
-    maxneighbors = transform.maxneighbors
-    neighborhood = transform.neighborhood
-    distance = transform.distance
-    point = transform.point
-    prob = transform.prob
-    path = LinearPath()
-
-    interps = map(selectors, models) do selector, model
-        svars = selector(vars)
-        data = geotable[:, svars]
-        localfitpredict(
-            model,
-            data,
-            domain,
-            point,
-            prob,
-            minneighbors,
-            maxneighbors,
-            neighborhood,
-            distance,
-            path,
+    interp = localfitpredict(
+        # forward arguments
+        transform.model,
+        geotable |> AbsoluteUnits(), # handle affine units
+        transform.domain;
+        path=transform.path,
+        point=transform.point,
+        prob=transform.prob,
+        neighbors=true,
+        minneighbors=transform.minneighbors,
+        maxneighbors=transform.maxneighbors,
+        neighborhood=transform.neighborhood,
+        distance=transform.distance
         )
-    end
 
-    newgeotable = reduce(hcat, interps)
-
-    newgeotable, nothing
+    interp, nothing
 end
 
 function localfitpredict(
     model::GeoStatsModel,
-    geotable::AbstractGeoTable,
-    pdomain::Domain,
-    point = true,
-    prob = false,
-    minneighbors = 1,
-    maxneighbors = 10,
-    neighborhood = nothing,
-    distance = Euclidean(),
-    path = LinearPath(),
+    dat::AbstractGeoTable,
+    dom::Domain;
+    path=LinearPath(),
+    point=true,
+    prob=false,
+    neighbors=true,
+    minneighbors=1,
+    maxneighbors=10,
+    neighborhood=nothing,
+    distance=Euclidean()
 )
+    # point or volume support
+    pdat = point ? GeoStatsModels._pointsupport(dat) : dat
 
-    table = values(geotable)
-    ddomain = domain(geotable)
-    vars = Tables.schema(table).names
-
-    # adjust data
-    data = if point
-        pset = PointSet(centroid(ddomain, i) for i = 1:nelements(ddomain))
-        GeoStatsModels._adjustunits(georef(values(geotable), pset))
-    else
-        GeoStatsModels._adjustunits(geotable)
+    if model isa KCModels && isnothing(model.hdlocalaniso)
+        model = initmodel(model, dat, dom)
     end
 
-    # fix neighbors limits
-    nobs = nrow(data)
+    # scale objects for numerical stability
+    smodel, sdat, sdom, sneigh = GeoStatsModels._scale(model, pdat, dom, neighborhood)
+
+    nobs = nrow(sdat)
     if maxneighbors > nobs || maxneighbors < 1
         maxneighbors = nobs
     end
@@ -119,69 +86,71 @@ function localfitpredict(
     end
 
     # determine bounded search method
-    searcher = if isnothing(neighborhood)
+    searcher = if isnothing(sneigh)
         # nearest neighbor search with a metric
-        KNearestSearch(ddomain, maxneighbors; metric = distance)
+        KNearestSearch(domain(sdat), maxneighbors; metric=distance)
     else
         # neighbor search with ball neighborhood
-        KBallSearch(ddomain, maxneighbors, neighborhood)
+        KBallSearch(domain(sdat), maxneighbors, sneigh)
     end
 
-    # prediction order
-    inds = traverse(pdomain, path)
+    # pre-allocate memory for neighbors
+    neighbors = Vector{Int}(undef, maxneighbors)
 
-    # predict function
-    predfun = prob ? predictprob : predict
+    # traverse domain with given path
+    inds = traverse(sdom, path)
+
+    # prediction function
+    predfun = prob ? GeoStatsModels._marginals ∘ predictprob : predict
 
     # check pars
-    localaniso = model.localaniso
-    oklocal1 = nvals(localaniso) == nvals(pdomain)
+    localaniso = smodel.localaniso
+    oklocal1 = nvals(localaniso) == nvals(dom)
     oklocal2 = typeof(localaniso) <: LocalAnisotropy
     @assert oklocal1 "number of local anisotropies must match domain points"
     @assert oklocal2 "wrong format of local anisotropies"
 
-    if model isa KCModels && isnothing(model.hdlocalaniso)
-        model = initmodel(model, geotable, pdomain)
-    end
+    # predict variables
+    cols = Tables.columns(values(sdat))
+    vars = Tables.columnnames(cols)
+    pred = @inbounds map(inds) do ind
+        # centroid of estimation
+        center = centroid(sdom, ind)
 
-    # predict variable values
-    function pred(var)
-        tmap(inds) do ind
-            # centroid of estimation
-            center = centroid(pdomain, ind)
+        # # modify search with local anisotropy
+        # searcher_ = if isnothing(sneigh)
+        #     Qi = qmat(localaniso, ind)
+        #     anisodistance = Mahalanobis(Symmetric(Qi))
+        #     KNearestSearch(sdom, maxneighbors; metric = anisodistance)
+        # else
+        #     # change angles here later
+        #     searcher
+        # end
 
-            # modify search with local anisotropy
-            # searcher_ = if isnothing(neighborhood)
-            #     Qi = qmat(model.localaniso, ind)
-            #     anisodistance = Mahalanobis(Symmetric(Qi))
-            #     KNearestSearch(ddomain, maxneighbors; metric = anisodistance)
-            # else
-            #     searcher
-            # end
+        # find neighbors with data
+        nneigh = search!(neighbors, center, searcher)
 
-            # find neighbors with data
-            ninds = search(center, searcher)
-            nneigh = length(ninds)
+        # predict if enough neighbors
+        if nneigh ≥ minneighbors
+            # final set of neighbors
+            ninds = view(neighbors, 1:nneigh)
 
-            # predict if enough neighbors
-            if nneigh ≥ minneighbors
-                # view neighborhood with data
-                samples = view(data, ninds)
+            # view neighborhood with data
+            samples = view(sdat, ninds)
 
-                # fit model to samples
-                fmodel = local_fit(model, samples, i = ind, m = ninds)
+            # fit model to samples
+            fmodel = local_fit(smodel, samples, i = ind, m = ninds)
 
-                # save prediction
-                geom = point ? center : pdomain[ind]
-                predfun(fmodel, var, geom)
-            else
-                # missing prediction
-                missing
-            end
+            # save prediction
+            geom = point ? center : sdom[ind]
+            vals = predfun(fmodel, vars, geom)
+        else
+            # missing prediction
+            vals = fill(missing, length(vars))
         end
+        (; zip(vars, vals)...)
     end
 
-    pairs = (var => pred(var) for var in vars)
-    newtab = (; pairs...) |> Tables.materializer(table)
-    georef(newtab, pdomain)
+    # convert to original table type
+    georef(pred |> Tables.materializer(values(sdat)), sdom)
 end

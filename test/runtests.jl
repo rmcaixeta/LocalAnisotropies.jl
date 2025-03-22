@@ -168,47 +168,47 @@ import LocalAnisotropies: rotmat, anisodistance
         # LocalIDW (IDW)
         println("IDW")
         ID = LocalIDW(2.0, lpars)
-        S |> LocalInterpolate(G, :P => ID, maxneighbors = 20)
+        S |> LocalInterpolate(G, model=ID, maxneighbors = 20)
 
         # LocalKriging (MW)
         println("MW")
         MW = LocalKriging(:MovingWindows, lpars, γ)
-        S |> LocalInterpolate(G, :P => MW, maxneighbors = 20)
+        S |> LocalInterpolate(G, model=MW, maxneighbors = 20)
 
         # LocalKriging (KC)
         println("KC")
         KC = LocalKriging(:KernelConvolution, lpars, γ)
-        S |> LocalInterpolate(G, :P => KC, maxneighbors = 6)
+        S |> LocalInterpolate(G, model=KC, maxneighbors = 6)
 
         # Spatial deformation: anisotropic distances
         println("SD")
         Sd1, Dd1 = deformspace(S, G, lpars, AnisoDistance, anchors = 250)
-        s3 = Sd1 |> Interpolate(Dd1, :P => Kriging(γ))
+        s3 = Sd1 |> Interpolate(Dd1, model=Kriging(γ))
         to_3d(s3)
 
         # Spatial deformation: anisotropic variogram distances
         Sd2, Dd2 = deformspace(S, G, lpars, KernelVariogram, γ, anchors = 250)
-        s4 = Sd2 |> Interpolate(Dd2, :P => Kriging(γ))
+        s4 = Sd2 |> Interpolate(Dd2, model=Kriging(γ))
         to_3d(s4)
 
         # Spatial deformation: geodesic anisotropic distances
         LDa = graph(S, G, lpars, AnisoDistance, searcher)
         Sd3, Dd3 = deformspace(LDa, GraphDistance, anchors = 250)
-        s5 = Sd3 |> Interpolate(Dd3, :P => Kriging(γ))
+        s5 = Sd3 |> Interpolate(Dd3, model=Kriging(γ))
         to_3d(s5)
 
         # Spatial deformation: geodesic anisotropic variogram distances
         LDv = graph(S, G, lpars, KernelVariogram, γ, searcher)
         Sd4, Dd4 = deformspace(LDv, GraphDistance, anchors = 250)
-        s6 = Sd4 |> Interpolate(Dd4, :P => Kriging(γ))
+        s6 = Sd4 |> Interpolate(Dd4, model=Kriging(γ))
         to_3d(s6)
 
         # Local sequential gaussian simulation
         println("SGS")
         local_sgs = LocalSGS(lpars, maxneighbors = 10)
-        rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
+        rand(GaussianProcess(γ), G, 2; method=local_sgs, data=S |> Quantile())
 
         local_sgs = LocalSGS(:KernelConvolution, lpars, maxneighbors = 10)
-        rand(GaussianProcess(γ), G, S |> Quantile(), 2, local_sgs)
+        #rand(GaussianProcess(γ), G, 2; method=local_sgs, data=S |> Quantile())
     end
 end

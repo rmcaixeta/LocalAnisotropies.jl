@@ -39,16 +39,16 @@ import GeoStatsModels:
     KrigingWeights,
     OrdinaryKriging,
     SimpleKriging,
-    lhs,
     nconstraints,
     predict,
     predictmean,
     predictprob,
     predictvar,
-    set_constraints_rhs!
-import GeoStatsProcesses: RandMethod, RandSetup
-import GeoStatsTransforms: ColumnSelector, TableTransform, selector, apply
+    rhsconstraints!
+import GeoStatsProcesses: FieldSimulationMethod, SEQSIM
+import GeoStatsTransforms: AbsoluteUnits, ColumnSelector, TableTransform, selector, apply
 import Meshes: lentype, withcrs
+
 
 include("parametrization.jl")
 include("estimators/idw.jl")
