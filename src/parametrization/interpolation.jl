@@ -27,7 +27,7 @@ idw3_into_grid = idwpars(localaniso, searcher, grid, power=3)
 ```
 """
 idwpars(lpars, searcher::NeighborSearchMethod, domain; kwargs...) =
-    interpolate(lpars, searcher, domain; wgtmethod = :idw, kwargs...)
+  interpolate(lpars, searcher, domain; wgtmethod=:idw, kwargs...)
 
 """
     smoothpars(localaniso, searcher; b=0.0, kwargs)
@@ -45,10 +45,8 @@ averaged_inplace = smoothpars(localaniso, searcher)
 averaged_grid = smoothpars(localaniso, searcher, grid, b=0.6)
 ```
 """
-smoothpars(lpars, searcher::NeighborSearchMethod, domain = nothing; b = 0.0, kwargs...) =
-    interpolate(lpars, searcher, domain; wgtmethod = :kernel, power = b, kwargs...)
-
-
+smoothpars(lpars, searcher::NeighborSearchMethod, domain=nothing; b=0.0, kwargs...) =
+  interpolate(lpars, searcher, domain; wgtmethod=:kernel, power=b, kwargs...)
 
 """
     interpolate(localaniso, searcher, domain=nothing;
@@ -91,177 +89,163 @@ General function to return the (weighted) average of `localaniso` using `searche
 Markley, F.L., et al. (2007). [Averaging quaternions](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf)
 """
 
-
 function interpolate(
-    lpars,
-    searcher::NeighborSearchMethod,
-    domain = nothing;
-    wgtmethod::Symbol = :idw,
-    power::Real = 0,
-    method::Symbol = :qavg,
-    metric = Euclidean(),
-    bkgpars = nothing,
-    bkgwgt = 0.0,
-    fillna = :bkg,
+  lpars,
+  searcher::NeighborSearchMethod,
+  domain=nothing;
+  wgtmethod::Symbol=:idw,
+  power::Real=0,
+  method::Symbol=:qavg,
+  metric=Euclidean(),
+  bkgpars=nothing,
+  bkgwgt=0.0,
+  fillna=:bkg
 )
-    D = searcher.domain
-    N = embeddim(D)
-    smooth = isnothing(domain)
-    len = smooth ? nvals(D) : nvals(domain)
-    targetD = smooth ? D : domain
-    #@assert nvals(D) == nvals(lpars) "searcher domain must match number of local anisotropies"
+  D = searcher.domain
+  N = embeddim(D)
+  smooth = isnothing(domain)
+  len = smooth ? nvals(D) : nvals(domain)
+  targetD = smooth ? D : domain
+  #@assert nvals(D) == nvals(lpars) "searcher domain must match number of local anisotropies"
 
-    quat = Vector{Quaternion}(undef, len)
-    m = Array{Float64}(undef, N, len)
-    missids = zeros(Bool, len)
+  quat = Vector{Quaternion}(undef, len)
+  m = Array{Float64}(undef, N, len)
+  missids = zeros(Bool, len)
 
-    @tasks for i = 1:len
-        ic = centro(targetD, i)
-        icoords = ustrip.(to(ic))
-        neighids = search(ic, searcher)
+  @tasks for i in 1:len
+    ic = centro(targetD, i)
+    icoords = ustrip.(to(ic))
+    neighids = search(ic, searcher)
 
-        if length(neighids) == 0
-            missids[i] = 1
-        else
-            twgt = 1.0 - bkgwgt
+    if length(neighids) == 0
+      missids[i] = 1
+    else
+      twgt = 1.0 - bkgwgt
 
-            prewgts = if power != 0
-                xcoords = coords_(D, neighids)
-                distances = Distances.colwise(metric, icoords, xcoords)
-                get_weights(wgtmethod, distances, power)
-            else
-                [1.0 for i in neighids]
-            end
-            weights = twgt .* prewgts ./ sum(prewgts)
+      prewgts = if power != 0
+        xcoords = coords_(D, neighids)
+        distances = Distances.colwise(metric, icoords, xcoords)
+        get_weights(wgtmethod, distances, power)
+      else
+        [1.0 for i in neighids]
+      end
+      weights = twgt .* prewgts ./ sum(prewgts)
 
-            rot = rotation(lpars, neighids)
-            mi = magnitude(lpars, neighids)
-            if bkgwgt > 0
-                rot = vcat(bkgpars[1], rot)
-                mi = hcat(bkgpars[2], mi)
-                weights = vcat(bkgwgt, weights)
-            end
+      rot = rotation(lpars, neighids)
+      mi = magnitude(lpars, neighids)
+      if bkgwgt > 0
+        rot = vcat(bkgpars[1], rot)
+        mi = hcat(bkgpars[2], mi)
+        weights = vcat(bkgwgt, weights)
+      end
 
-            if method in (:ellipavg, :ellipavg_full)
-                quat[i], mx = ellipsavg(mi, rot, weights)
-                m[:, i] .= mx
-                if method == :ellipavg && N == 3
-                    newm = mean(m[1:2, i])
-                    m[1, i] = 1
-                    m[2, i] = 1
-                    m[3, i] = m[3, i] / newm
-                end
-            else
-                quat[i], f = quatavg(rot, weights)
-                if smooth && method == :qavg
-                    m[:, i] .= magnitude(lpars, i)
-                else
-                    wgts = Weights(weights)
-                    mx =
-                        occursin("_mn", "$method") ?
-                        (mapreduce(x -> mean(view(mi, x, :), wgts), vcat, 1:N)) :
-                        (mapreduce(x -> quantile(view(mi, x, :), wgts, 0.5), vcat, 1:N))
-                    mx =
-                        occursin("_full", "$method") ?
-                        (f .* mx .+ (1 - f) .* [1.0 for i = 1:N]) : mx
-                    m[:, i] .= mx
-                end
-            end
+      if method in (:ellipavg, :ellipavg_full)
+        quat[i], mx = ellipsavg(mi, rot, weights)
+        m[:, i] .= mx
+        if method == :ellipavg && N == 3
+          newm = mean(m[1:2, i])
+          m[1, i] = 1
+          m[2, i] = 1
+          m[3, i] = m[3, i] / newm
         end
-    end
-
-    # deal with missing
-    ismiss = findall(missids)
-    if length(ismiss) > 0
-        if fillna == :nn || isnothing(bkgpars)
-            notmiss = findall(.!missids)
-            Dfrom = view(targetD, notmiss)
-            Dto = view(targetD, ismiss)
-            outids = notmiss[grid2hd_ids(Dto, Dfrom)]
-            quat[ismiss] .= quat[outids]
-            m[:, ismiss] .= m[:, outids]
+      else
+        quat[i], f = quatavg(rot, weights)
+        if smooth && method == :qavg
+          m[:, i] .= magnitude(lpars, i)
         else
-            for i in ismiss
-                quat[i] = bkgpars[1]
-                m[:, i] .= bkgpars[2]
-            end
+          wgts = Weights(weights)
+          mx =
+            occursin("_mn", "$method") ? (mapreduce(x -> mean(view(mi, x, :), wgts), vcat, 1:N)) :
+            (mapreduce(x -> quantile(view(mi, x, :), wgts, 0.5), vcat, 1:N))
+          mx = occursin("_full", "$method") ? (f .* mx .+ (1 - f) .* [1.0 for i in 1:N]) : mx
+          m[:, i] .= mx
         end
+      end
     end
+  end
 
-    LocalAnisotropy(quat, m)
+  # deal with missing
+  ismiss = findall(missids)
+  if length(ismiss) > 0
+    if fillna == :nn || isnothing(bkgpars)
+      notmiss = findall(.!missids)
+      Dfrom = view(targetD, notmiss)
+      Dto = view(targetD, ismiss)
+      outids = notmiss[grid2hd_ids(Dto, Dfrom)]
+      quat[ismiss] .= quat[outids]
+      m[:, ismiss] .= m[:, outids]
+    else
+      for i in ismiss
+        quat[i] = bkgpars[1]
+        m[:, i] .= bkgpars[2]
+      end
+    end
+  end
+
+  LocalAnisotropy(quat, m)
 end
 
 quat2vector(q) = [q.q0; q.q1; q.q2; q.q3]
 tensor(q) = q' .* q
 wtensor(q) = q[1] .* (q[2]' .* q[2])
 
-function quatavg(
-    qarr::AbstractVector{Quaternion},
-    warr::AbstractVector{Float64} = Float64[],
-)
-    if length(qarr) == 1
-        qarr[1], 1.0
-    else
-        Q = mapreduce(quat2vector, hcat, qarr)
-        n = size(Q, 2)
-        W = length(warr) > 0
+function quatavg(qarr::AbstractVector{Quaternion}, warr::AbstractVector{Float64}=Float64[])
+  if length(qarr) == 1
+    qarr[1], 1.0
+  else
+    Q = mapreduce(quat2vector, hcat, qarr)
+    n = size(Q, 2)
+    W = length(warr) > 0
 
-        A =
-            W ? mapreduce(wtensor, +, zip(warr, eachcol(Q))) :
-            mapreduce(tensor, +, eachcol(Q))
+    A = W ? mapreduce(wtensor, +, zip(warr, eachcol(Q))) : mapreduce(tensor, +, eachcol(Q))
 
-        # scale
-        Nw = W ? sum(warr) : n
-        A ./= Nw
+    # scale
+    Nw = W ? sum(warr) : n
+    A ./= Nw
 
-        # compute eigenvalues and -vectors
-        T = eigen(Symmetric(SMatrix{4,4}(A)))
-        s = sortperm(T.values, rev = true)
-        f = T.values[s][1] / sum(T.values)
-        V = view(T.vectors[:, s], :, 1)
-        Quaternion(V...), f
-    end
+    # compute eigenvalues and -vectors
+    T = eigen(Symmetric(SMatrix{4,4}(A)))
+    s = sortperm(T.values, rev=true)
+    f = T.values[s][1] / sum(T.values)
+    V = view(T.vectors[:, s], :, 1)
+    Quaternion(V...), f
+  end
 end
 
-function ellipsavg(
-    mag::AbstractArray,
-    qarr::AbstractVector{Quaternion},
-    wgt::AbstractVector{Float64} = Float64[],
-)
-    nv = length(qarr)
-    if nv == 1
-        qarr[1], mag
+function ellipsavg(mag::AbstractArray, qarr::AbstractVector{Quaternion}, wgt::AbstractVector{Float64}=Float64[])
+  nv = length(qarr)
+  if nv == 1
+    qarr[1], mag
+  else
+    Ms = [qmat(qarr[i], mag[:, i]) for i in 1:nv]
+    wgt = length(wgt) == 0 ? [1 / nv for i in Ms] : wgt
+    log_Ms = [log(Matrix(M)) for M in Ms]
+    log_mean = sum(wgt[i] * log_Ms[i] for i in 1:length(Ms))
+    M_avg = exp(log_mean)
+
+    N = size(M_avg, 1)
+    T = eigen(Symmetric(SMatrix{N,N}(M_avg)))
+    s = sortperm(T.values, rev=true)
+    V = T.vectors[:, sortperm(T.values)]'
+    λ = T.values[s] .^ 0.5
+    λ = λ / λ[1]
+
+    if N == 3
+      eigv = V
+      det(V) < 0 && (eigv = Diagonal(SVector{3}([-1, 1, 1])) * eigv)
     else
-        Ms = [qmat(qarr[i], mag[:, i]) for i = 1:nv]
-        wgt = length(wgt) == 0 ? [1 / nv for i in Ms] : wgt
-        log_Ms = [log(Matrix(M)) for M in Ms]
-        log_mean = sum(wgt[i] * log_Ms[i] for i = 1:length(Ms))
-        M_avg = exp(log_mean)
-
-        N = size(M_avg, 1)
-        T = eigen(Symmetric(SMatrix{N,N}(M_avg)))
-        s = sortperm(T.values, rev = true)
-        V = T.vectors[:, sortperm(T.values)]'
-        λ = T.values[s] .^ 0.5
-        λ = λ / λ[1]
-
-        if N == 3
-            eigv = V
-            det(V) < 0 && (eigv = Diagonal(SVector{3}([-1, 1, 1])) * eigv)
-        else
-            eigv = zeros(Float64, 3, 3)
-            eigv[1:2, 1:2] = V
-            eigv[1, 1] ≉ eigv[2, 2] && (eigv[1, :] .*= -1)
-            eigv[3, 3] = 1.0
-            eigv = SMatrix{3,3}(eigv)
-        end
-        q = dcm_to_quat(DCM(eigv))
-        q, λ
+      eigv = zeros(Float64, 3, 3)
+      eigv[1:2, 1:2] = V
+      eigv[1, 1] ≉ eigv[2, 2] && (eigv[1, :] .*= -1)
+      eigv[3, 3] = 1.0
+      eigv = SMatrix{3,3}(eigv)
     end
+    q = dcm_to_quat(DCM(eigv))
+    q, λ
+  end
 end
-
 
 function get_weights(method, distances, par)
-    method == :kernel ? exp.(-distances .^ 2 ./ (2 * par^2)) :
-    method == :idw ? 1 ./ (eps() .+ distances) .^ par : 1 ./ (eps() .+ distances) .^ par
+  method == :kernel ? exp.(-distances .^ 2 ./ (2 * par^2)) :
+  method == :idw ? 1 ./ (eps() .+ distances) .^ par : 1 ./ (eps() .+ distances) .^ par
 end

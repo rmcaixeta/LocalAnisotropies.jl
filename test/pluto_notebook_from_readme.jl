@@ -72,11 +72,11 @@ begin
 
     # do an unconventional variography along local X axis (same can be done for Y)
     expvario = localvariography(S, spars, :P, tol = 2, maxlag = 20, nlags = 20, axis = :X)
-    #Mke.plot(expvario)
+    Mke.plot(expvario)
     γx = ExponentialVariogram(sill = 32.0, range = 40.0)
     γy = GaussianVariogram(sill = 32.0, range = 8.0)
-    #Mke.plot!(γx)
-    #Mke.current_figure()
+    Mke.plot!(γx)
+    Mke.current_figure()
 end
 
 # ╔═╡ 5859126d-a870-49c1-b74f-7eb50e29f78b

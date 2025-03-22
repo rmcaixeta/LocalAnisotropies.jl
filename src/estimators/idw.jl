@@ -5,8 +5,8 @@
 
 # Local IDW estimator using local anisotropies
 struct LocalIDWModel{E,L} <: GeoStatsModel
-    exponent::E
-    localaniso::L
+  exponent::E
+  localaniso::L
 end
 
 """
@@ -22,12 +22,12 @@ LocalIDW(exponent, localaniso::LocalAnisotropy) = LocalIDWModel(exponent, locala
 LocalIDW(localaniso::LocalAnisotropy) = LocalIDWModel(1, localaniso)
 
 function local_fit(model::LocalIDWModel, data; i, m)
-    LA = model.localaniso
-    state = IDWState(data)
+  LA = model.localaniso
+  state = IDWState(data)
 
-    # get local anisotropy at estimation point
-    Qi = qmat(LA, i)
-    d = Mahalanobis(Symmetric(Qi))
+  # get local anisotropy at estimation point
+  Qi = qmat(LA, i)
+  d = Mahalanobis(Symmetric(Qi))
 
-    FittedIDW(IDW(model.exponent, d), state)
+  FittedIDW(IDW(model.exponent, d), state)
 end

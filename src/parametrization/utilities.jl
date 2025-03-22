@@ -23,41 +23,35 @@ And range3 will vary between 1 and 5.
 example = rescale_magnitude(localaniso3d, r1=1, r2=(0.2,1.0), r3=(0.1,0.5))
 ```
 """
-function rescale_magnitude!(
-    lp::LocalAnisotropy;
-    r1 = nothing,
-    r2 = nothing,
-    r3 = nothing,
-    clip = [0.05, 0.95],
-)
-    N = ndims(lp)
-    m = lp.magnitude
-    rvals = (r1, r2, r3)
+function rescale_magnitude!(lp::LocalAnisotropy; r1=nothing, r2=nothing, r3=nothing, clip=[0.05, 0.95])
+  N = ndims(lp)
+  m = lp.magnitude
+  rvals = (r1, r2, r3)
 
-    for i = 1:N
-        rvals[i] == nothing && continue
+  for i in 1:N
+    rvals[i] == nothing && continue
 
-        mi = m[i, :]
-        qx = quantile(mi, clip)
+    mi = m[i, :]
+    qx = quantile(mi, clip)
 
-        if rvals[i] isa Number
-            m[i, :] .= rvals[i]
-        elseif qx[1] == qx[2]
-            throw(ArgumentError("clipped values are unique; inform a single value to r$i"))
-        else
-            mi[mi.<qx[1]] .= qx[1]
-            mi[mi.>qx[2]] .= qx[2]
-            mi = (mi .- qx[1]) ./ (qx[2] - qx[1])
-            b1, b2 = rvals[i] isa Number ? (rvals[i], rvals[i]) : rvals[i]
-            m[i, :] .= (b1 .+ (b2 - b1) .* mi)
-        end
+    if rvals[i] isa Number
+      m[i, :] .= rvals[i]
+    elseif qx[1] == qx[2]
+      throw(ArgumentError("clipped values are unique; inform a single value to r$i"))
+    else
+      mi[mi .< qx[1]] .= qx[1]
+      mi[mi .> qx[2]] .= qx[2]
+      mi = (mi .- qx[1]) ./ (qx[2] - qx[1])
+      b1, b2 = rvals[i] isa Number ? (rvals[i], rvals[i]) : rvals[i]
+      m[i, :] .= (b1 .+ (b2 - b1) .* mi)
     end
-    lp
+  end
+  lp
 end
 
 function rescale_magnitude(lpo::LocalAnisotropy; kwargs...)
-    lp = deepcopy(lpo)
-    rescale_magnitude!(lp; kwargs...)
+  lp = deepcopy(lpo)
+  rescale_magnitude!(lp; kwargs...)
 end
 
 """
@@ -76,18 +70,18 @@ the magnitude will turn to [5.0, 1.0], and after scaling to the same previous
 variogram, the range in X would be 50m and in Y would be 10m.
 """
 function reference_magnitude!(lpar::LocalAnisotropy, ax::Symbol)
-    # rescale magnitude according to reference axis
-    m = lpar.magnitude
-    ref = m[iaxis(ax), :]
-    for i = 1:size(m, 1)
-        m[i, :] ./= ref
-    end
-    lpar
+  # rescale magnitude according to reference axis
+  m = lpar.magnitude
+  ref = m[iaxis(ax), :]
+  for i in 1:size(m, 1)
+    m[i, :] ./= ref
+  end
+  lpar
 end
 
 function reference_magnitude(lpar::LocalAnisotropy, ax::Symbol)
-    lp = deepcopy(lpar)
-    reference_magnitude!(lp, ax)
+  lp = deepcopy(lpar)
+  reference_magnitude!(lp, ax)
 end
 
 """
@@ -109,27 +103,26 @@ newpars = adjust_rake(localaniso, azimuths)
 ```
 """
 function adjust_rake!(lpar::LocalAnisotropy, az::AbstractVector)
+  rot = map(1:nvals(lpar)) do i
+    dcm = quat_to_dcm(lpar.rotation[i])
+    p1 = Plane(Point(0, 0, 0), Vec(dcm[1, :]), Vec(dcm[2, :]))
+    n2 = Vec(sind(az[i] + 90), cosd(az[i] + 90), 0)
+    p2 = Plane(Point(0, 0, 0), n2)
 
-    rot = map(1:nvals(lpar)) do i
-        dcm = quat_to_dcm(lpar.rotation[i])
-        p1 = Plane(Point(0, 0, 0), Vec(dcm[1, :]), Vec(dcm[2, :]))
-        n2 = Vec(sind(az[i] + 90), cosd(az[i] + 90), 0)
-        p2 = Plane(Point(0, 0, 0), n2)
-
-        dcm = collect(dcm)
-        icross = ustrip.(to(intersection(p1, p2).geom.b))
-        dcm[1, :] .= icross
-        dcm[2, :] .= cross(dcm[1, :], dcm[3, :])
-        det(dcm) < 0 && (dcm = Diagonal([-1, 1, 1]) * dcm)
-        dcm_to_quat(DCM(dcm))
-    end
-    lpar.rotation .= rot
-    lpar
+    dcm = collect(dcm)
+    icross = ustrip.(to(intersection(p1, p2).geom.b))
+    dcm[1, :] .= icross
+    dcm[2, :] .= cross(dcm[1, :], dcm[3, :])
+    det(dcm) < 0 && (dcm = Diagonal([-1, 1, 1]) * dcm)
+    dcm_to_quat(DCM(dcm))
+  end
+  lpar.rotation .= rot
+  lpar
 end
 
 function adjust_rake(lpar::LocalAnisotropy, az::AbstractVector)
-    lp = deepcopy(lpar)
-    adjust_rake!(lp, az)
+  lp = deepcopy(lpar)
+  adjust_rake!(lp, az)
 end
 
 """
@@ -145,75 +138,69 @@ loaded in Paraview or similars and processed as Glyphs to plot the directions.
 If `dir = :ellips`, TensorGlyphs must be used for proper visualization (need to
 disable extract eigenvalues).
 """
-function to_vtk(
-    vtkfile,
-    coords::AbstractArray,
-    lpars::LocalAnisotropy;
-    dir = :ellips,
-    magnitude = :ranges,
-)
-    @assert dir in [:ellips, :XYZ, :X, :Y, :Z] "`dir` must be :ellips, :XYZ :X, :Y or :Z"
-    @assert magnitude in [:ratios, :ranges] "`magnitude` must be :ratios or :ranges"
+function to_vtk(vtkfile, coords::AbstractArray, lpars::LocalAnisotropy; dir=:ellips, magnitude=:ranges)
+  @assert dir in [:ellips, :XYZ, :X, :Y, :Z] "`dir` must be :ellips, :XYZ :X, :Y or :Z"
+  @assert magnitude in [:ratios, :ranges] "`magnitude` must be :ratios or :ranges"
 
-    elp = (dir == :ellips)
-    dim = size(coords, 1)
-    n = size(coords, 2)
-    axs = dir in [:XYZ, :ellips] ? (1:dim) : [iaxis(dir)]
-    xyz = dim == 2 ? vcat(coords, zeros(Float64, 1, n)) : coords
-    vtx = [MeshCell(VTKCellTypes.VTK_VERTEX, [i]) for i = 1:n]
-    ijk = elp ? zeros(Float64, 9, n, 1, 1) : [zeros(Float64, 3, n, 1, 1) for i in axs]
-    zx = (dim == 2 && elp) ? minimum(lpars.magnitude) / 10 : 0.0
+  elp = (dir == :ellips)
+  dim = size(coords, 1)
+  n = size(coords, 2)
+  axs = dir in [:XYZ, :ellips] ? (1:dim) : [iaxis(dir)]
+  xyz = dim == 2 ? vcat(coords, zeros(Float64, 1, n)) : coords
+  vtx = [MeshCell(VTKCellTypes.VTK_VERTEX, [i]) for i in 1:n]
+  ijk = elp ? zeros(Float64, 9, n, 1, 1) : [zeros(Float64, 3, n, 1, 1) for i in axs]
+  zx = (dim == 2 && elp) ? minimum(lpars.magnitude) / 10 : 0.0
 
-    # put data into vtk structure format
-    for x = 1:n
-        if elp
-            mag = lpars.magnitude[:, x]
-            dim == 2 && push!(mag, zx)
-            Λ = Diagonal(SVector{3}(mag))
-            P = rotmat(lpars, x)' * Λ
-            for v = 1:length(P)
-                ijk[v, x, 1, 1] = P[v]
-            end
-        else
-            dcm = rotmat(lpars, x)
-            f = dcm[3, 3] < 0 ? -1 : 1
-            for d in axs
-                ijk[d][1, x, 1, 1] = f * dcm[d, 1]
-                ijk[d][2, x, 1, 1] = f * dcm[d, 2]
-                ijk[d][3, x, 1, 1] = f * dcm[d, 3]
-            end
-        end
+  # put data into vtk structure format
+  for x in 1:n
+    if elp
+      mag = lpars.magnitude[:, x]
+      dim == 2 && push!(mag, zx)
+      Λ = Diagonal(SVector{3}(mag))
+      P = rotmat(lpars, x)' * Λ
+      for v in 1:length(P)
+        ijk[v, x, 1, 1] = P[v]
+      end
+    else
+      dcm = rotmat(lpars, x)
+      f = dcm[3, 3] < 0 ? -1 : 1
+      for d in axs
+        ijk[d][1, x, 1, 1] = f * dcm[d, 1]
+        ijk[d][2, x, 1, 1] = f * dcm[d, 2]
+        ijk[d][3, x, 1, 1] = f * dcm[d, 3]
+      end
     end
+  end
 
-    # write vtk file
-    outfiles = vtk_grid(vtkfile, xyz, (vtx)) do vtk
-        if elp
-            vtk["ellips"] = ijk
-        else
-            for d in axs
-                vtk["dir$d"] = ijk[d]
-            end
-        end
-        for d = 1:dim
-            if magnitude == :ranges
-                vtk["range$d"] = lpars.magnitude[d, :]
-            elseif d > 1
-                vtk["ratio$(d-1)"] = lpars.magnitude[d, :] ./ lpars.magnitude[1, :]
-            end
-        end
+  # write vtk file
+  outfiles = vtk_grid(vtkfile, xyz, (vtx)) do vtk
+    if elp
+      vtk["ellips"] = ijk
+    else
+      for d in axs
+        vtk["dir$d"] = ijk[d]
+      end
     end
+    for d in 1:dim
+      if magnitude == :ranges
+        vtk["range$d"] = lpars.magnitude[d, :]
+      elseif d > 1
+        vtk["ratio$(d-1)"] = lpars.magnitude[d, :] ./ lpars.magnitude[1, :]
+      end
+    end
+  end
 end
 
 function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
-    coords = reduce(hcat, [ustrip.(to(centro(D, x))) for x = 1:nvals(D)])
-    to_vtk(vtkfile, coords, lpars; kwargs...)
+  coords = reduce(hcat, [ustrip.(to(centro(D, x))) for x in 1:nvals(D)])
+  to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
 
-function Base.vcat(lpar1::LocalAnisotropy, lpar2::LocalAnisotropy; kind = :union)
-    kind != :union && error("vcat of LocalAnisotropy is restricted to kind=:union ")
-    rot = vcat(lpar1.rotation, lpar2.rotation)
-    mag = hcat(lpar1.magnitude, lpar2.magnitude)
-    LocalAnisotropy(rot, mag)
+function Base.vcat(lpar1::LocalAnisotropy, lpar2::LocalAnisotropy; kind=:union)
+  kind != :union && error("vcat of LocalAnisotropy is restricted to kind=:union ")
+  rot = vcat(lpar1.rotation, lpar2.rotation)
+  mag = hcat(lpar1.magnitude, lpar2.magnitude)
+  LocalAnisotropy(rot, mag)
 end
