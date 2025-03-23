@@ -184,6 +184,6 @@ import LocalAnisotropies: rotmat, anisodistance
     rand(GaussianProcess(γ), G, 2; method=local_sgs, data=S |> Quantile())
 
     local_sgs = LocalSGS(:KernelConvolution, lpars, maxneighbors=10)
-    #rand(GaussianProcess(γ), G, 2; method=local_sgs, data=S |> Quantile())
+    rand(GaussianProcess(γ), G, 2; method=local_sgs, data=S |> Quantile())
   end
 end

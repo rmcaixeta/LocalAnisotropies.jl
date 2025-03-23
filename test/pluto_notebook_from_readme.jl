@@ -69,13 +69,13 @@ end
 begin
     # pass local anisotropies to samples
     spars = nnpars(lpars, D, S)
-
+	#
     # do an unconventional variography along local X axis (same can be done for Y)
     expvario = localvariography(S, spars, :P, tol = 2, maxlag = 20, nlags = 20, axis = :X)
-    Mke.plot(expvario)
+    expfig1 = funplot(expvario)
     γx = ExponentialVariogram(sill = 32.0, range = 40.0)
     γy = GaussianVariogram(sill = 32.0, range = 8.0)
-    Mke.plot!(γx)
+    funplot!(expfig1, γx)
     Mke.current_figure()
 end
 
@@ -212,14 +212,16 @@ begin
     expomni2_ns = EmpiricalVariogram(Sd1_ns, :P, maxlag = 20, nlags = 20)
     γomni2_ns = ExponentialVariogram(sill = 1.0, range = 50.0)
 
-    figv = Mke.Figure(size = (700, 235))
-    Mke.plot(figv[1, 1], expvario_ns)
-    Mke.plot!(figv[1, 1], γx_ns, color = :red)
-    Mke.plot(figv[1, 2], expomni1_ns)
-    Mke.plot!(figv[1, 2], γomni1_ns, color = :red)
-    Mke.plot(figv[1, 3], expomni2_ns)
-    Mke.plot!(figv[1, 3], γomni2_ns, maxlag = 20, color = :red)
-    Mke.current_figure()
+    #figv = Mke.Figure(size = (700, 235))
+    #expfigs1 = funplot(expvario_ns)
+    #funplot!(expfigs1, γx_ns, color = :red)
+    #expfigs2 = funplot(expomni1_ns)
+    #funplot!(expfigs2, γomni1_ns, color = :red)
+    #funplot!(figv[1, 3], expomni2_ns)
+    #funplot!(figv[1, 3], γomni2_ns, maxlag = 20, color = :red)
+	#figv[1, 1] = expfigs1.scene
+	#figv[1, 2] = expfigs2.scene
+    #Mke.current_figure()
 end
 
 # ╔═╡ a9dd3f32-92df-4ddf-9f35-6a8f8b73b5be

@@ -143,10 +143,10 @@ spars = nnpars(lpars, D, S)
 
 # do an unconventional variography along local X axis (same can be done for Y)
 expvario = localvariography(S, spars, :P, tol=2, maxlag=20, nlags=20, axis=:X)
-Mke.plot(expvario)
-γx = ExponentialVariogram(sill=32., range=40.)
-γy = GaussianVariogram(sill=32., range=8.)
-Mke.plot!(γx)
+expfig1 = funplot(expvario)
+γx = ExponentialVariogram(sill = 32.0, range = 40.0)
+γy = GaussianVariogram(sill = 32.0, range = 8.0)
+funplot!(expfig1, γx)
 Mke.current_figure()
 ```
 

@@ -49,13 +49,11 @@ function kcfill!(Γ, γ::GeoStatsFunction, domain, localaniso)
       gᵢ = domain[i]
       Qi = localaniso[i]
       sᵢ = GeoStatsFunctions._sample(γ, gᵢ)
-      #Γ[i, j] = kccov(γ, gᵢ, gⱼ, Qi, Qj)
-      #Γᵢⱼ = ustrip.(mean(γ(pᵢ, pⱼ) for pᵢ in sᵢ, pⱼ in sⱼ))
-      Γᵢⱼ = ustrip.(mean(kccov(γ, pᵢ, pⱼ, Qi, Qj) for pᵢ in sᵢ, pⱼ in sⱼ))
+      Γᵢⱼ = ustrip.(mean(kcvario(γ, pᵢ, pⱼ, Qi, Qj) for pᵢ in sᵢ, pⱼ in sⱼ))
       Γ[((i - 1) * k + 1):(i * k), ((j - 1) * k + 1):(j * k)] .= Γᵢⱼ
     end
     # diagonal entries
-    Γᵢⱼ = ustrip.(mean(γ(pⱼ, pⱼ) for pⱼ in sⱼ, pⱼ in sⱼ))
+    Γᵢⱼ = ustrip.(mean(kcvario(γ, pⱼ, pⱼ, Qj, Qj) for pⱼ in sⱼ, pⱼ in sⱼ))
     Γ[((j - 1) * k + 1):(j * k), ((j - 1) * k + 1):(j * k)] .= Γᵢⱼ
   end
 
@@ -77,9 +75,7 @@ function kcfill!(F, f::GeoStatsFunction, domain₁, domain₂, Qx₀, hdla)
     for i in 1:m
       gᵢ = domain₁[i]
       sᵢ = GeoStatsFunctions._sample(f, gᵢ)
-      #RHS[j] = kccov(fun, pₒ, xj, localaniso[1], localaniso[2][j])
-      #Fᵢⱼ = ustrip.(mean(f(pᵢ, pⱼ) for pᵢ in sᵢ, pⱼ in sⱼ))
-      Fᵢⱼ = ustrip.(mean(kccov(f, pᵢ, pⱼ, Qx₀, hdla[j]) for pᵢ in sᵢ, pⱼ in sⱼ))
+      Fᵢⱼ = ustrip.(mean(kcvario(f, pᵢ, pⱼ, hdla[i], Qx₀) for pᵢ in sᵢ, pⱼ in sⱼ))
       F[((i - 1) * k + 1):(i * k), ((j - 1) * k + 1):(j * k)] .= Fᵢⱼ
     end
   end
@@ -99,4 +95,9 @@ function kccov(γ::GeoStatsFunction, xi, xj, Qi::AbstractMatrix, Qj::AbstractMat
 
   Cij = (sill(γl) - γl(xi, xj))
   (det(Qi)^0.25) * (det(Qj)^0.25) * (det(Qij)^-0.5) * Cij
+end
+
+function kcvario(γ::GeoStatsFunction, xi, xj, Qi::AbstractMatrix, Qj::AbstractMatrix)
+  C = kccov(γ, xi, xj, Qi, Qj)
+  sill(γ) - C
 end
