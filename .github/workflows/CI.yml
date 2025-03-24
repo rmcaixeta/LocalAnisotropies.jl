@@ -7,17 +7,19 @@ on:
     branches:
       - master
     tags: '*'
-env:
-  JULIA_NUM_THREADS: 2
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
+          - 'lts'
+          - '1'
         os:
           - ubuntu-latest
           - macos-latest
