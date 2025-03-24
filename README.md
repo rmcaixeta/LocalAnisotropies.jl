@@ -303,14 +303,15 @@ expomni1_ns = EmpiricalVariogram(S_ns, :P, maxlag=20, nlags=20)
 expomni2_ns = EmpiricalVariogram(Sd1_ns, :P, maxlag=20, nlags=20)
 γomni2_ns = ExponentialVariogram(sill=1.0, range=50.)
 
-figv = Mke.Figure(size=(700, 235))
-Mke.plot(figv[1,1],expvario_ns)
-Mke.plot!(figv[1,1],γx_ns,color=:red)
-Mke.plot(figv[1,2],expomni1_ns)
-Mke.plot!(figv[1,2],γomni1_ns,color=:red)
-Mke.plot(figv[1,3],expomni2_ns)
-Mke.plot!(figv[1,3],γomni2_ns,maxlag=20,color=:red)
-Mke.current_figure()
+## subplots not working anymore this way, need to be adjusted
+#figv = Mke.Figure(size=(700, 235))
+#Mke.plot(figv[1,1],expvario_ns)
+#Mke.plot!(figv[1,1],γx_ns,color=:red)
+#Mke.plot(figv[1,2],expomni1_ns)
+#Mke.plot!(figv[1,2],γomni1_ns,color=:red)
+#Mke.plot(figv[1,3],expomni2_ns)
+#Mke.plot!(figv[1,3],γomni2_ns,maxlag=20,color=:red)
+#Mke.current_figure()
 ```
 
 <p align="center">

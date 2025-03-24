@@ -5,6 +5,18 @@
 
 """
     LocalInterpolate(params ...)
+
+Example:
+MW = LocalKriging(:MovingWindows, lpars, γ)
+data |> Select(:var) |> LocalInterpolate(domain, model=MW, kwargs...)
+
+## Keyword Parameters
+* `point`        - Perform interpolation on point support (default to `true`)
+* `prob`         - Perform probabilistic interpolation (default to `false`)
+* `minneighbors` - Minimum number of neighbors (default to `1`)
+* `maxneighbors` - Maximum number of neighbors (default to `10`)
+* `neighborhood` - Search neighborhood (default to `nothing`)
+* `distance`     - A distance defined in Distances.jl (default to `Euclidean()`)
 """
 struct LocalInterpolate{D<:Domain,GM<:GeoStatsModel,P,N,M} <: TableTransform
   domain::D
@@ -116,7 +128,7 @@ function localfitpredict(
     # centroid of estimation
     center = centroid(sdom, ind)
 
-    # # modify search with local anisotropy
+    ## need to modify search with local anisotropy later here
     # searcher_ = if isnothing(sneigh)
     #     Qi = qmat(localaniso, ind)
     #     anisodistance = Mahalanobis(Symmetric(Qi))

@@ -51,21 +51,12 @@ function initmodel(model::KCModels, geotable, pdomain)
 end
 
 """
-    LocalKriging(params ...)
+    LocalKriging(method, localaniso, γ, μ=nothing, localanisohd=nothing)
 
-LocalKriging estimation solver, where `var::Symbol` is the variable name
-and `param` is a `NamedTuple` containing the parameters below:
-
-## Parameters
-
-* `variogram` - Reference variogram model
-* `mean`      - Simple Kriging mean
-* `method`    - LocalKriging method. :MovingWindows or :KernelConvolution
-  (default to :MovingWindows)
-* `localaniso`    - Local parameters of the domain
-* `localanisohd`  - Local parameters of the samples. Only necessary for
-  :KernelConvolution method. They are automatically passed via NN from
-  `localaniso` if not informed.
+LocalKriging estimation solver where `method` can be :MovingWindows
+or :KernelConvolution; `γ` is the variogram model and `μ` is the mean in case
+simple kriging is used. `localanisohd`is only necessary for :KernelConvolution
+and it is automatically passed via NN from `localaniso` if not informed.
 """
 function LocalKriging(
   method::Symbol,
