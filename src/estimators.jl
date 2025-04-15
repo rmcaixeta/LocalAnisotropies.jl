@@ -163,5 +163,5 @@ function localfitpredict(
   end
 
   # convert to original table type
-  georef(pred |> Tables.materializer(values(sdat)), sdom)
+  georef(pred |> Tables.materializer(values(dat)), dom)
 end
