@@ -196,6 +196,45 @@ function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
   to_vtk(vtkfile, coords, lpars; kwargs...)
 end
 
+function to_vector(lpars::LocalAnisotropy, dir::Int)
+  mapreduce(vcat, 1:nvals(lpars)) do i
+    dcm = rotmat(lpars, i)
+    f = dcm[3, 3] < 0 ? -1 : 1
+    dvec = f * dcm[dir, :]
+    hcat(dvec...)
+  end
+end
+
+function to_vector_angle(lpars::LocalAnisotropy, dir::Int)
+  mapreduce(vcat, 1:nvals(lpars)) do x
+    dcm = rotmat(lpars, x)
+    i, j, k = dcm[dir, :]
+    plunge = rad2deg(asin(abs(k)))
+    azimuth = rad2deg(atan(j, i)) % 360
+    hcat(azimuth, plunge)
+  end
+end
+
+function to_plane_angle(lpars::LocalAnisotropy)
+  mapreduce(vcat, 1:nvals(lpars)) do x
+    dcm = rotmat(lpars, x)
+    nx, ny, nz = dcm[3,:]
+    strike = atan(ny, nx)
+    dipdir = (rad2deg(strike + π/2) + 360) % 360
+    dip = rad2deg(asin(abs(nz)))
+    hcat(dipdir, dip)
+  end
+end
+
+function to_plane_dipvector(lpars::LocalAnisotropy)
+  mapreduce(vcat, 1:nvals(lpars)) do x
+    dcm = rotmat(lpars, x)
+    nx, ny, nz = dcm[3,:]
+    dip_vector = [nz * nx, nz * ny, -(nx^2 + ny^2)]
+    hcat(dip_vector...)
+  end
+end
+
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
 
 function Base.vcat(lpar1::LocalAnisotropy, lpar2::LocalAnisotropy; kind=:union)

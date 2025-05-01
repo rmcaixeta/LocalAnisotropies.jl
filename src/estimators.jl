@@ -86,7 +86,9 @@ function localfitpredict(
   end
 
   # scale objects for numerical stability
-  smodel, sdat, sdom, sneigh = GeoStatsModels._scale(model, pdat, dom, neighborhood)
+  #smodel, sdat, sdom, sneigh = GeoStatsModels._scale(model, pdat, dom, neighborhood)
+  # or do not rescale by default
+  smodel, sdat, sdom, sneigh = (model, pdat, dom, neighborhood)
 
   nobs = nrow(sdat)
   if maxneighbors > nobs || maxneighbors < 1
@@ -116,7 +118,7 @@ function localfitpredict(
 
   # check pars
   localaniso = smodel.localaniso
-  oklocal1 = nvals(localaniso) == nvals(dom)
+  oklocal1 = nvals(localaniso) == nvals(sdom)
   oklocal2 = typeof(localaniso) <: LocalAnisotropy
   @assert oklocal1 "number of local anisotropies must match domain points"
   @assert oklocal2 "wrong format of local anisotropies"
@@ -129,17 +131,19 @@ function localfitpredict(
     center = centroid(sdom, ind)
 
     ## need to modify search with local anisotropy later here
-    # searcher_ = if isnothing(sneigh)
-    #     Qi = qmat(localaniso, ind)
-    #     anisodistance = Mahalanobis(Symmetric(Qi))
-    #     KNearestSearch(sdom, maxneighbors; metric = anisodistance)
-    # else
-    #     # change angles here later
-    #     searcher
-    # end
+    #searcher_ = if isnothing(sneigh)
+    #    Qi = qmat(localaniso, ind)
+    #    anisodistance = Mahalanobis(Symmetric(Qi))
+    #    KNearestSearch(sdom, maxneighbors; metric = anisodistance)
+    #else
+    #    # change angles here later
+    #    searcher
+    #end
 
     # find neighbors with data
     nneigh = search!(neighbors, center, searcher)
+    #neighbors = search(center, searcher_)
+    #nneigh = length(neighbors)
 
     # predict if enough neighbors
     if nneigh ≥ minneighbors
@@ -163,5 +167,5 @@ function localfitpredict(
   end
 
   # convert to original table type
-  georef(pred |> Tables.materializer(values(dat)), dom)
+  georef(pred |> Tables.materializer(values(sdat)), dom)
 end

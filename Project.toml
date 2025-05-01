@@ -1,7 +1,7 @@
 name = "LocalAnisotropies"
 uuid = "cb698b3a-2f1d-48b4-a1e9-ddc0b8f648e2"
 authors = ["Rafael Caixeta and contributors"]
-version = "0.8.1"
+version = "0.8.2"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"

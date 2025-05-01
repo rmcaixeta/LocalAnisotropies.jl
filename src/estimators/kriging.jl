@@ -171,15 +171,17 @@ function predictprob(fitted::LocalFittedKriging, var::Symbol, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, (var,)) |> first
   σ² = predictvar(fitted, w, gₒ) |> first
+  ## Ordinary kriging: inflate variance in comparison to simple kriging variance; correction for multigaussian case
   #σ² = fitted.model isa OrdinaryKriging  ? σ² + 2 * w.ν[1] : σ²
   Normal(ustrip.(μ), √σ²)
 end
 
-function predictprob(fitted::LocalFittedKriging, var, gₒ)
+function predictprob(fitted::LocalFittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
-  μ = predictmean(fitted, w, var)
-  σ² = predictvar(fitted, w, gₒ)
-  #σ² = fitted.model isa OrdinaryKriging  ? σ² + 2 * w.ν[1] : σ²
+  μ = predictmean(fitted, w, vars)
+  Σ = predictvar(fitted, w, gₒ)
+  # Correct somehow for the ordinary multivariate case?
+  # Σ = fitted.model isa OrdinaryKriging  ? Σ + 2 * w.ν[1] : Σ
   MvNormal(ustrip.(μ), Σ)
 end
 
