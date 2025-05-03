@@ -64,8 +64,7 @@ end
 
 function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data, preproc)
   # retrieve parameters
-  (; params, model, prior, sdom, sdat, cache, init) = preproc
-  (; path, searcher, nmin, nmax) = params
+  (; path, searcher, nmin, nmax, model, prior, sdom, sdat, cache, init) = preproc
   (; method, localaniso) = meth
 
   # initialize realization and mask

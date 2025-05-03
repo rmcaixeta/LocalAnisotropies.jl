@@ -120,11 +120,11 @@ function minpt(tr)
 end
 
 function normal_to_quaternion(normal)
-  strike = [normal[2], -normal[1], 0]
+  strike = [-normal[2], normal[1], 0]
   v1 = strike ./ norm(strike)
   v2 = cross(v1, normal)
 
-  m = SMatrix{3,3}(v1..., v2..., normal...)
+  m = SMatrix{3,3}(v1..., v2..., normal...)'
   det(m) < 0 && (m = Diagonal(SVector{3}([-1, 1, 1])) * m)
 
   dcm_to_quat(DCM(m))

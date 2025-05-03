@@ -197,42 +197,58 @@ function to_vtk(vtkfile, D::SpatialData, lpars::LocalAnisotropy; kwargs...)
 end
 
 function to_vector(lpars::LocalAnisotropy, dir::Int)
-  mapreduce(vcat, 1:nvals(lpars)) do i
-    dcm = rotmat(lpars, i)
-    f = dcm[3, 3] < 0 ? -1 : 1
-    dvec = f * dcm[dir, :]
-    hcat(dvec...)
+  mapreduce(vcat, 1:nvals(lpars)) do x
+    to_vector(rotation(lpars, x), dir)
   end
 end
 
 function to_vector_angle(lpars::LocalAnisotropy, dir::Int)
   mapreduce(vcat, 1:nvals(lpars)) do x
-    dcm = rotmat(lpars, x)
-    i, j, k = dcm[dir, :]
-    plunge = rad2deg(asin(abs(k)))
-    azimuth = rad2deg(atan(j, i)) % 360
-    hcat(azimuth, plunge)
+    to_vector_angle(rotation(lpars, x), dir)
   end
 end
 
 function to_plane_angle(lpars::LocalAnisotropy)
   mapreduce(vcat, 1:nvals(lpars)) do x
-    dcm = rotmat(lpars, x)
-    nx, ny, nz = dcm[3,:]
-    strike = atan(ny, nx)
-    dipdir = (rad2deg(strike + π/2) + 360) % 360
-    dip = rad2deg(asin(abs(nz)))
-    hcat(dipdir, dip)
+    to_plane_angle(rotation(lpars, x))
   end
 end
 
 function to_plane_dipvector(lpars::LocalAnisotropy)
   mapreduce(vcat, 1:nvals(lpars)) do x
-    dcm = rotmat(lpars, x)
-    nx, ny, nz = dcm[3,:]
-    dip_vector = [nz * nx, nz * ny, -(nx^2 + ny^2)]
-    hcat(dip_vector...)
+    to_plane_dipvector(rotation(lpars, x))
   end
+end
+
+function to_vector(q::Quaternion, dir::Int)
+  dcm = quat_to_dcm(q)
+  f = dcm[3, 3] < 0 ? -1 : 1
+  dvec = f * dcm[dir, :]
+  hcat(dvec...)
+end
+
+function to_vector_angle(q::Quaternion, dir::Int)
+  dcm = quat_to_dcm(q)
+  i, j, k = dcm[dir, :]
+  plunge = rad2deg(asin(abs(k)))
+  azimuth = rad2deg(atan(j, i)) % 360
+  hcat(azimuth, plunge)
+end
+
+function to_plane_angle(q::Quaternion)
+  dcm = quat_to_dcm(q)
+  nx, ny, nz = dcm[3,:]
+  strike = atan(ny, nx)
+  dipdir = (rad2deg(strike + π/2) + 360) % 360
+  dip = rad2deg(asin(abs(nz)))
+  hcat(dipdir, dip)
+end
+
+function to_plane_dipvector(q::Quaternion)
+  dcm = quat_to_dcm(q)
+  nx, ny, nz = dcm[3,:]
+  dip_vector = [nz * nx, nz * ny, -(nx^2 + ny^2)]
+  hcat(dip_vector...)
 end
 
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
