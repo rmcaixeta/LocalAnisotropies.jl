@@ -108,13 +108,8 @@ function adjust_rake!(lpar::LocalAnisotropy, az::AbstractVector)
     p1 = Plane(Point(0, 0, 0), Vec(dcm[1, :]), Vec(dcm[2, :]))
     n2 = Vec(sind(az[i] + 90), cosd(az[i] + 90), 0)
     p2 = Plane(Point(0, 0, 0), n2)
-
-    dcm = collect(dcm)
     icross = ustrip.(to(intersection(p1, p2).geom.b))
-    dcm[1, :] .= icross
-    dcm[2, :] .= cross(dcm[1, :], dcm[3, :])
-    det(dcm) < 0 && (dcm = Diagonal([-1, 1, 1]) * dcm)
-    dcm_to_quat(DCM(dcm))
+    vectors_to_quaternion(icross, dcm[3, :]; dirs=(1,3))
   end
   lpar.rotation .= rot
   lpar
@@ -124,6 +119,9 @@ function adjust_rake(lpar::LocalAnisotropy, az::AbstractVector)
   lp = deepcopy(lpar)
   adjust_rake!(lp, az)
 end
+
+adjust_rake!(lpar::LocalAnisotropy, az::Number) = adjust_rake!(lpar, [az for i in 1:nvals(lpar)])
+adjust_rake(lpar::LocalAnisotropy, az::Number) = adjust_rake(lpar, [az for i in 1:nvals(lpar)])
 
 """
     to_vtk(vtkfile, coords, localaniso; dir=:ellips, magnitude=:ranges)
@@ -250,6 +248,35 @@ function to_plane_dipvector(q::Quaternion)
   dip_vector = [nz * nx, nz * ny, -(nx^2 + ny^2)]
   hcat(dip_vector...)
 end
+
+function angles_to_vector(azimuth, plunge)
+  i = cosd(plunge) * sind(azimuth)
+  j = cosd(plunge) * cosd(azimuth)
+  k = -sind(plunge)
+  [i, j, k]
+end
+
+function normal_to_quaternion(normal)
+  strike = [-normal[2], normal[1], 0]
+  v1 = sum(strike) > 0 ? strike ./ norm(strike) : [1,0,0]
+  v2 = cross(v1, normal)
+  vectors_to_quaternion(v1, v2, normal)
+end
+
+function vectors_to_quaternion(vec1, vec2, vec3)
+  m = SMatrix{3,3}(vec1..., vec2..., vec3...)'
+  det(m) < 0 && (m = Diagonal(SVector{3}([-1, 1, 1])) * m)
+  dcm_to_quat(DCM(m))
+end
+
+function vectors_to_quaternion(vec1, vec2; dirs=(1,2))
+  vecs = Vector{Vector{Float64}}(undef, 3)
+  vecs[dirs[1]] = vec1
+  vecs[dirs[2]] = vec2
+  vecs[setdiff(1:3, dirs)[1]] = cross(vec1, vec2)
+  vectors_to_quaternion(vecs...)
+end
+
 
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
 
