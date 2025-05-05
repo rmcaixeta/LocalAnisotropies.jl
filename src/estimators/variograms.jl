@@ -20,11 +20,11 @@ qmat(L::Union{LocalAnisotropy,Nothing}) = isnothing(L) ? nothing : [qmat(L, i) f
 
 function mw_estimator(μ, γ, localpar)
   # get local Mahalanobis matrix
-  Q = qmat(localpar...)
+  quat, mag = localpar
   # get reference pars. and apply local anisotropy to given structures
   p = structures(γ)
   γs = map(p[3]) do γ
-    Qs = ustrip.(Q ./ collect(radii(γ.ball))' .^ 2)
+    Qs = qmat(quat, mag .* ustrip.(radii(γ.ball)))
     γ = @set γ.ball = MetricBall(1.0, Mahalanobis(Symmetric(Qs)))
   end
   γl = NuggetEffect(p[1]) + sum(c * γ for (c, γ) in zip(p[2], γs))
