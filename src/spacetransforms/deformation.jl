@@ -172,10 +172,12 @@ function outobj(D, coord)
     h1 = n + 1
     dc = view(coord, :, 1:n)
     dd = view(coord, :, h1:hn)
-    dobj = dom isa Domain ? PointSet([tuple(dc[:, x]...) for x in 1:size(dc, 2)]) : georef(dom, dc)
+    dobj = PointSet([tuple(dc[:, x]...) for x in 1:size(dc, 2)])
+    dobj = dom isa Domain ? dobj : georef(dom, dobj)
     georef(values(sobj(D)), PointSet([tuple(dd[:, x]...) for x in 1:size(dd, 2)])), dobj
   else
-    dobj = dom isa Domain ? PointSet([tuple(coord[:, x]...) for x in 1:size(coord, 2)]) : georef(dom, coord)
+    dobj = PointSet([tuple(coord[:, x]...) for x in 1:size(coord, 2)])
+    dobj = dom isa Domain ? dobj : georef(dom, dobj)
     dobj
   end
   out
