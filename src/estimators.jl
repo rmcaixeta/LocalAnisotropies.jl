@@ -99,13 +99,13 @@ function localfitpredict(
   end
 
   # determine bounded search method
-  searcher = if isnothing(sneigh)
+  # searcher = if isnothing(sneigh)
     # nearest neighbor search with a metric
-    KNearestSearch(domain(sdat), maxneighbors; metric=distance)
-  else
+    # KNearestSearch(domain(sdat), maxneighbors; metric=distance)
+  # else
     # neighbor search with ball neighborhood
-    KBallSearch(domain(sdat), maxneighbors, sneigh)
-  end
+    # KBallSearch(domain(sdat), maxneighbors, sneigh)
+  # end
 
   # pre-allocate memory for neighbors
   neighbors = Vector{Int}(undef, maxneighbors)
@@ -131,19 +131,18 @@ function localfitpredict(
     center = centroid(sdom, ind)
 
     ## need to modify search with local anisotropy later here
-    #searcher_ = if isnothing(sneigh)
-    #    Qi = qmat(localaniso, ind)
-    #    anisodistance = Mahalanobis(Symmetric(Qi))
-    #    KNearestSearch(sdom, maxneighbors; metric = anisodistance)
-    #else
-    #    # change angles here later
-    #    searcher
-    #end
+    searcher = if isnothing(sneigh)
+        Qi = qmat(localaniso, ind)
+        anisodistance = Mahalanobis(Symmetric(Qi))
+        KNearestSearch(domain(sdat), maxneighbors; metric = anisodistance)
+    else
+        angs = convertangles(rotation(localaniso, ind), :Datamine)
+        localsneigh = MetricBall(radii(sneigh), DatamineAngles(angs))
+        KBallSearch(domain(sdat), maxneighbors, localsneigh)
+    end
 
     # find neighbors with data
     nneigh = search!(neighbors, center, searcher)
-    #neighbors = search(center, searcher_)
-    #nneigh = length(neighbors)
 
     # predict if enough neighbors
     if nneigh ≥ minneighbors
