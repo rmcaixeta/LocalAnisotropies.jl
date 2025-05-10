@@ -136,8 +136,11 @@ function localfitpredict(
         anisodistance = Mahalanobis(Symmetric(Qi))
         KNearestSearch(domain(sdat), maxneighbors; metric = anisodistance)
     else
-        angs = convertangles(rotation(localaniso, ind), :Datamine)
-        localsneigh = MetricBall(radii(sneigh), DatamineAngles(angs...))
+        N = ndims(localaniso)
+        angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
+        ranges = radii(sneigh)
+        ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
+        localsneigh = MetricBall(ranges, angs)
         KBallSearch(domain(sdat), maxneighbors, localsneigh)
     end
 

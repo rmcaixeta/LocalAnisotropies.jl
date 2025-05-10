@@ -54,6 +54,7 @@ rules = Dict(
   :TaitBryanIntr => RotationRule(:ZXY, [:CCW, :CCW, :CCW], true, :x, false),
   :EulerExtr => RotationRule(:ZXZ, [:CCW, :CCW, :CCW], true, :x, true),
   :EulerIntr => RotationRule(:ZXZ, [:CCW, :CCW, :CCW], true, :x, false),
+  :ZXZ => RotationRule(:ZXZ, [:CW, :CW, :CW], false, :x, false),
   :GSLIB => RotationRule(:ZXY, [:CW, :CCW, :CCW], false, :y, false),
   :Leapfrog => RotationRule(:ZXZ, [:CW, :CW, :CW], false, :x, false),
   :Datamine => RotationRule(:ZXZ, [:CW, :CW, :CW], false, :x, false),

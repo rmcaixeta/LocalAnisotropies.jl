@@ -103,8 +103,11 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
           anisodistance = Mahalanobis(Symmetric(Qi))
           KNearestSearch(searcher.domain, searcher.k; metric = anisodistance)
       else
-          angs = convertangles(rotation(localaniso, ind), :Datamine)
-          localsneigh = MetricBall(radii(searcher.ball), DatamineAngles(angs...))
+          N = ndims(localaniso)
+          angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
+          ranges = radii(searcher.ball)
+          ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
+          localsneigh = MetricBall(ranges, angs)
           KBallSearch(searcher.domain, searcher.k, localsneigh)
       end
 
