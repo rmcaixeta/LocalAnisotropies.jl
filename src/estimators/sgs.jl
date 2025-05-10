@@ -97,8 +97,19 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
       # buffer at target location
       buffer = view(realization, :, ind)
 
+      # local search
+      local_searcher = if searcher isa KNearestSearch
+          Qi = qmat(localaniso, ind)
+          anisodistance = Mahalanobis(Symmetric(Qi))
+          KNearestSearch(searcher.domain, searcher.k; metric = anisodistance)
+      else
+          angs = convertangles(rotation(localaniso, ind), :Datamine)
+          localsneigh = MetricBall(radii(searcher.ball), DatamineAngles(angs...))
+          KBallSearch(searcher.domain, searcher.k, localsneigh)
+      end
+
       # search neighbors with simulated data
-      n = search!(neighbors, center, searcher, mask=simulated)
+      n = search!(neighbors, center, local_searcher, mask=simulated)
 
       if n < nmin
         # draw from prior

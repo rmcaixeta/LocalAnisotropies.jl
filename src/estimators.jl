@@ -137,7 +137,7 @@ function localfitpredict(
         KNearestSearch(domain(sdat), maxneighbors; metric = anisodistance)
     else
         angs = convertangles(rotation(localaniso, ind), :Datamine)
-        localsneigh = MetricBall(radii(sneigh), DatamineAngles(angs))
+        localsneigh = MetricBall(radii(sneigh), DatamineAngles(angs...))
         KBallSearch(domain(sdat), maxneighbors, localsneigh)
     end
 
