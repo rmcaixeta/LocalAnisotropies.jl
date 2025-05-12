@@ -16,7 +16,7 @@ using LinearAlgebra
 using Meshes
 using MultivariateStats
 using NearestNeighbors
-using OhMyThreads: tmap, @tasks
+using OhMyThreads: tmap, tmapreduce, @tasks
 using RecipesBase
 using ReferenceFrameRotations
 using Setfield

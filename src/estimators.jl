@@ -98,15 +98,6 @@ function localfitpredict(
     minneighbors = 1
   end
 
-  # determine bounded search method
-  # searcher = if isnothing(sneigh)
-    # nearest neighbor search with a metric
-    # KNearestSearch(domain(sdat), maxneighbors; metric=distance)
-  # else
-    # neighbor search with ball neighborhood
-    # KBallSearch(domain(sdat), maxneighbors, sneigh)
-  # end
-
   # pre-allocate memory for neighbors
   neighbors = Vector{Int}(undef, maxneighbors)
 
@@ -123,6 +114,20 @@ function localfitpredict(
   @assert oklocal1 "number of local anisotropies must match domain points"
   @assert oklocal2 "wrong format of local anisotropies"
 
+  # determine bounded search method
+  ref_searcher = if isnothing(sneigh)
+      Qi = qmat(localaniso, 1)
+      anisodistance = Mahalanobis(Symmetric(Qi))
+      KNearestSearch(domain(sdat), maxneighbors; metric = anisodistance)
+  else
+      N = ndims(localaniso)
+      angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
+      ranges = radii(sneigh)
+      ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
+      localsneigh = MetricBall(ranges, angs)
+      KBallSearch(domain(sdat), maxneighbors, localsneigh)
+  end
+
   # predict variables
   cols = Tables.columns(values(sdat))
   vars = Tables.columnnames(cols)
@@ -130,18 +135,18 @@ function localfitpredict(
     # centroid of estimation
     center = centroid(sdom, ind)
 
-    ## need to modify search with local anisotropy later here
+    ## modify search with local anisotropy
     searcher = if isnothing(sneigh)
         Qi = qmat(localaniso, ind)
-        anisodistance = Mahalanobis(Symmetric(Qi))
-        KNearestSearch(domain(sdat), maxneighbors; metric = anisodistance)
+        @set ref_searcher.tree.metric = Mahalanobis(Symmetric(Qi))
     else
         N = ndims(localaniso)
         angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
         ranges = radii(sneigh)
         ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
         localsneigh = MetricBall(ranges, angs)
-        KBallSearch(domain(sdat), maxneighbors, localsneigh)
+        searcher_ = @set ref_searcher.ball = localsneigh
+        @set searcher_.tree.metric = metric(localsneigh)
     end
 
     # find neighbors with data

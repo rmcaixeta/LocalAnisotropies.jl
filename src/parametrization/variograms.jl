@@ -25,36 +25,30 @@ function localvariography(
   var₂=var₁;
   axis=:X,
   tol=1e-6,
-  maxratio1=Inf,
-  maxratio2=Inf,
   kwargs...
 )
-  p = pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)
+  p = pseudolocalpartition(obj, lpars, axis, tol)
   EmpiricalVariogram(p, var₁, var₂; kwargs...)
 end
 
-function pseudolocalpartition(obj, lpars, axis, tol, maxratio1, maxratio2)
+function pseudolocalpartition(obj, lpars, axis, tol)
   subs = []
   dims = ndims(lpars)
   n = nvals(obj)
   planar = length("$axis") == 2
-  for i in 1:n
-    maxratio1 != Inf && ratio1(lpars, i) > maxratio1 && continue
-    maxratio2 != Inf && ratio2(lpars, i) > maxratio2 && continue
+  axfun = planar ? get_normal_axis : iaxis
+  ptfun = planar ? PlanePartition : DirectionPartition
+  subs = tmapreduce(vcat, 1:n) do i
     x = to(centro(obj, i))
-    axfun = planar ? get_normal_axis : iaxis
     v = rotmat(lpars, i)[axfun(axis), 1:dims]
-    ptfun = planar ? PlanePartition : DirectionPartition
     p = ptfun(Tuple(v), tol=tol)
     s = Int[i]
-    for j in 1:n
-      i == j && continue
+    for j in setdiff(1:n, [i])
       y = to(centro(obj, j))
       p(x, y) && push!(s, j)
     end
-    push!(subs, s)
+    [s]
   end
-
   Partition(obj, subs)
 end
 

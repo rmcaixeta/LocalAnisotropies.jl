@@ -88,6 +88,20 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
   # variables passed to probability model
   mvars = length(vars) == 1 ? first(vars) : vars
 
+  # restart searcher using local aniso
+  ref_searcher = if searcher isa KNearestSearch
+      Qi = qmat(localaniso, 1)
+      anisodistance = Mahalanobis(Symmetric(Qi))
+      KNearestSearch(searcher.domain, searcher.k; metric = anisodistance)
+  else
+      N = ndims(localaniso)
+      angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
+      ranges = radii(searcher.ball)
+      ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
+      localsneigh = MetricBall(ranges, angs)
+      KBallSearch(searcher.domain, searcher.k, localsneigh)
+  end
+
   # simulation loop
   @inbounds for ind in traverse(domain, path)
     if !simulated[ind]
@@ -97,18 +111,18 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
       # buffer at target location
       buffer = view(realization, :, ind)
 
-      # local search
+      # modify local search
       local_searcher = if searcher isa KNearestSearch
           Qi = qmat(localaniso, ind)
-          anisodistance = Mahalanobis(Symmetric(Qi))
-          KNearestSearch(searcher.domain, searcher.k; metric = anisodistance)
+          @set ref_searcher.tree.metric = Mahalanobis(Symmetric(Qi))
       else
           N = ndims(localaniso)
           angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
           ranges = radii(searcher.ball)
           ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
           localsneigh = MetricBall(ranges, angs)
-          KBallSearch(searcher.domain, searcher.k, localsneigh)
+          searcher_ = @set ref_searcher.ball = localsneigh
+          @set searcher_.tree.metric = metric(localsneigh)
       end
 
       # search neighbors with simulated data
