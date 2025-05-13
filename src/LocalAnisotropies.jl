@@ -71,6 +71,7 @@ include("spacetransforms/metrics.jl")
 export adjust_rake,
   adjust_rake!,
   angles_to_vector,
+  average_variogram_along_vector,
   convertangles,
   deformspace,
   graph,

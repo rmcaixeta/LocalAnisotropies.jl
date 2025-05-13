@@ -8,7 +8,7 @@
   deformspace(samples, domain, localaniso, metric; kwargs)
     deformspace(samples, domain, localaniso, metric, refvariogram; kwargs)
     deformspace(graphobject, metric=GraphDistance; kwargs)
-  kwargs = (anchors=1500, maxoutdim=10, weights=nothing)
+  kwargs = (anchors=1500, maxoutdim=200, weights=nothing)
 
 Spatial deformation is a method that transforms coordinates to an isotropic
 space in high dimension where the local anisotropies information are embedded
@@ -35,7 +35,7 @@ function deformspace(
   lpar::LocalAnisotropy,
   metric::Type{<:LocalMetric};
   anchors=1500,
-  maxoutdim=10,
+  maxoutdim=200,
   weights=nothing
 )
   D = LocalGeoData(obj, lpar)
@@ -48,7 +48,7 @@ function deformspace(
   metric::Type{<:LocalMetric},
   refvario::GeoStatsFunction;
   anchors=1500,
-  maxoutdim=10,
+  maxoutdim=200,
   weights=nothing
 )
   D = LocalGeoData(obj, lpar, refvario)
@@ -61,7 +61,7 @@ function deformspace(
   lpar::LocalAnisotropy,
   metric::Type{<:LocalMetric};
   anchors=1500,
-  maxoutdim=10,
+  maxoutdim=200,
   weights=nothing
 )
   D = LocalGeoData(hd, obj, lpar)
@@ -75,7 +75,7 @@ function deformspace(
   metric::Type{<:LocalMetric},
   refvario::GeoStatsFunction;
   anchors=1500,
-  maxoutdim=10,
+  maxoutdim=200,
   weights=nothing
 )
   D = LocalGeoData(hd, obj, lpar, refvario)
@@ -87,7 +87,7 @@ function deformspace(
   D::LocalGeoData,
   metric::Type{<:LocalMetric}=GraphDistance;
   anchors=1500,
-  maxoutdim=10,
+  maxoutdim=200,
   weights=nothing
 )
 
@@ -142,11 +142,19 @@ function anchors_mds(ADM, maxoutdim)
   G = dmat2gram(ADM)
   F = eigen(Symmetric(G))
   λ = F.values
-  maxdim = minimum([maxoutdim, nx - 1, sum(λ .> 0)])
+
   sorti = sortperm(F.values, rev=true)
   sortλ = λ[sorti]
+
+  threshold = 0.95
+  total_var = sum(sortλ[sortλ .> 0])
+  explained_ratio = cumsum(sortλ[sortλ .> 0]) ./ total_var
+  maxdim = minimum([findfirst(x -> x ≥ threshold, explained_ratio), maxoutdim, nx - 1, sum(λ .> 0)])
+  #println(round.(explained_ratio, digits=2))
+  println("Ideal nb dims for 95% adherence = $(findfirst(x -> x ≥ threshold, explained_ratio))")
+  println("Nb of dimensions selected = $maxdim (explains $(round(explained_ratio[maxdim]*100, digits=2))% of the variance)")
+
   EM = (F.vectors[:, sorti])[:, 1:maxdim]
-  #println("Explained variance: $(sum(sortλ[1:maxdim])/sum(sortλ[sortλ .> 0]))")
   sq_eigenvals = sortλ[1:maxdim] .^ 0.5
   AM = Diagonal(sq_eigenvals)
   atcoords = permutedims(EM * AM)

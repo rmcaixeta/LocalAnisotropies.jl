@@ -101,3 +101,22 @@ function kcvario(γ::GeoStatsFunction, xi, xj, Qi::AbstractMatrix, Qj::AbstractM
   C = kccov(γ, xi, xj, Qi, Qj)
   sill(γ) - C
 end
+
+function average_variogram_along_vector(dir, lpars, vario)
+  # assert if length(γ.ball.radii) == 1
+  ratio = mapreduce(vcat, 1:nvals(lpars)) do i
+	  Qs = qmat(lpars, i)
+    d = Mahalanobis(Symmetric(Qs))
+	  ustrip(1 / Distances.evaluate(d, Point(0,0,0), Point(dir...)))
+  end
+  
+  avg_ratio = mean(ratio)
+  
+  γ = deepcopy(vario)
+  p = structures(γ)
+  γs = map(p[3]) do γ
+    radius = γ.ball.radii[1] * avg_ratio
+    γ = @set γ.ball = MetricBall(radius, Euclidean())
+  end
+  NuggetEffect(p[1]) + sum(c * γ for (c, γ) in zip(p[2], γs))
+end
