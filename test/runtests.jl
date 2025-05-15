@@ -151,6 +151,11 @@ import LocalAnisotropies: rotmat, anisodistance
     ID = LocalIDW(2.0, lpars)
     S |> LocalInterpolate(G, model=ID, maxneighbors=20)
 
+    # Global
+    println("GLOBAL")
+    GB = LocalKriging(:Global, lpars, γ)
+    S |> LocalInterpolate(G, model=GB, maxneighbors=20)
+
     # LocalKriging (MW)
     println("MW")
     MW = LocalKriging(:MovingWindows, lpars, γ)

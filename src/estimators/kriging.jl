@@ -29,14 +29,29 @@ struct KC_SKModel{G<:GeoStatsFunction,V} <: LocalKrigingModel
   hdlocalaniso::Union{AbstractVector,Nothing}
 end
 
+struct OKModel{G<:GeoStatsFunction} <: LocalKrigingModel
+  localaniso::LocalAnisotropy
+  fun::G
+end
+
+struct SKModel{G<:GeoStatsFunction,V} <: LocalKrigingModel
+  localaniso::LocalAnisotropy
+  fun::G
+  mean::V
+end
+
 MWModels = Union{MW_OKModel,MW_SKModel}
 KCModels = Union{KC_OKModel,KC_SKModel}
+KModels = Union{OKModel,SKModel}
 
 krig_estimator(model::MWModels, localpar) = mw_estimator(model, localpar)
 krig_estimator(model::KC_OKModel, localpar=nothing) = OrdinaryKriging(model.fun)
 krig_estimator(model::KC_SKModel, localpar=nothing) = SimpleKriging(model.fun, model.mean)
+krig_estimator(model::OKModel, localpar=nothing) = OrdinaryKriging(model.fun)
+krig_estimator(model::SKModel, localpar=nothing) = SimpleKriging(model.fun, model.mean)
 
 neighs_localaniso(model::MWModels, m) = nothing
+neighs_localaniso(model::KModels, m) = nothing
 neighs_localaniso(model::KCModels, m) = view(model.hdlocalaniso, m)
 
 function neighs_localaniso(localaniso::LocalAnisotropy, dom, neigh; method::Symbol=:KernelConvolution)
@@ -70,6 +85,8 @@ function LocalKriging(
   elseif method == :KernelConvolution
     hd = qmat(hdlocalaniso)
     isnothing(mean) ? KC_OKModel(localaniso, fun, hd) : KC_SKModel(localaniso, fun, mean, hd)
+  elseif method == :Global
+    isnothing(mean) ? OKModel(localaniso, fun) : SKModel(localaniso, fun, mean)
   else
     @assert false "method must be :MovingWindows or :KernelConvolution"
   end

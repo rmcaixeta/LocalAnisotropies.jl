@@ -161,6 +161,14 @@ begin
   Mke.plot(s0.geometry, color=s0.P)
 end
 
+# ╔═╡ fade3a5d-e2ef-460b-9a66-b35140e55a68
+begin
+  # check ignoring local aniso
+  II = LocalKriging(:Global, lparsx, γomni)
+  s00 = S |> LocalInterpolate(G, model=II, maxneighbors=20, local_search=false)
+  Mke.plot(s00.geometry, color=s00.P)
+end
+
 # ╔═╡ 915af65f-287a-4a11-9bb6-2755bc571a5a
 begin
   # comparison of the different estimates
@@ -282,6 +290,7 @@ end
 # ╠═85ba6341-92d3-43dd-a9a1-a1e72a60b0d4
 # ╠═5f0f00c9-05cc-4185-aad9-4bb0eab2c1ce
 # ╠═e935064e-5e18-46ae-919d-83c8ac733f78
+# ╠═fade3a5d-e2ef-460b-9a66-b35140e55a68
 # ╠═915af65f-287a-4a11-9bb6-2755bc571a5a
 # ╠═807f31dc-3e3f-4d2c-ab4a-4eb150f9599b
 # ╠═8bb14d5a-1096-4fa8-a505-23b031bb0611
