@@ -109,7 +109,7 @@ function adjust_rake!(lpar::LocalAnisotropy, az::AbstractVector)
     n2 = Vec(sind(az[i] + 90), cosd(az[i] + 90), 0)
     p2 = Plane(Point(0, 0, 0), n2)
     icross = ustrip.(to(intersection(p1, p2).geom.b))
-    vectors_to_quaternion(icross, dcm[3, :]; dirs=(1,3))
+    vectors_to_quaternion(icross, dcm[3, :]; dirs=(1, 3))
   end
   lpar.rotation .= rot
   lpar
@@ -235,7 +235,7 @@ end
 
 function to_plane_angle(q::Quaternion)
   dcm = quat_to_dcm(q)
-  nx, ny, nz = dcm[3,:]
+  nx, ny, nz = dcm[3, :]
   strike = atan(ny, nx)
   dipdir = (rad2deg(strike + π/2) + 360) % 360
   dip = rad2deg(asin(abs(nz)))
@@ -244,7 +244,7 @@ end
 
 function to_plane_dipvector(q::Quaternion)
   dcm = quat_to_dcm(q)
-  nx, ny, nz = dcm[3,:]
+  nx, ny, nz = dcm[3, :]
   dip_vector = [nz * nx, nz * ny, -(nx^2 + ny^2)]
   hcat(dip_vector...)
 end
@@ -258,7 +258,7 @@ end
 
 function normal_to_quaternion(normal)
   strike = [-normal[2], normal[1], 0]
-  v1 = sum(strike) > 0 ? strike ./ norm(strike) : [1,0,0]
+  v1 = sum(strike) > 0 ? strike ./ norm(strike) : [1, 0, 0]
   v2 = cross(v1, normal)
   vectors_to_quaternion(v1, v2, normal)
 end
@@ -269,14 +269,13 @@ function vectors_to_quaternion(vec1, vec2, vec3)
   dcm_to_quat(DCM(m))
 end
 
-function vectors_to_quaternion(vec1, vec2; dirs=(1,2))
+function vectors_to_quaternion(vec1, vec2; dirs=(1, 2))
   vecs = Vector{Vector{Float64}}(undef, 3)
   vecs[dirs[1]] = vec1
   vecs[dirs[2]] = vec2
   vecs[setdiff(1:3, dirs)[1]] = cross(vec1, vec2)
   vectors_to_quaternion(vecs...)
 end
-
 
 Base.vcat(lpars::LocalAnisotropy...; kwars...) = reduce(vcat, lpars)
 

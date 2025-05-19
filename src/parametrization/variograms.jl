@@ -18,15 +18,7 @@ of two axes (e.g. :XY), this will consider a planar variogram along that plane.
 
 Similar (but not equal) to https://github.com/rmcaixeta/Local_variography
 """
-function localvariography(
-  obj::SpatialData,
-  lpars::LocalAnisotropy,
-  var₁,
-  var₂=var₁;
-  axis=:X,
-  tol=1e-6,
-  kwargs...
-)
+function localvariography(obj::SpatialData, lpars::LocalAnisotropy, var₁, var₂=var₁; axis=:X, tol=1e-6, kwargs...)
   p = pseudolocalpartition(obj, lpars, axis, tol)
   EmpiricalVariogram(p, var₁, var₂; kwargs...)
 end

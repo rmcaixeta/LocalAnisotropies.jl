@@ -151,9 +151,11 @@ function anchors_mds(ADM, maxoutdim)
   explained_ratio = cumsum(sortλ[sortλ .> 0]) ./ total_var
   dim95 = findfirst(x -> x ≥ threshold, explained_ratio)
   println("Nb dims for 95% adherence = $dim95")
-  maxdim = minimum([max(dim95,3), maxoutdim, nx - 1, sum(λ .> 0)])
+  maxdim = minimum([max(dim95, 3), maxoutdim, nx - 1, sum(λ .> 0)])
   #println(round.(explained_ratio, digits=2))
-  println("Nb of dimensions selected = $maxdim (explains $(round(explained_ratio[maxdim]*100, digits=2))% of the variance)")
+  println(
+    "Nb of dimensions selected = $maxdim (explains $(round(explained_ratio[maxdim]*100, digits=2))% of the variance)"
+  )
 
   EM = (F.vectors[:, sorti])[:, 1:maxdim]
   sq_eigenvals = sortλ[1:maxdim] .^ 0.5

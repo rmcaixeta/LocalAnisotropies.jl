@@ -80,10 +80,10 @@ import LocalAnisotropies: rotmat, anisodistance
   @test !all(round.(rotmat(pars, 1)[1, :], digits=4) .≈ round.(rotmat(pars_, 1)[1, :], digits=4))
 
   # try some utils
-	normals = to_vector(pars, 3)
-	azplunge_maindir = to_vector_angle(pars, 1)
-	dipdir_dip = to_plane_angle(pars)
-	dipvector = to_plane_dipvector(pars)
+  normals = to_vector(pars, 3)
+  azplunge_maindir = to_vector_angle(pars, 1)
+  dipdir_dip = to_plane_angle(pars)
+  dipvector = to_plane_dipvector(pars)
 
   tabpars_quat = to_table(pars)
   tabpars_angs = to_table(pars, :Datamine)

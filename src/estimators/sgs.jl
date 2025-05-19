@@ -90,16 +90,16 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
 
   # restart searcher using local aniso
   ref_searcher = if searcher isa KNearestSearch
-      Qi = qmat(localaniso, 1)
-      anisodistance = Mahalanobis(Symmetric(Qi))
-      KNearestSearch(searcher.domain, searcher.k; metric = anisodistance)
+    Qi = qmat(localaniso, 1)
+    anisodistance = Mahalanobis(Symmetric(Qi))
+    KNearestSearch(searcher.domain, searcher.k; metric=anisodistance)
   else
-      N = ndims(localaniso)
-      angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
-      ranges = radii(searcher.ball)
-      ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
-      localsneigh = MetricBall(ranges, angs)
-      KBallSearch(searcher.domain, searcher.k, localsneigh)
+    N = ndims(localaniso)
+    angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
+    ranges = radii(searcher.ball)
+    ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
+    localsneigh = MetricBall(ranges, angs)
+    KBallSearch(searcher.domain, searcher.k, localsneigh)
   end
 
   # simulation loop
@@ -113,16 +113,16 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
 
       # modify local search
       local_searcher = if searcher isa KNearestSearch
-          Qi = qmat(localaniso, ind)
-          @set ref_searcher.tree.metric = Mahalanobis(Symmetric(Qi))
+        Qi = qmat(localaniso, ind)
+        @set ref_searcher.tree.metric = Mahalanobis(Symmetric(Qi))
       else
-          N = ndims(localaniso)
-          angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
-          ranges = radii(searcher.ball)
-          ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
-          localsneigh = MetricBall(ranges, angs)
-          searcher_ = @set ref_searcher.ball = localsneigh
-          @set searcher_.tree.metric = metric(localsneigh)
+        N = ndims(localaniso)
+        angs = quat_to_dcm(rotation(localaniso, ind))[SOneTo(N), SOneTo(N)]'
+        ranges = radii(searcher.ball)
+        ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, ind)) : ranges
+        localsneigh = MetricBall(ranges, angs)
+        searcher_ = @set ref_searcher.ball = localsneigh
+        @set searcher_.tree.metric = metric(localsneigh)
       end
 
       # search neighbors with simulated data

@@ -79,7 +79,7 @@ end
 function localanisotropies(normals::AbstractArray)
   # only adapted to 3d
   # set the preference first in case it's a 3x3 matrix
-  q = if size(normals,1) == 3
+  q = if size(normals, 1) == 3
     normal_to_quaternion.(eachcol(normals))
   else
     normal_to_quaternion.(eachrow(normals))

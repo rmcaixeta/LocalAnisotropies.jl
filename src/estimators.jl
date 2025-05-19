@@ -43,7 +43,18 @@ LocalInterpolate(
   minneighbors=1,
   maxneighbors=10,
   neighborhood=nothing
-) = LocalInterpolate(domain, model, path, point, prob, get_only_weights, local_search, minneighbors, maxneighbors, neighborhood)
+) = LocalInterpolate(
+  domain,
+  model,
+  path,
+  point,
+  prob,
+  get_only_weights,
+  local_search,
+  minneighbors,
+  maxneighbors,
+  neighborhood
+)
 
 LocalInterpolate(geoms::AbstractVector{<:Geometry}; kwargs...) = LocalInterpolate(GeometrySet(geoms); kwargs...)
 
@@ -114,29 +125,69 @@ function localfitpredict(
 
   # determine bounded search method
   ref_searcher = if isnothing(sneigh)
-      refdist = local_search ? Mahalanobis(Symmetric(qmat(localaniso, 1))) : Euclidean()
-      KNearestSearch(domain(sdat), maxneighbors; metric = refdist)
+    refdist = local_search ? Mahalanobis(Symmetric(qmat(localaniso, 1))) : Euclidean()
+    KNearestSearch(domain(sdat), maxneighbors; metric=refdist)
   else
-      refneigh = if local_search
-        N = ndims(localaniso)
-        angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
-        ranges = radii(sneigh)
-        ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
-        MetricBall(ranges, angs)
-      else
-        sneigh
-      end
-      KBallSearch(domain(sdat), maxneighbors, refneigh)
+    refneigh = if local_search
+      N = ndims(localaniso)
+      angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
+      ranges = radii(sneigh)
+      ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
+      MetricBall(ranges, angs)
+    else
+      sneigh
+    end
+    KBallSearch(domain(sdat), maxneighbors, refneigh)
   end
 
   if get_only_weights
-    predict_weights(sdat, sdom, smodel, localaniso, local_search, inds, sneigh, ref_searcher, neighbors, minneighbors, point)
+    predict_weights(
+      sdat,
+      sdom,
+      smodel,
+      localaniso,
+      local_search,
+      inds,
+      sneigh,
+      ref_searcher,
+      neighbors,
+      minneighbors,
+      point
+    )
   else
-    predict_variables(sdat, sdom, dom, smodel, localaniso, local_search, inds, sneigh, ref_searcher, neighbors, minneighbors, point, predfun)
+    predict_variables(
+      sdat,
+      sdom,
+      dom,
+      smodel,
+      localaniso,
+      local_search,
+      inds,
+      sneigh,
+      ref_searcher,
+      neighbors,
+      minneighbors,
+      point,
+      predfun
+    )
   end
 end
 
-function predict_variables(sdat, sdom, dom, smodel, localaniso, local_search, inds, sneigh, ref_searcher, neighbors, minneighbors, point, predfun)
+function predict_variables(
+  sdat,
+  sdom,
+  dom,
+  smodel,
+  localaniso,
+  local_search,
+  inds,
+  sneigh,
+  ref_searcher,
+  neighbors,
+  minneighbors,
+  point,
+  predfun
+)
   # predict variables
   cols = Tables.columns(values(sdat))
   vars = Tables.columnnames(cols)
@@ -164,8 +215,19 @@ function predict_variables(sdat, sdom, dom, smodel, localaniso, local_search, in
   georef(pred |> Tables.materializer(values(sdat)), dom)
 end
 
-
-function predict_weights(sdat, sdom, smodel, localaniso, local_search, inds, sneigh, ref_searcher, neighbors, minneighbors, point)
+function predict_weights(
+  sdat,
+  sdom,
+  smodel,
+  localaniso,
+  local_search,
+  inds,
+  sneigh,
+  ref_searcher,
+  neighbors,
+  minneighbors,
+  point
+)
   # predict weights
   accu_weights = zeros(Float64, length(domain(sdat)))
   for ind in inds
@@ -191,10 +253,9 @@ function predict_weights(sdat, sdom, smodel, localaniso, local_search, inds, sne
   accu_weights
 end
 
-get_weights(m, g) = m isa FittedIDW ? ustrip.(GeoStatsModels.weights(m, g)) :
-            m isa LocalFittedKriging ? weights(m, g).λ :
-            GeoStatsModels.weights(m, g).λ
-
+get_weights(m, g) =
+  m isa FittedIDW ? ustrip.(GeoStatsModels.weights(m, g)) :
+  m isa LocalFittedKriging ? weights(m, g).λ : GeoStatsModels.weights(m, g).λ
 
 function make_local_searcher(ind, ref_searcher, sneigh, localaniso, local_search)
   if !local_search
