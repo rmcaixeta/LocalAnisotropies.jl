@@ -76,13 +76,14 @@ function localanisotropies(
   LocalAnisotropy(q, reduce(hcat, m))
 end
 
-function localanisotropies(normals::AbstractArray)
+function localanisotropies(vectors::AbstractArray; dipvector=false)
   # only adapted to 3d
-  # set the preference first in case it's a 3x3 matrix
-  q = if size(normals, 1) == 3
-    normal_to_quaternion.(eachcol(normals))
+  conversion_func = dipvector ? dipvector_to_quaternion : normal_to_quaternion
+  q = if size(vectors, 1) == 3
+    size(vectors, 2) == 3 && println("Warning: 3x3 table might return strange results if vectors are not in column-major order.")
+    conversion_func.(eachcol(vectors))
   else
-    normal_to_quaternion.(eachrow(normals))
+    conversion_func.(eachrow(vectors))
   end
 
   LocalAnisotropy(q, ones(3, length(q)))

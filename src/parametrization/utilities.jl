@@ -263,6 +263,14 @@ function normal_to_quaternion(normal)
   vectors_to_quaternion(v1, v2, normal)
 end
 
+function dipvector_to_quaternion(dipdirvec)
+    dx, dy, dz = dipdirvec
+    hm = (dx^2 + dy^2) ^ 0.5
+    n = [-dx * dz / hm, -dy * dz / hm, hm]
+    n ./= norm(n)
+    vectors_to_quaternion(dipdirvec, n; dirs=(2, 3))
+end
+
 function vectors_to_quaternion(vec1, vec2, vec3)
   m = SMatrix{3,3}(vec1..., vec2..., vec3...)'
   det(m) < 0 && (m = Diagonal(SVector{3}([-1, 1, 1])) * m)
