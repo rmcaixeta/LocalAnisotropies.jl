@@ -133,7 +133,8 @@ function localfitpredict(
       angs = quat_to_dcm(rotation(localaniso, 1))[SOneTo(N), SOneTo(N)]'
       ranges = radii(sneigh)
       ranges = length(ranges) < 2 ? Tuple(ranges .* magnitude(localaniso, 1)) : ranges
-      MetricBall(ranges, angs)
+      m = MetricBall(ranges, angs)
+      sneigh isa MetricBall ? m : (@set sneigh.ball = m)
     else
       sneigh
     end
