@@ -254,9 +254,10 @@ function predict_weights(
   accu_weights
 end
 
-get_weights(m, g) =
-  m isa FittedIDW ? ustrip.(GeoStatsModels.weights(m, g)) :
-  m isa LocalFittedKriging ? weights(m, g).λ : GeoStatsModels.weights(m, g).λ
+get_weights(m::FittedIDW, g) = ustrip.(GeoStatsModels.weights(m, g))
+get_weights(m::LocalFittedKriging, g) = weights(m, g).λ
+get_weights(m::FittedKriging, g) = GeoStatsModels.weights(m, g).λ
+
 
 function make_local_searcher(ind, ref_searcher, sneigh, localaniso, local_search)
   if !local_search

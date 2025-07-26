@@ -229,16 +229,16 @@ function to_vector_angle(q::Quaternion, dir::Int)
   dcm = quat_to_dcm(q)
   i, j, k = dcm[dir, :]
   plunge = rad2deg(asin(abs(k)))
-  azimuth = rad2deg(atan(j, i)) % 360
+  azimuth = (rad2deg(atan(j, i)) + 360) % 360
   hcat(azimuth, plunge)
 end
 
 function to_plane_angle(q::Quaternion)
   dcm = quat_to_dcm(q)
-  nx, ny, nz = dcm[3, :]
-  strike = atan(ny, nx)
-  dipdir = (rad2deg(strike + π/2) + 360) % 360
-  dip = rad2deg(asin(abs(nz)))
+  f = dcm[3, 3] < 0 ? -1 : 1
+  nx, ny, nz = round.(f .* dcm[3, :], digits=4)
+  dipdir = (rad2deg(atan(nx, ny)) + 360) % 360
+  dip = rad2deg(acos(nz))
   hcat(dipdir, dip)
 end
 
