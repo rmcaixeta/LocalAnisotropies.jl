@@ -103,39 +103,28 @@ function local_fit(model_::LocalKrigingModel, data; i, m)
   Qx₀ = model_ isa KCModels ? qmat(localpar...) : nothing
 
   # initialize Kriging system
-  LHS, RHS, ncon, miss = localinitkrig(model, data, hdlocalaniso)
-
-  # factorize LHS
+  LHS, RHS, nfun, miss = localinitkrig(model, data, hdlocalaniso)
   FLHS = GeoStatsModels.lhsfactorize(model, LHS)
-
-  # record Kriging state
-  state = KrigingState(data, FLHS, RHS, ncon, miss)
+  state = KrigingState(data, LHS, RHS, FLHS, nfun, miss)
 
   localfitting(model, state, Qx₀, hdlocalaniso)
 end
 
 # initialize Kriging system
 function localinitkrig(model::KrigingModel, data, hdlocalaniso)
+  LHS, RHS = GeoStatsModels.prealloc(model, data)
+
   fun = model.fun
   dom = domain(data)
   tab = values(data)
 
-  # retrieve matrix parameters
+  # number of function evaluations
   nobs = nelements(dom)
   nvar = nvariates(fun)
-  ncon = nconstraints(model)
-  nrow = nobs * nvar + ncon
+  nfun = nobs * nvar
 
-  # make sure data is compatible with model
-  nfeat = ncol(data) - 1
-  if nfeat != nvar
-    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
-  end
-
-  # pre-allocate memory for LHS
-  F = fun(dom[1], dom[1])
-  V = eltype(ustrip.(F))
-  LHS = Matrix{V}(undef, nrow, nrow)
+  # find locations with missing values
+  miss = GeoStatsModels.missingindices(tab)
 
   # set main block with pairwise evaluation
   if isnothing(hdlocalaniso)
@@ -156,12 +145,9 @@ function localinitkrig(model::KrigingModel, data, hdlocalaniso)
   miss = GeoStatsModels.missingindices(tab)
 
   # knock out entries with missing values
-  GeoStatsModels.lhsmissings!(LHS, ncon, miss)
+  GeoStatsModels.lhsmissings!(LHS, nfun, miss)
 
-  # pre-allocate memory for RHS
-  RHS = similar(LHS, nrow, nvar)
-
-  LHS, RHS, ncon, miss
+  LHS, RHS, nfun, miss
 end
 
 localfitting(model, state, q, hd) = isnothing(q) ? FittedKriging(model, state) : LocalFittedKriging(model, state, q, hd)
@@ -175,7 +161,7 @@ end
 
 FKC(m::LocalFittedKriging) = FittedKriging(m.model, m.state)
 
-local_status(fitted::LocalFittedKriging) = issuccess(fitted.state.LHS)
+local_status(fitted::LocalFittedKriging) = issuccess(fitted.state.FHS)
 local_status(fitted::FittedKriging) = GeoStatsModels.status(fitted)
 
 predict(fitted::LocalFittedKriging, var::AbstractString, gₒ) = predict(fitted, Symbol(var), gₒ)
@@ -211,9 +197,9 @@ predictmean(fitted::LocalFittedKriging, weights::KrigingWeights, var) =
 rhsconstraints!(fitted::LocalFittedKriging, pₒ) = GeoStatsModels.rhsconstraints!(FKC(fitted), pₒ)
 
 function weights(fitted::LocalFittedKriging, gₒ)
-  LHS = fitted.state.LHS
+  LHS = fitted.state.FHS
   RHS = fitted.state.RHS
-  ncon = fitted.state.ncon
+  nfun = fitted.state.nfun
   miss = fitted.state.miss
   dom = domain(fitted.state.data)
   fun = fitted.model.fun
@@ -240,11 +226,8 @@ function weights(fitted::LocalFittedKriging, gₒ)
   W = LHS \ RHS
 
   # index of first constraint
-  ind = size(LHS, 1) - ncon + 1
-
-  # split weights and Lagrange multipliers
-  λ = @view W[begin:(ind - 1), :]
-  ν = @view W[ind:end, :]
+  λ = @view W[begin:nfun, :]
+  ν = @view W[(nfun+1):end, :]
 
   KrigingWeights(λ, ν)
 end

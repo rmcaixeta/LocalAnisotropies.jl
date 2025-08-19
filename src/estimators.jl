@@ -192,6 +192,7 @@ function predict_variables(
   # predict variables
   cols = Tables.columns(values(sdat))
   vars = Tables.columnnames(cols)
+  getgeom(dom, ind) = @inbounds (point ? centroid(dom, ind) : dom[ind])
   pred = @inbounds map(inds) do ind
     center = centroid(sdom, ind)
 
@@ -203,8 +204,7 @@ function predict_variables(
       ninds = view(neighbors, 1:nneigh)
       samples = view(sdat, ninds)
       fmodel = local_fit(smodel, samples, i=ind, m=ninds)
-      geom = point ? center : sdom[ind]
-      vals = predfun(fmodel, vars, geom)
+      vals = predfun(fmodel, vars, getgeom(sdom, ind))
     else
       # missing prediction
       vals = fill(missing, length(vars))
