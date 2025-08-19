@@ -62,6 +62,29 @@ function GeoStatsProcesses.preprocess(rng, process, meth::LocalSGS, init, domain
   GeoStatsProcesses.preprocess(rng, process, method_, init, domain, data)
 end
 
+#function GeoStatsProcesses.preprocess(rng, process, meth::LocalSGS, init, domain, data)
+#  (; path, minneighbors, maxneighbors, neighborhood, distance) = meth
+#  method = SEQSIM(path, minneighbors, maxneighbors, neighborhood, distance)
+#
+#  func = process.func
+#
+#  ## scale objects for numerical stability
+#  #dom, dat, fun, neigh = _scale(domain, data, func, method.neighborhood)
+#  # or ignore that for now
+#  dom, dat, fun, neigh = domain, data, func, method.neighborhood
+#
+#  # determine search method and min/max neighbors
+#  path, searcher, nmin, nmax = GeoStatsProcesses._search(dom, neigh, method)
+#
+#  # determine probability model
+#  model, prior = GeoStatsProcesses._probmodel(process, fun)
+#
+#  # transform process and data
+#  sdom, sdat, cache = GeoStatsProcesses._transform(process, dom, dat)
+#
+#  (; path, searcher, nmin, nmax, model, prior, sdom, sdat, cache, init)
+#end
+
 function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data, preproc)
   # retrieve parameters
   (; path, searcher, nmin, nmax, model, prior, sdom, sdat, cache, init) = preproc

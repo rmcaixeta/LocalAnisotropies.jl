@@ -149,7 +149,7 @@ function interpolate(
           m[3, i] = m[3, i] / newm
         end
       else
-        quat[i], f = quatavg(rot, weights)
+        quat[i], f = occursin("_md", "$method") ? quatmed(rot, weights) : quatavg(rot, weights)
         if smooth && method == :qavg
           m[:, i] .= magnitude(lpars, i)
         else
@@ -209,6 +209,27 @@ function quatavg(qarr::AbstractVector{Quaternion}, warr::AbstractVector{Float64}
     f = T.values[s][1] / sum(T.values)
     V = view(T.vectors[:, s], :, 1)
     Quaternion(V...), f
+  end
+end
+
+function quatmed(qarr::AbstractVector{Quaternion}, warr::AbstractVector{Float64}=Float64[])
+  if length(qarr) == 1
+    qarr[1], 1.0
+  else
+    n = mapreduce(vcat, qarr) do q
+      to_vector(q, 3)
+    end
+    i_idx = argmin(abs.(n[:,1] .- median(n[:,1])))
+    j_idx = argmin(abs.(n[:,2] .- median(n[:,2])))
+    k_idx = argmin(abs.(n[:,3] .- median(n[:,3])))
+
+    i_idx = findall(n[:,1] .== n[i_idx,1])
+    j_idx = findall(n[:,2] .== n[j_idx,2])
+    k_idx = findall(n[:,3] .== n[k_idx,3])
+
+    idxs = unique(vcat(i_idx,j_idx,k_idx))
+    wgts = isempty(warr) ? warr : view(warr,idxs)
+    quatavg(view(qarr,idxs), wgts)
   end
 end
 

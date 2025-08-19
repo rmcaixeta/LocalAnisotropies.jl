@@ -22,7 +22,7 @@ using ReferenceFrameRotations
 using Setfield
 using SimpleWeightedGraphs
 using StaticArrays
-using StatsBase: Weights, quantile, mean!
+using StatsBase: Weights, quantile, median, mean!
 using Tables
 using Unitful: ustrip
 using WriteVTK
