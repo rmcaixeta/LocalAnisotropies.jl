@@ -89,6 +89,12 @@ function localanisotropies(vectors::AbstractArray; dipvector=false)
   LocalAnisotropy(q, ones(3, length(q)))
 end
 
+function localanisotropies(q::Quaternion, dom::SpatialData)
+  n = nvals(dom)
+  dims = embeddim(centro(dom, 1))
+  LocalAnisotropy(fill(q,n), ones(dims, n))
+end
+
 """
     convertangles(angles, convention1, convention2) # angles to new angles
     convertangles(angles, convention1) # angles to quaternion

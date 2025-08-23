@@ -51,6 +51,7 @@ import Meshes: lentype, withcrs
 
 include("parametrization.jl")
 include("estimators/idw.jl")
+include("estimators/lwr.jl")
 include("estimators/kriging.jl")
 include("estimators.jl")
 include("estimators/variograms.jl")
@@ -102,6 +103,7 @@ export adjust_rake,
   LocalAnisotropy,
   LocalGeoData,
   LocalIDW,
+  LocalLWR,
   LocalInterpolate,
   LocalKriging,
   LocalSGS,
