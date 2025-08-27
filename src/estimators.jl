@@ -114,7 +114,7 @@ function localfitpredict(
 
   neighbors = Vector{Int}(undef, maxneighbors)
   inds = traverse(sdom, path)
-  predfun = prob ? GeoStatsModels._marginals ∘ predictprob : predict
+  predfun = prob ? GeoStatsModels._marginals ∘ predictprob_ : predict
 
   # check pars
   localaniso = smodel.localaniso
@@ -204,7 +204,8 @@ function predict_variables(
       ninds = view(neighbors, 1:nneigh)
       samples = view(sdat, ninds)
       fmodel = local_fit(smodel, samples, i=ind, m=ninds)
-      vals = predfun(fmodel, vars, getgeom(sdom, ind))
+      gₒ = getgeom(sdom, ind)
+      vals = predfun(fmodel, vars, gₒ)
     else
       # missing prediction
       vals = fill(missing, length(vars))
@@ -257,7 +258,6 @@ end
 get_weights(m::FittedIDW, g) = ustrip.(GeoStatsModels.weights(m, g))
 get_weights(m::LocalFittedKriging, g) = weights(m, g).λ
 get_weights(m::FittedKriging, g) = GeoStatsModels.weights(m, g).λ
-
 
 function make_local_searcher(ind, ref_searcher, sneigh, localaniso, local_search)
   if !local_search

@@ -31,3 +31,5 @@ function local_fit(model::LocalIDWModel, data; i, m)
 
   FittedIDW(IDW(model.exponent, d), state)
 end
+
+predictprob_(fitted::FittedIDW, args...) = predictprob(fitted, args...)

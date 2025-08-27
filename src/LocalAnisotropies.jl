@@ -27,7 +27,7 @@ using Tables
 using Unitful: ustrip
 using WriteVTK
 
-import Distributions: Normal
+import Distributions: Normal, MvNormal
 import GeoStatsModels:
   FittedIDW,
   FittedKriging,

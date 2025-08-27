@@ -66,11 +66,11 @@ function initmodel(model::KCModels, geotable, pdomain)
 end
 
 """
-    LocalKriging(method, localaniso, γ, μ=nothing, localanisohd=nothing)
+    LocalKriging(method, localaniso, γ, mean=nothing, hdlocalaniso=nothing)
 
 LocalKriging estimation solver where `method` can be :MovingWindows
-or :KernelConvolution; `γ` is the variogram model and `μ` is the mean in case
-simple kriging is used. `localanisohd`is only necessary for :KernelConvolution
+or :KernelConvolution; `γ` is the variogram model and `mean` is the mean in case
+simple kriging is used. `hdlocalaniso`is only necessary for :KernelConvolution
 and it is automatically passed via NN from `localaniso` if not informed.
 """
 function LocalKriging(
@@ -168,23 +168,31 @@ predict(fitted::LocalFittedKriging, var::AbstractString, gₒ) = predict(fitted,
 predict(fitted::LocalFittedKriging, var::Symbol, gₒ) = predictmean(FKC(fitted), weights(fitted, gₒ), (var,)) |> first
 predict(fitted::LocalFittedKriging, vars, gₒ) = predictmean(FKC(fitted), weights(fitted, gₒ), vars)
 
-predictprob(fitted::LocalFittedKriging, var::AbstractString, gₒ) = predictprob(fitted, Symbol(var), gₒ)
+AllFittedKriging = Union{LocalFittedKriging,FittedKriging}
+predictprob_(fitted::AllFittedKriging, var::AbstractString, gₒ) = predictprob_(fitted, Symbol(var), gₒ)
 
-function predictprob(fitted::LocalFittedKriging, var::Symbol, gₒ)
+function predictprob_(fitted::AllFittedKriging, var::Symbol, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, (var,)) |> first
   σ² = predictvar(fitted, w, gₒ) |> first
-  ## Ordinary kriging: inflate variance in comparison to simple kriging variance; correction for multigaussian case
-  #σ² = fitted.model isa OrdinaryKriging  ? σ² + 2 * w.ν[1] : σ²
+
+  ## Ordinary kriging: inflate variance in comparison to simple kriging variance
+  # correction for multigaussian case: https://doi.org/10.1007/s11004-005-1560-6
+  σ² = fitted.model isa OrdinaryKriging ? max(0.0, σ² + 2 * w.ν[1]) : σ² ##
+
   Normal(ustrip.(μ), √σ²)
 end
 
-function predictprob(fitted::LocalFittedKriging, vars, gₒ)
+function predictprob_(fitted::AllFittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
   Σ = predictvar(fitted, w, gₒ)
-  # Correct somehow for the ordinary multivariate case?
-  # Σ = fitted.model isa OrdinaryKriging  ? Σ + 2 * w.ν[1] : Σ
+
+  # same situation of last function; correction here only if univariate
+  if fitted.model isa OrdinaryKriging && length(vars) == 1
+    Σ[1,1] = max.(0.0, Σ[1,1] + 2 * w.ν[1,1])
+  end
+
   MvNormal(ustrip.(μ), Σ)
 end
 
@@ -195,6 +203,8 @@ predictmean(fitted::LocalFittedKriging, weights::KrigingWeights, var) =
   GeoStatsModels.predictmean(FKC(fitted), weights::KrigingWeights, var)
 
 rhsconstraints!(fitted::LocalFittedKriging, pₒ) = GeoStatsModels.rhsconstraints!(FKC(fitted), pₒ)
+
+weights(fitted::FittedKriging, gₒ) = GeoStatsModels.weights(fitted, gₒ)
 
 function weights(fitted::LocalFittedKriging, gₒ)
   LHS = fitted.state.FHS
@@ -227,7 +237,7 @@ function weights(fitted::LocalFittedKriging, gₒ)
 
   # index of first constraint
   λ = @view W[begin:nfun, :]
-  ν = @view W[(nfun+1):end, :]
+  ν = @view W[(nfun + 1):end, :]
 
   KrigingWeights(λ, ν)
 end

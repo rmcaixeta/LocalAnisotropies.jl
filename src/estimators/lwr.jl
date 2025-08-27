@@ -35,3 +35,5 @@ function local_fit(model::LocalLWRModel, data; i, m)
 
   GeoStatsModels.FittedLWR(model_, state)
 end
+
+predictprob_(fitted::GeoStatsModels.FittedLWR, args...) = predictprob(fitted, args...)

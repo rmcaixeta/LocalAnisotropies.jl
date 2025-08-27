@@ -80,7 +80,8 @@ function localanisotropies(vectors::AbstractArray; dipvector=false)
   # only adapted to 3d
   conversion_func = dipvector ? dipvector_to_quaternion : normal_to_quaternion
   q = if size(vectors, 1) == 3
-    size(vectors, 2) == 3 && println("Warning: 3x3 table might return strange results if vectors are not in column-major order.")
+    size(vectors, 2) == 3 &&
+      println("Warning: 3x3 table might return strange results if vectors are not in column-major order.")
     conversion_func.(eachcol(vectors))
   else
     conversion_func.(eachrow(vectors))
@@ -92,7 +93,7 @@ end
 function localanisotropies(q::Quaternion, dom::SpatialData)
   n = nvals(dom)
   dims = embeddim(centro(dom, 1))
-  LocalAnisotropy(fill(q,n), ones(dims, n))
+  LocalAnisotropy(fill(q, n), ones(dims, n))
 end
 
 """

@@ -264,11 +264,11 @@ function normal_to_quaternion(normal)
 end
 
 function dipvector_to_quaternion(dipdirvec)
-    dx, dy, dz = dipdirvec
-    hm = (dx^2 + dy^2) ^ 0.5
-    n = hm != 0 ? [-dx * dz / hm, -dy * dz / hm, hm] : [1,0,0]
-    n ./= norm(n)
-    vectors_to_quaternion(dipdirvec, n; dirs=(2, 3))
+  dx, dy, dz = dipdirvec
+  hm = (dx^2 + dy^2) ^ 0.5
+  n = hm != 0 ? [-dx * dz / hm, -dy * dz / hm, hm] : [1, 0, 0]
+  n ./= norm(n)
+  vectors_to_quaternion(dipdirvec, n; dirs=(2, 3))
 end
 
 function vectors_to_quaternion(vec1, vec2, vec3)

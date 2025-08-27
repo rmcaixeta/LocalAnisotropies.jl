@@ -219,17 +219,17 @@ function quatmed(qarr::AbstractVector{Quaternion}, warr::AbstractVector{Float64}
     n = mapreduce(vcat, qarr) do q
       to_vector(q, 3)
     end
-    i_idx = argmin(abs.(n[:,1] .- median(n[:,1])))
-    j_idx = argmin(abs.(n[:,2] .- median(n[:,2])))
-    k_idx = argmin(abs.(n[:,3] .- median(n[:,3])))
+    i_idx = argmin(abs.(n[:, 1] .- median(n[:, 1])))
+    j_idx = argmin(abs.(n[:, 2] .- median(n[:, 2])))
+    k_idx = argmin(abs.(n[:, 3] .- median(n[:, 3])))
 
-    i_idx = findall(n[:,1] .== n[i_idx,1])
-    j_idx = findall(n[:,2] .== n[j_idx,2])
-    k_idx = findall(n[:,3] .== n[k_idx,3])
+    i_idx = findall(n[:, 1] .== n[i_idx, 1])
+    j_idx = findall(n[:, 2] .== n[j_idx, 2])
+    k_idx = findall(n[:, 3] .== n[k_idx, 3])
 
-    idxs = unique(vcat(i_idx,j_idx,k_idx))
-    wgts = isempty(warr) ? warr : view(warr,idxs)
-    quatavg(view(qarr,idxs), wgts)
+    idxs = unique(vcat(i_idx, j_idx, k_idx))
+    wgts = isempty(warr) ? warr : view(warr, idxs)
+    quatavg(view(qarr, idxs), wgts)
   end
 end
 
