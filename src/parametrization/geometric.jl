@@ -60,13 +60,8 @@ end
 
 function localanisotropies(::Type{Geometric}, trs::GeometrySet, magnitude::AbstractVector)
   q = mapreduce(vcat, trs) do tr
-    c = centroid(tr)
     n = [ustrip(i) for i in normal(tr)]
-    p = minpt(tr)
-    v1 = [ustrip(i) for i in (p - c)]
-    v1 ./= sum(v1)
-    v2 = cross(v1, n)
-    vectors_to_quaternion(v1, v2, n)
+    normal_to_quaternion(n)
   end
   q = q isa AbstractVector ? q : [q]
   mag = repeat(magnitude, 1, length(q))
