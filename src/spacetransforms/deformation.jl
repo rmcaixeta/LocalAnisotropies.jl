@@ -103,9 +103,12 @@ function deformspace(
     iothers = setdiff(1:n, ianchors)
     atcoords, M1, M3 = anchors_mds(ADM, maxoutdim)
     dim = size(atcoords, 1)
-    otcoords = Array{Float64}(undef, (dim, length(iothers)))
-    @tasks for i in 1:length(iothers)
-      otcoords[:, i] .= triangulation(D, metric, iothers[i], ianchors, M1, M3)
+    # otcoords = Array{Float64}(undef, (dim, length(iothers)))
+    # @tasks for i in 1:length(iothers)
+    #   otcoords[:, i] .= triangulation(D, metric, iothers[i], ianchors, M1, M3)
+    # end
+    otcoords = tmapreduce(hcat, 1:length(iothers)) do i
+      triangulation(D, metric, iothers[i], ianchors, M1, M3)
     end
     tcoords = Array{Float64}(undef, (dim, n))
     tcoords[:, ianchors] .= atcoords
@@ -122,15 +125,15 @@ end
 function setanchors(n, anchors, weights)
   n == anchors && (return collect(1:n))
   # maybe need to convert GeoStatsBase weights to StatsBase format
-  args = weights == nothing ? (1:n, anchors) : (1:n, weights, anchors)
+  args = isnothing(weights) ? (1:n, anchors) : (1:n, weights, anchors)
   ianchors = sample(args..., replace=false)
   sort!(ianchors)
 end
 
 function dissmatrix!(ADM, D::LocalGeoData, metric::Type{<:LocalMetric}, iax::Vector{Int})
   n = size(ADM, 1)
-  for (i, ia) in enumerate(iax)
-    dcols = colwise(D, metric, ia, iax[i:n])
+  @tasks for i in 1:n
+    dcols = colwise(D, metric, iax[i], iax[i:n])
     for (d, j) in zip(dcols, i:n)
       ADM[i, j] = ADM[j, i] = d
     end

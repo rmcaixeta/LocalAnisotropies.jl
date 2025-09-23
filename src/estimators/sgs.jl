@@ -153,7 +153,8 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
 
         # draw from conditional
         conditional = if local_status(fitted)
-          GeoStatsProcesses._conditional(process, fitted, mvars, center)
+          process isa GaussianProcess ? predictprob_(fitted, mvars, center) : 
+              GeoStatsProcesses._conditional(process, fitted, mvars, center)
         else
           prior
         end
