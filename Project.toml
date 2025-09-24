@@ -59,7 +59,7 @@ SimpleWeightedGraphs = "1.2 - 1.5"
 StaticArrays = "1.2 - 1.9"
 StatsBase = "0.33, 0.34"
 Tables = "1.10 - 1.12"
-Unitful = "1.20 - 1.24"
+Unitful = "1.20 - 1.24, 1"
 WriteVTK = "1.18 - 1.21"
 julia = "1.10"
 
