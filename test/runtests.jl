@@ -137,9 +137,9 @@ import LocalAnisotropies: rotmat, anisodistance
 
     # interpolate in a coarser grid
     G_ = if R == 2
-      CartesianGrid((0.5, 0.5), (2.0, 2.0), (5, 5))
+      CartesianGrid((0.5, 0.5), (2.0, 2.0), dims=(5, 5))
     else
-      CartesianGrid((0.5, 0.5, 0.5), (2.0, 2.0, 2.0), (5, 5, 3))
+      CartesianGrid((0.5, 0.5, 0.5), (2.0, 2.0, 2.0), dims=(5, 5, 3))
     end
     lpars_ = idwpars(lpars, searcher, G_)
 
