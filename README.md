@@ -277,7 +277,7 @@ dummy = georef((az=1:10, r1=1:10, r2=1:10))
 pars  = localanisotropies(dummy, [:az], [:r1,:r2], :GSLIB)
 
 # interpolate local anisotropies into a coarser grid
-G_ = CartesianGrid((10,10),(0.5,0.5),(2.0,2.0))
+G_ = CartesianGrid((0.5,0.5),(2.0,2.0),(10,10))
 lpars_ = idwpars(lpars, searcher, G_, power=2.0)
 
 # convert between different rotation conventions
