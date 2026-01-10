@@ -251,11 +251,15 @@ function predict_weights(
     end
   end
 
-  accu_weights ./= sum(accu_weights)
   accu_weights
 end
 
-get_weights(m::FittedIDW, g) = ustrip.(GeoStatsModels.weights(m, g))
+function get_weights(m::FittedIDW, g)
+  wgts = ustrip.(GeoStatsModels.weights(m, g))
+  wgts = any(isinf, wgts) ? map(x -> isinf(x) ? 1.0 : 0.0, wgts) : wgts
+  wgts ./ sum(wgts)
+end
+
 get_weights(m::LocalFittedKriging, g) = weights(m, g).λ
 get_weights(m::FittedKriging, g) = GeoStatsModels.weights(m, g).λ
 
