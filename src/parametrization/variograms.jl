@@ -18,15 +18,17 @@ of two axes (e.g. :XY), this will consider a planar variogram along that plane.
 
 Similar (but not equal) to https://github.com/rmcaixeta/Local_variography
 """
-function localvariography(obj::SpatialData, lpars::LocalAnisotropy, var₁, var₂=var₁; axis=:X, tol=1e-6, kwargs...)
-  p = pseudolocalpartition(obj, lpars, axis, tol)
+function localvariography(obj::SpatialData, lpars::LocalAnisotropy, var₁, var₂=var₁; axis=:X, group=nothing, tol=1e-6, kwargs...)
+  p = pseudolocalpartition(obj, lpars, axis, tol, group)
   EmpiricalVariogram(p, var₁, var₂; kwargs...)
 end
 
-function pseudolocalpartition(obj, lpars, axis, tol)
+function pseudolocalpartition(obj, lpars, axis, tol, group)
   subs = []
   dims = ndims(lpars)
   n = nvals(obj)
+  gvals = isnothing(group) ? nothing : getproperty(obj, group)
+  g(i,j) = isnothing(group) ? true : isequal(gvals[i], gvals[j]) 
   planar = length("$axis") == 2
   axfun = planar ? get_normal_axis : iaxis
   ptfun = planar ? PlanePartition : DirectionPartition
@@ -37,7 +39,7 @@ function pseudolocalpartition(obj, lpars, axis, tol)
     s = Int[i]
     for j in setdiff(1:n, [i])
       y = to(centro(obj, j))
-      p(x, y) && push!(s, j)
+      p(x, y) && g(i,j) && push!(s, j)
     end
     [s]
   end

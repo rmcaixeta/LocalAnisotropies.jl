@@ -21,7 +21,6 @@ by sampling from this distribution.
 * `maxneighbors` - Maximum number of neighbors (default to `36`)
 * `neighborhood` - Search neighborhood (default to `:range`)
 * `distance`     - Distance used to find nearest neighbors (default to `Euclidean()`)
-* `init`         - Data initialization method (default to `NearestInit()`)
 
 For each location in the process `path`, a maximum number of
 neighbors `maxneighbors` is used to fit the conditional Gaussian
@@ -37,18 +36,13 @@ neighbors are used without additional constraints.
 * Gomez-Hernandez & Journel 1993. [Joint Sequential Simulation of
   MultiGaussian Fields](https://link.springer.com/chapter/10.1007/978-94-011-1739-5_8)
 
-### Notes
-
-* This method is very sensitive to the various parameters.
-  Care must be taken to make sure that enough neighbors
-  are used in the underlying Kriging model.
 """
 @kwdef struct LocalSGS{P,N,D} <: FieldSimulationMethod
   method::Symbol = :MovingWindows
   localaniso::LocalAnisotropy
   path::P = LinearPath()
   minneighbors::Int = 1
-  maxneighbors::Int = 36 # 6x6 grid cells
+  maxneighbors::Int = 25
   neighborhood::N = :range
   distance::D = Euclidean()
 end
@@ -71,7 +65,7 @@ function GeoStatsProcesses.randsingle(rng, process, meth::LocalSGS, domain, data
   (; method, localaniso) = meth
 
   # initialize realization and mask
-  real, mask = GeoStatsProcesses.randinit(process, sdom, sdat, init)
+  real, mask = GeoStatsProcesses.initialize(process, sdom, sdat, init)
 
   # realization in matrix form for efficient updates
   realization = ustrip.(stack(Tables.rowtable(real)))
